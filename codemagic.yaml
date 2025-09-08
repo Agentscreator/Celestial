@@ -1,0 +1,60 @@
+workflows:
+  ios-capacitor:
+    name: iOS Capacitor Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    
+    environment:
+      groups:
+        - APP_STORE_CONNECT  # Your environment variable group
+      # Remove iOS signing configuration for unsigned build
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.mirro2.app"  # Correct bundle ID
+      node: 18
+      xcode: latest
+      cocoapods: default
+    
+    cache:
+      cache_paths:
+        - $HOME/.yarn
+        - node_modules
+    
+    scripts:
+      - name: Install dependencies
+        script: |
+          yarn install
+          
+      - name: Build Next.js app
+        script: |
+          yarn build
+          
+      - name: Capacitor sync
+        script: |
+          npx cap sync ios
+          
+      - name: Set up keychain
+        script: |
+          keychain initialize
+          
+      - name: Build unsigned ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags="-allowProvisioningUpdates CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+    
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    
+    publishing:
+      email:
+        recipients:
+          - agentverse884@gmail.com
+        notify:
+          success: true
+          failure: true
