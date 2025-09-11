@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast"
 import { TypingAnimation } from "@/components/typing-animation"
 
-interface Invite {
+interface Event {
   id: string
   title: string
   description: string
@@ -25,10 +25,13 @@ interface Invite {
   createdBy: string
   createdByUsername: string
   shareUrl: string
+  hasJoined: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export default function EventsPage() {
-  const [invites, setInvites] = useState<Invite[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [formData, setFormData] = useState({
@@ -40,42 +43,43 @@ export default function EventsPage() {
     maxParticipants: "",
   })
 
-  // Mock data for development
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setInvites([
-        {
-          id: "1",
-          title: "Beach Volleyball",
-          description: "Let's play some beach volleyball this weekend! All skill levels welcome.",
-          location: "Santa Monica Beach",
-          date: "2024-03-15",
-          time: "10:00",
-          maxParticipants: 8,
-          currentParticipants: 3,
-          createdBy: "user1",
-          createdByUsername: "sarah_beach",
-          shareUrl: "https://app.com/events/invite/1"
-        },
-        {
-          id: "2",
-          title: "Coffee & Code",
-          description: "Working session at a cozy cafe. Bring your laptop and let's get productive together!",
-          location: "Blue Bottle Coffee, Downtown",
-          date: "2024-03-12",
-          time: "14:00",
-          currentParticipants: 2,
-          createdBy: "user2",
-          createdByUsername: "dev_mike",
-          shareUrl: "https://app.com/events/invite/2"
-        }
-      ])
+  // Load events from API
+  const loadEvents = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/events', {
+        method: 'GET',
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data.events || [])
+      } else {
+        console.error('Failed to load events:', response.status)
+        toast({
+          title: "Error",
+          description: "Failed to load events",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error loading events:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load events",
+        variant: "destructive",
+      })
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }
+
+  useEffect(() => {
+    loadEvents()
   }, [])
 
-  const handleCreateInvite = async (e: React.FormEvent) => {
+  const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.title || !formData.description || !formData.location || !formData.date || !formData.time) {
@@ -87,62 +91,143 @@ export default function EventsPage() {
       return
     }
 
-    // Create new invite
-    const newInvite: Invite = {
-      id: Date.now().toString(),
-      title: formData.title,
-      description: formData.description,
-      location: formData.location,
-      date: formData.date,
-      time: formData.time,
-      maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : undefined,
-      currentParticipants: 1,
-      createdBy: "current_user",
-      createdByUsername: "you",
-      shareUrl: `https://app.com/events/invite/${Date.now()}`
-    }
-
-    setInvites([newInvite, ...invites])
-    setIsCreateModalOpen(false)
-    setFormData({
-      title: "",
-      description: "",
-      location: "",
-      date: "",
-      time: "",
-      maxParticipants: "",
-    })
-
-    toast({
-      title: "Success",
-      description: "Your invite has been created!",
-    })
-  }
-
-  const handleJoinInvite = async (inviteId: string) => {
-    setInvites(invites.map(invite => 
-      invite.id === inviteId 
-        ? { ...invite, currentParticipants: invite.currentParticipants + 1 }
-        : invite
-    ))
-
-    toast({
-      title: "Joined!",
-      description: "You've successfully joined this event.",
-    })
-  }
-
-  const handleShareInvite = async (invite: Invite) => {
     try {
-      await navigator.clipboard.writeText(invite.shareUrl)
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          location: formData.location,
+          date: formData.date,
+          time: formData.time,
+          maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEvents([data.event, ...events])
+        setIsCreateModalOpen(false)
+        setFormData({
+          title: "",
+          description: "",
+          location: "",
+          date: "",
+          time: "",
+          maxParticipants: "",
+        })
+
+        toast({
+          title: "Success",
+          description: "Your event has been created!",
+        })
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to create event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error creating event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create event",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleJoinEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/join`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(events.map(event => 
+          event.id === eventId 
+            ? { ...event, currentParticipants: data.currentParticipants, hasJoined: true }
+            : event
+        ))
+
+        toast({
+          title: "Joined!",
+          description: "You've successfully joined this event.",
+        })
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to join event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error joining event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to join event",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleLeaveEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/join`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(events.map(event => 
+          event.id === eventId 
+            ? { ...event, currentParticipants: data.currentParticipants, hasJoined: false }
+            : event
+        ))
+
+        toast({
+          title: "Left event",
+          description: "You've left this event.",
+        })
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to leave event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error leaving event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to leave event",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleShareEvent = async (event: Event) => {
+    try {
+      await navigator.clipboard.writeText(event.shareUrl)
       toast({
         title: "Link copied!",
-        description: "The invite link has been copied to your clipboard.",
+        description: "The event link has been copied to your clipboard.",
       })
     } catch (err) {
       toast({
         title: "Share",
-        description: `Share this event: ${invite.title}`,
+        description: `Share this event: ${event.title}`,
       })
     }
   }
@@ -196,7 +281,7 @@ export default function EventsPage() {
             <DialogHeader>
               <DialogTitle>Create New Invite</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateInvite} className="space-y-4">
+            <form onSubmit={handleCreateEvent} className="space-y-4">
               <div>
                 <Label htmlFor="title">Event Title *</Label>
                 <Input
@@ -296,40 +381,40 @@ export default function EventsPage() {
 
       {/* Events Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {invites.map((invite) => (
-          <Card key={invite.id} className="bg-gray-900/50 backdrop-blur-sm border-gray-700/50 text-white hover:bg-gray-900/70 transition-colors">
+        {events.map((event) => (
+          <Card key={event.id} className="bg-gray-900/50 backdrop-blur-sm border-gray-700/50 text-white hover:bg-gray-900/70 transition-colors">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-white">{invite.title}</CardTitle>
+              <CardTitle className="text-lg text-white">{event.title}</CardTitle>
               <div className="flex items-center gap-1 text-sm text-gray-400">
                 <span>by</span>
-                <span className="font-medium text-blue-400">@{invite.createdByUsername}</span>
+                <span className="font-medium text-blue-400">@{event.createdByUsername}</span>
               </div>
             </CardHeader>
             
             <CardContent className="space-y-3">
-              <p className="text-gray-300 text-sm leading-relaxed">{invite.description}</p>
+              <p className="text-gray-300 text-sm leading-relaxed">{event.description}</p>
               
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-gray-400">
                   <MapPin className="h-4 w-4" />
-                  <span>{invite.location}</span>
+                  <span>{event.location}</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-400">
                   <Calendar className="h-4 w-4" />
-                  <span>{formatDate(invite.date)}</span>
+                  <span>{formatDate(event.date)}</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-400">
                   <Clock className="h-4 w-4" />
-                  <span>{formatTime(invite.time)}</span>
+                  <span>{formatTime(event.time)}</span>
                 </div>
                 
                 <div className="flex items-center gap-2 text-gray-400">
                   <Users className="h-4 w-4" />
                   <span>
-                    {invite.currentParticipants}
-                    {invite.maxParticipants && ` / ${invite.maxParticipants}`} 
+                    {event.currentParticipants}
+                    {event.maxParticipants && ` / ${event.maxParticipants}`} 
                     {" "}participants
                   </span>
                 </div>
@@ -338,16 +423,25 @@ export default function EventsPage() {
             
             <CardFooter className="pt-4 gap-2">
               <Button
-                onClick={() => handleJoinInvite(invite.id)}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={invite.maxParticipants ? invite.currentParticipants >= invite.maxParticipants : false}
+                onClick={() => event.hasJoined ? handleLeaveEvent(event.id) : handleJoinEvent(event.id)}
+                className={`flex-1 text-white ${
+                  event.hasJoined 
+                    ? "bg-red-600 hover:bg-red-700" 
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+                disabled={!event.hasJoined && event.maxParticipants ? event.currentParticipants >= event.maxParticipants : false}
               >
-                {invite.maxParticipants && invite.currentParticipants >= invite.maxParticipants ? "Full" : "Join"}
+                {!event.hasJoined && event.maxParticipants && event.currentParticipants >= event.maxParticipants 
+                  ? "Full" 
+                  : event.hasJoined 
+                    ? "Leave" 
+                    : "Join"
+                }
               </Button>
               
               <Button
                 variant="outline"
-                onClick={() => handleShareInvite(invite)}
+                onClick={() => handleShareEvent(event)}
                 className="border-gray-600 text-gray-300 hover:bg-gray-800"
               >
                 <Share2 className="h-4 w-4" />
@@ -357,10 +451,10 @@ export default function EventsPage() {
         ))}
       </div>
 
-      {invites.length === 0 && (
+      {events.length === 0 && !loading && (
         <div className="text-center py-16">
           <div className="text-gray-400 mb-2">No events yet</div>
-          <p className="text-sm text-gray-500">Create your first invite to get started!</p>
+          <p className="text-sm text-gray-500">Create your first event to get started!</p>
         </div>
       )}
     </div>

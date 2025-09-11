@@ -481,6 +481,37 @@ export const groupStoryViewsTable = pgTable("group_story_views", {
   viewedAt: timestamp("viewed_at").defaultNow().notNull(),
 })
 
+// Events (NEW TABLE)
+export const eventsTable = pgTable("events", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  location: varchar("location", { length: 300 }).notNull(),
+  eventDate: date("event_date").notNull(),
+  eventTime: varchar("event_time", { length: 10 }).notNull(), // Format: "HH:MM"
+  maxParticipants: integer("max_participants"), // null = unlimited
+  currentParticipants: integer("current_participants").notNull().default(1), // Creator is first participant
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => usersTable.id),
+  shareToken: varchar("share_token", { length: 64 }).unique().notNull(), // For sharing events via link
+  isActive: integer("is_active").notNull().default(1), // 0 = cancelled, 1 = active
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+})
+
+// Event Participants (NEW TABLE)
+export const eventParticipantsTable = pgTable("event_participants", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  eventId: integer("event_id")
+    .notNull()
+    .references(() => eventsTable.id),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+})
+
 // Notifications (ENHANCED TABLE)
 export const notificationsTable = pgTable("notifications", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -489,7 +520,7 @@ export const notificationsTable = pgTable("notifications", {
     .references(() => usersTable.id), // The user who receives the notification
   fromUserId: uuid("from_user_id")
     .references(() => usersTable.id), // The user who triggered the notification (optional)
-  type: varchar("type", { length: 50 }).notNull(), // "invite_accepted", "invite_request", "group_invite", etc.
+  type: varchar("type", { length: 50 }).notNull(), // "invite_accepted", "invite_request", "group_invite", "event_join", etc.
   title: varchar("title", { length: 200 }).notNull(),
   message: text().notNull(),
   data: text("data"), // JSON data for additional notification context
