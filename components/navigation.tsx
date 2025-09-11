@@ -61,7 +61,7 @@ export function Navigation() {
   return (
     <>
       {/* Desktop navigation (side) - FORCE HIDE on mobile */}
-      <div className="fixed left-0 top-0 z-50 hidden lg:flex lg:flex-col lg:items-center lg:justify-between lg:py-6 h-screen w-16 border-r border-gray-800 bg-black max-lg:!hidden">
+      <div className="fixed left-0 top-0 z-50 hidden lg:flex lg:flex-col lg:items-center lg:justify-between lg:py-6 h-screen w-16 border-r border-white/10 bg-black max-lg:!hidden">
         <Link href="/feed" className="flex items-center justify-center">
           <Logo size="md" />
         </Link>
@@ -71,12 +71,12 @@ export function Navigation() {
               key={route.href}
               href={route.href}
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/10",
-                route.active && "bg-white/20",
+                "flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/5 border border-transparent hover:border-white/20",
+                route.active && "bg-white border-white/30",
               )}
               aria-label={route.label}
             >
-              <route.icon className={cn("h-5 w-5", route.active ? "text-white" : "text-gray-400")} />
+              <route.icon className={cn("h-5 w-5", route.active ? "text-black" : "text-white/70")} />
               <span className="sr-only">{route.label}</span>
             </Link>
           ))}
@@ -84,10 +84,10 @@ export function Navigation() {
           {/* Create Video Button */}
           <Link
             href="/create-video"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20"
             aria-label="Create Video"
           >
-            <Plus className="h-5 w-5 text-white" />
+            <Plus className="h-5 w-5 text-black" />
             <span className="sr-only">Create</span>
           </Link>
           
@@ -96,12 +96,12 @@ export function Navigation() {
               key={route.href}
               href={route.href}
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/10 relative",
-                route.active && "bg-white/20",
+                "flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-white/5 border border-transparent hover:border-white/20 relative",
+                route.active && "bg-white border-white/30",
               )}
               aria-label={route.label}
             >
-              <route.icon className={cn("h-5 w-5", route.active ? "text-white" : "text-gray-400")} />
+              <route.icon className={cn("h-5 w-5", route.active ? "text-black" : "text-white/70")} />
               <span className="sr-only">{route.label}</span>
               {route.href === "/inbox" && <MessageBadge />}
             </Link>
@@ -111,7 +111,7 @@ export function Navigation() {
       </div>
 
       {/* Mobile navigation (bottom) */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-800 bg-black pb-safe-bottom md:hidden">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black pb-safe-bottom md:hidden">
         <div className="flex h-16 items-center justify-around px-2">
           {routes.slice(0, 2).map((route) => (
             <Link
@@ -119,16 +119,16 @@ export function Navigation() {
               href={route.href}
               className={cn(
                 "flex flex-col items-center justify-center rounded-full p-2 transition-colors",
-                route.active ? "text-white" : "text-gray-400",
+                route.active ? "text-white" : "text-white/70",
               )}
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-full",
-                  route.active && "bg-white/20",
+                  "flex h-10 w-10 items-center justify-center rounded-full border border-transparent",
+                  route.active && "bg-white border-white/30",
                 )}
               >
-                <route.icon className="h-5 w-5" />
+                <route.icon className={cn("h-5 w-5", route.active ? "text-black" : "text-white/70")} />
               </div>
               <span className="mt-0.5 text-[10px] font-medium">{route.label}</span>
             </Link>
@@ -139,8 +139,8 @@ export function Navigation() {
             href="/create-video"
             className="flex flex-col items-center justify-center p-2"
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all transform hover:scale-105 shadow-lg">
-              <Plus className="h-6 w-6 text-white" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20">
+              <Plus className="h-6 w-6 text-black" />
             </div>
             <span className="mt-0.5 text-[10px] font-medium text-white">Create</span>
           </Link>
@@ -151,16 +151,16 @@ export function Navigation() {
               href={route.href}
               className={cn(
                 "flex flex-col items-center justify-center rounded-full p-2 transition-colors",
-                route.active ? "text-white" : "text-gray-400",
+                route.active ? "text-white" : "text-white/70",
               )}
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-full relative",
-                  route.active && "bg-white/20",
+                  "flex h-10 w-10 items-center justify-center rounded-full relative border border-transparent",
+                  route.active && "bg-white border-white/30",
                 )}
               >
-                <route.icon className="h-5 w-5" />
+                <route.icon className={cn("h-5 w-5", route.active ? "text-black" : "text-white/70")} />
                 {route.href === "/inbox" && <MessageBadge />}
               </div>
               <span className="mt-0.5 text-[10px] font-medium">{route.label}</span>
