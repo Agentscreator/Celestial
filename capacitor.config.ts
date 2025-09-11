@@ -29,7 +29,6 @@ const config: CapacitorConfig = {
       splashImmersive: true
     },
     App: {
-      initialPath: "/login"
     },
     // Apple Watch specific configurations
     Device: {
@@ -39,13 +38,9 @@ const config: CapacitorConfig = {
       watchHaptics: true
     }
   },
-  // Apple Watch specific settings
+  // iOS specific settings
   ios: {
-    scheme: "MirroSocial",
-    watchApp: {
-      bundleId: "com.mirro2.app.watchkitapp",
-      displayName: "Mirro Watch"
-    }
+    scheme: "MirroSocial"
   }
 };
 
