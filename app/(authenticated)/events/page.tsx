@@ -10,6 +10,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "@/hooks/use-toast"
 import { TypingAnimation } from "@/components/typing-animation"
 import { EventsCalendar } from "@/components/events-calendar"
@@ -27,6 +28,9 @@ interface Event {
   createdByUsername: string
   shareUrl: string
   hasJoined: boolean
+  isInvite?: boolean
+  inviteDescription?: string
+  groupName?: string
   createdAt: string
   updatedAt: string
 }
@@ -43,6 +47,22 @@ export default function EventsPage() {
     time: "",
     maxParticipants: "",
   })
+  
+  // Community invitation state
+  const [enableInvites, setEnableInvites] = useState(true)
+  const [inviteDescription, setInviteDescription] = useState('')
+  const [communityName, setCommunityName] = useState('')
+
+  const generateCommunityName = () => {
+    if (formData.title.trim()) {
+      // Extract first few words from title
+      const words = formData.title.trim().split(' ').slice(0, 3)
+      const generatedName = words.join(' ') + ' Community'
+      setCommunityName(generatedName)
+    } else {
+      setCommunityName('My Event Community')
+    }
+  }
 
   // Load events from API
   const loadEvents = async () => {
@@ -92,6 +112,24 @@ export default function EventsPage() {
       return
     }
 
+    if (enableInvites && !inviteDescription.trim()) {
+      toast({
+        title: "Invite description required",
+        description: "Please describe what you're inviting people to do",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (enableInvites && !communityName.trim()) {
+      toast({
+        title: "Community name required",
+        description: "Please provide a name for your community",
+        variant: "destructive",
+      })
+      return
+    }
+
     try {
       const response = await fetch('/api/events', {
         method: 'POST',
@@ -106,6 +144,9 @@ export default function EventsPage() {
           date: formData.date,
           time: formData.time,
           maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null,
+          isInvite: enableInvites,
+          inviteDescription: enableInvites ? inviteDescription.trim() : null,
+          groupName: enableInvites && communityName.trim() ? communityName.trim() : null,
         }),
       })
 
@@ -121,10 +162,15 @@ export default function EventsPage() {
           time: "",
           maxParticipants: "",
         })
+        setEnableInvites(true)
+        setInviteDescription('')
+        setCommunityName('')
 
         toast({
           title: "Success",
-          description: "Your event has been created!",
+          description: enableInvites 
+            ? "Your event and community have been created!" 
+            : "Your event has been created!",
         })
       } else {
         const errorData = await response.json()
@@ -281,7 +327,7 @@ export default function EventsPage() {
                 Create Event
               </Button>
             </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
+          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Event</DialogTitle>
             </DialogHeader>
@@ -361,6 +407,64 @@ export default function EventsPage() {
                   min="2"
                 />
               </div>
+
+              {/* Community Invitation Settings */}
+              <div className="space-y-4 pt-4 border-t border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Enable Community</Label>
+                    <p className="text-sm text-gray-400">Create a community chat for event participants</p>
+                  </div>
+                  <Switch
+                    checked={enableInvites}
+                    onCheckedChange={setEnableInvites}
+                  />
+                </div>
+
+                {enableInvites && (
+                  <div className="space-y-4 pt-4 border-t border-gray-700">
+                    <div>
+                      <Label className="text-sm font-medium">What are you inviting people to do?</Label>
+                      <Textarea
+                        placeholder="e.g., Join me for a coffee meetup, Come hiking with me, Let's play basketball..."
+                        value={inviteDescription}
+                        onChange={(e) => setInviteDescription(e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white mt-2"
+                        maxLength={200}
+                        rows={2}
+                      />
+                      <div className="text-right text-sm text-gray-400 mt-1">
+                        {inviteDescription.length}/200
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-sm font-medium">Community Name</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={generateCommunityName}
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                        >
+                          Generate
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Name your community..."
+                        value={communityName}
+                        onChange={(e) => setCommunityName(e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white"
+                        maxLength={50}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        People who join will be added to this community chat
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <div className="flex gap-3 pt-4">
                 <Button 
@@ -389,7 +493,14 @@ export default function EventsPage() {
         {events.map((event) => (
           <Card key={event.id} className="bg-gray-900/50 backdrop-blur-sm border-gray-700/50 text-white hover:bg-gray-900/70 transition-colors">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-white">{event.title}</CardTitle>
+              <CardTitle className="text-lg text-white flex items-center gap-2">
+                {event.title}
+                {event.isInvite && (
+                  <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
+                    Community
+                  </span>
+                )}
+              </CardTitle>
               <div className="flex items-center gap-1 text-sm text-gray-400">
                 <span>by</span>
                 <span className="font-medium text-blue-400">@{event.createdByUsername}</span>
@@ -398,6 +509,18 @@ export default function EventsPage() {
             
             <CardContent className="space-y-3">
               <p className="text-gray-300 text-sm leading-relaxed">{event.description}</p>
+              
+              {event.isInvite && event.inviteDescription && (
+                <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-3">
+                  <p className="text-blue-200 text-sm font-medium mb-1">What you're invited to do:</p>
+                  <p className="text-blue-100 text-sm">{event.inviteDescription}</p>
+                  {event.groupName && (
+                    <p className="text-blue-300 text-xs mt-2">
+                      Join "{event.groupName}" community chat
+                    </p>
+                  )}
+                </div>
+              )}
               
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-gray-400">

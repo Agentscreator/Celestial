@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, eventParticipantsTable } from "@/src/db/schema"
+import { eventsTable, eventParticipantsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
 import { eq, and } from "drizzle-orm"
 
 // POST - Join an event
@@ -67,6 +67,46 @@ export async function POST(
       .update(eventsTable)
       .set({ currentParticipants: event.currentParticipants + 1 })
       .where(eq(eventsTable.id, eventId))
+
+    // If event has a community, add user to the group
+    if (event.isInvite === 1 && event.groupName) {
+      // Find the group associated with this event creator and name
+      const [group] = await db
+        .select()
+        .from(groupsTable)
+        .where(
+          and(
+            eq(groupsTable.createdBy, event.createdBy),
+            eq(groupsTable.name, event.groupName)
+          )
+        )
+        .limit(1)
+
+      if (group) {
+        // Check if user is already a group member
+        const [existingMembership] = await db
+          .select()
+          .from(groupMembersTable)
+          .where(
+            and(
+              eq(groupMembersTable.groupId, group.id),
+              eq(groupMembersTable.userId, session.user.id)
+            )
+          )
+          .limit(1)
+
+        // Add to group if not already a member
+        if (!existingMembership) {
+          await db
+            .insert(groupMembersTable)
+            .values({
+              groupId: group.id,
+              userId: session.user.id,
+              role: 'member',
+            })
+        }
+      }
+    }
 
     return NextResponse.json({ 
       message: "Successfully joined event",
@@ -137,6 +177,33 @@ export async function DELETE(
       .update(eventsTable)
       .set({ currentParticipants: Math.max(0, event.currentParticipants - 1) })
       .where(eq(eventsTable.id, eventId))
+
+    // If event has a community, remove user from the group (but keep creator as admin)
+    if (event.isInvite === 1 && event.groupName && event.createdBy !== session.user.id) {
+      // Find the group associated with this event
+      const [group] = await db
+        .select()
+        .from(groupsTable)
+        .where(
+          and(
+            eq(groupsTable.createdBy, event.createdBy),
+            eq(groupsTable.name, event.groupName)
+          )
+        )
+        .limit(1)
+
+      if (group) {
+        // Remove from group (only if not the creator)
+        await db
+          .delete(groupMembersTable)
+          .where(
+            and(
+              eq(groupMembersTable.groupId, group.id),
+              eq(groupMembersTable.userId, session.user.id)
+            )
+          )
+      }
+    }
 
     return NextResponse.json({ 
       message: "Successfully left event",

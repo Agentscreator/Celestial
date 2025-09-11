@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, usersTable, eventParticipantsTable } from "@/src/db/schema"
+import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
 import { desc, eq, count, and, gte } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
         createdBy: eventsTable.createdBy,
         shareToken: eventsTable.shareToken,
         isActive: eventsTable.isActive,
+        isInvite: eventsTable.isInvite,
+        inviteDescription: eventsTable.inviteDescription,
+        groupName: eventsTable.groupName,
         createdAt: eventsTable.createdAt,
         updatedAt: eventsTable.updatedAt,
         creator: {
@@ -69,6 +72,9 @@ export async function GET(request: NextRequest) {
           createdByUsername: event.creator?.username || "Unknown User",
           shareUrl: `${process.env.NEXTAUTH_URL}/events/invite/${event.shareToken}`,
           hasJoined: userParticipation !== undefined,
+          isInvite: event.isInvite === 1,
+          inviteDescription: event.inviteDescription,
+          groupName: event.groupName,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
         }
@@ -92,13 +98,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, location, date, time, maxParticipants } = body
+    const { title, description, location, date, time, maxParticipants, isInvite, inviteDescription, groupName } = body
 
     // Validation
     if (!title?.trim() || !description?.trim() || !location?.trim() || !date || !time) {
       return NextResponse.json({ 
         error: "Title, description, location, date, and time are required" 
       }, { status: 400 })
+    }
+
+    // Validate community fields if enabled
+    if (isInvite) {
+      if (!inviteDescription?.trim()) {
+        return NextResponse.json({ 
+          error: "Invite description is required when creating a community" 
+        }, { status: 400 })
+      }
+      if (!groupName?.trim()) {
+        return NextResponse.json({ 
+          error: "Community name is required when creating a community" 
+        }, { status: 400 })
+      }
     }
 
     // Validate date is not in the past
@@ -129,6 +149,9 @@ export async function POST(request: NextRequest) {
         createdBy: session.user.id,
         shareToken,
         isActive: 1,
+        isInvite: isInvite ? 1 : 0,
+        inviteDescription: isInvite ? inviteDescription?.trim() : null,
+        groupName: isInvite ? groupName?.trim() : null,
       })
       .returning()
 
@@ -139,6 +162,32 @@ export async function POST(request: NextRequest) {
         eventId: newEvent.id,
         userId: session.user.id,
       })
+
+    // Create community group if enabled
+    let groupId = null
+    if (isInvite && groupName?.trim()) {
+      const [newGroup] = await db
+        .insert(groupsTable)
+        .values({
+          name: groupName.trim(),
+          description: `Community for ${title.trim()}`,
+          createdBy: session.user.id,
+          isActive: 1,
+          maxMembers: maxParticipants || null, // Use same limit as event
+        })
+        .returning()
+
+      groupId = newGroup.id
+
+      // Add creator as group admin
+      await db
+        .insert(groupMembersTable)
+        .values({
+          groupId: newGroup.id,
+          userId: session.user.id,
+          role: 'admin',
+        })
+    }
 
     // Fetch creator info for response
     const [creator] = await db
@@ -164,6 +213,10 @@ export async function POST(request: NextRequest) {
       createdByUsername: creator?.username || "Unknown User",
       shareUrl: `${process.env.NEXTAUTH_URL}/events/invite/${newEvent.shareToken}`,
       hasJoined: true, // Creator has joined by default
+      isInvite: newEvent.isInvite === 1,
+      inviteDescription: newEvent.inviteDescription,
+      groupName: newEvent.groupName,
+      groupId: groupId,
       createdAt: newEvent.createdAt,
       updatedAt: newEvent.updatedAt,
     }

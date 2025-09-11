@@ -496,6 +496,10 @@ export const eventsTable = pgTable("events", {
     .references(() => usersTable.id),
   shareToken: varchar("share_token", { length: 64 }).unique().notNull(), // For sharing events via link
   isActive: integer("is_active").notNull().default(1), // 0 = cancelled, 1 = active
+  // Community invitation fields
+  isInvite: integer("is_invite").notNull().default(0), // 0 = no community, 1 = has community
+  inviteDescription: text("invite_description"), // What the user is inviting people to do
+  groupName: varchar("group_name", { length: 100 }), // Name for auto-created community
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
