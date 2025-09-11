@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
   // Web users can visit the landing page normally
 
   // Protected routes - require authentication
-  const protectedPaths = ['/feed', '/discover', '/messages', '/profile', '/albums', '/settings']
+  const protectedPaths = ['/feed', '/discover', '/inbox', '/profile', '/albums', '/settings']
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   )
