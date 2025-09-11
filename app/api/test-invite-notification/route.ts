@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
           test: true,
           timestamp: new Date().toISOString(),
         }),
-        actionUrl: "/messages",
+        actionUrl: "/inbox",
       })
       .returning()
 

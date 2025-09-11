@@ -765,7 +765,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error creating channel:", error)
-      router.push(`/messages/${user.id}`)
+      router.push(`/inbox/${user.id}`)
     }
   }
 

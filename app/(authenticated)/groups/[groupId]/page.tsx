@@ -91,7 +91,7 @@ export default function GroupChatPage() {
           description: "You don't have access to this group",
           variant: "destructive",
         })
-        router.push('/messages')
+        router.push('/inbox')
       } else {
         throw new Error('Failed to fetch group')
       }
@@ -298,7 +298,7 @@ export default function GroupChatPage() {
       <div className="flex flex-col items-center justify-center min-h-screen px-4">
         <h2 className="text-xl font-semibold text-white mb-2">Group not found</h2>
         <p className="text-gray-400 mb-4">This group doesn't exist or you don't have access.</p>
-        <Button onClick={() => router.push('/messages')}>
+        <Button onClick={() => router.push('/inbox')}>
           Back to Messages
         </Button>
       </div>
