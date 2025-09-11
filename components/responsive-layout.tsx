@@ -21,7 +21,7 @@ export function ResponsiveLayout({ children, className }: ResponsiveLayoutProps)
     switch (pathname) {
       case "/feed":
         return <WatchFeed />
-      case "/messages":
+      case "/inbox":
         return <WatchMessages />
       default:
         return (

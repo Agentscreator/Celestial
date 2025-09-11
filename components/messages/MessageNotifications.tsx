@@ -45,7 +45,7 @@ export function MessageNotifications() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push(`/messages/${conv.userId}`)}
+                    onClick={() => router.push(`/inbox/${conv.userId}`)}
                   >
                     Reply
                   </Button>

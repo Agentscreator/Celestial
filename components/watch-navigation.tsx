@@ -26,10 +26,10 @@ export function WatchNavigation() {
       active: pathname === "/events",
     },
     {
-      href: "/messages",
+      href: "/inbox",
       icon: MessageSquare,
       label: "Messages",
-      active: pathname === "/messages",
+      active: pathname === "/inbox",
     },
     {
       href: "/profile",
@@ -82,7 +82,7 @@ export function WatchNavigation() {
             aria-label={route.label}
           >
             <route.icon className="watch-nav-icon" />
-            {route.href === "/messages" && (
+            {route.href === "/inbox" && (
               <div className="watch-badge">
                 <MessageBadge />
               </div>
