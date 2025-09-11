@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/hooks/use-toast"
 import { TypingAnimation } from "@/components/typing-animation"
+import { EventsCalendar } from "@/components/events-calendar"
 
 interface Event {
   id: string
@@ -270,16 +271,19 @@ export default function EventsPage() {
           <p className="text-gray-400 mt-1">Create and discover amazing experiences</p>
         </div>
         
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invite
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-3">
+          <EventsCalendar events={events} />
+          
+          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </Button>
+            </DialogTrigger>
           <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
             <DialogHeader>
-              <DialogTitle>Create New Invite</DialogTitle>
+              <DialogTitle>Create New Event</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <div>

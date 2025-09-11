@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Search, User, MessageSquare, Plus } from "lucide-react"
+import { Home, Search, User, MessageSquare, Plus, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 import { NewPostCreator } from "@/components/new-post/NewPostCreator"
@@ -21,7 +21,7 @@ export function WatchNavigation() {
     },
     {
       href: "/events",
-      icon: Search,
+      icon: Calendar,
       label: "Events",
       active: pathname === "/events",
     },
