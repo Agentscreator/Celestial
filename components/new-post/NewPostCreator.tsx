@@ -76,11 +76,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      // Validate file type - only videos allowed
+      if (!file.type.startsWith('video/')) {
         toast({
           title: "Invalid file type",
-          description: "Please select an image or video file",
+          description: "Please select a video file",
           variant: "destructive",
         })
         return
@@ -419,19 +419,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               <div className="w-full h-full flex flex-col items-center justify-center">
                 {previewUrl ? (
                   <div className="relative w-full h-full flex items-center justify-center">
-                    {selectedFile?.type.startsWith('video/') ? (
-                      <video
-                        src={previewUrl}
-                        className="max-w-full max-h-full object-contain"
-                        controls
-                      />
-                    ) : (
-                      <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    )}
+                    <video
+                      src={previewUrl}
+                      className="max-w-full max-h-full object-contain"
+                      controls
+                    />
                     
                     <Button
                       variant="destructive"
@@ -447,9 +439,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-6 mx-auto">
                       <Upload className="w-12 h-12 text-white" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Select Media</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2">Select Video</h2>
                     <p className="text-white/70 mb-8 max-w-md">
-                      Choose a photo or video from your device
+                      Choose a video from your device
                     </p>
                     <Button
                       onClick={() => fileInputRef.current?.click()}
@@ -461,7 +453,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*,video/*"
+                      accept="video/*"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
