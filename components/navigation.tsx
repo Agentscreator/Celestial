@@ -23,10 +23,10 @@ export function Navigation() {
       active: pathname === "/feed",
     },    
     {
-      href: "/discover",
+      href: "/events",
       icon: Search,
-      label: "Discover",
-      active: pathname === "/discover",
+      label: "Events",
+      active: pathname === "/events",
     },
     {
       href: "/inbox",
