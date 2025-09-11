@@ -375,12 +375,13 @@ export default function EventsPage() {
                   type="submit" 
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  Create Invite
+                  Create Event
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Events Grid */}
