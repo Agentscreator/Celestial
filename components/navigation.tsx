@@ -81,15 +81,15 @@ export function Navigation() {
             </Link>
           ))}
           
-          {/* Create Video Button */}
-          <Link
-            href="/create-video"
+          {/* Create Post Button */}
+          <button
+            onClick={() => setIsCreatePostOpen(true)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20"
-            aria-label="Create Video"
+            aria-label="Create Post"
           >
             <Plus className="h-5 w-5 text-black" />
             <span className="sr-only">Create</span>
-          </Link>
+          </button>
           
           {routes.slice(2).map((route) => (
             <Link
@@ -134,16 +134,16 @@ export function Navigation() {
             </Link>
           ))}
           
-          {/* Create Video Button */}
-          <Link
-            href="/create-video"
+          {/* Create Post Button */}
+          <button
+            onClick={() => setIsCreatePostOpen(true)}
             className="flex flex-col items-center justify-center p-2"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20">
               <Plus className="h-6 w-6 text-black" />
             </div>
             <span className="mt-0.5 text-[10px] font-medium text-white">Create</span>
-          </Link>
+          </button>
           
           {routes.slice(2).map((route) => (
             <Link

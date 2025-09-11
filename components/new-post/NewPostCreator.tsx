@@ -171,10 +171,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Create post
   const handleCreatePost = async () => {
-    if (!caption.trim() && !selectedFile) {
+    if (!caption.trim()) {
       toast({
-        title: "Content required",
-        description: "Please add some text or upload a file",
+        title: "Description required",
+        description: "Please add a description for your post",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!selectedFile) {
+      toast({
+        title: "Media required",
+        description: "Please record a video or upload a file",
         variant: "destructive",
       })
       return
@@ -185,10 +194,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     try {
       const formData = new FormData()
       formData.append('content', caption.trim())
-      
-      if (selectedFile) {
-        formData.append('media', selectedFile)
-      }
+      formData.append('media', selectedFile)
+      formData.append('isInvite', 'false')
 
       const response = await fetch('/api/posts', {
         method: 'POST',
@@ -213,7 +220,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         onClose()
         
         // Refresh feed
-        window.dispatchEvent(new CustomEvent('feedRefresh'))
+        window.dispatchEvent(new CustomEvent('postCreated'))
       } else {
         const error = await response.json()
         throw new Error(error.error || 'Failed to create post')
@@ -323,7 +330,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
           <Button
             onClick={handleCreatePost}
-            disabled={isUploading || (!caption.trim() && !selectedFile)}
+            disabled={isUploading || !caption.trim() || !selectedFile}
             className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6"
           >
             {isUploading ? (
