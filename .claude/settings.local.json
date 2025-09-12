@@ -24,7 +24,9 @@
       "Bash(git commit:*)",
       "Bash(xcode-select:*)",
       "Bash(npx vercel:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Bash(psql:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": []
   }

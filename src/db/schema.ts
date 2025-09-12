@@ -481,7 +481,27 @@ export const groupStoryViewsTable = pgTable("group_story_views", {
   viewedAt: timestamp("viewed_at").defaultNow().notNull(),
 })
 
-// Events (NEW TABLE)
+// Event Themes (NEW TABLE)
+export const eventThemesTable = pgTable("event_themes", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
+  description: text("description"),
+  primaryColor: varchar("primary_color", { length: 7 }).notNull(), // Hex color
+  secondaryColor: varchar("secondary_color", { length: 7 }).notNull(),
+  accentColor: varchar("accent_color", { length: 7 }).notNull(),
+  textColor: varchar("text_color", { length: 7 }).notNull(),
+  backgroundGradient: text("background_gradient"), // CSS gradient string
+  fontFamily: varchar("font_family", { length: 100 }).notNull(),
+  fontWeight: varchar("font_weight", { length: 20 }).notNull().default("400"),
+  borderRadius: integer("border_radius").notNull().default(8), // px
+  shadowIntensity: varchar("shadow_intensity", { length: 20 }).notNull().default("medium"),
+  category: varchar("category", { length: 50 }).notNull(), // business, party, sports, etc.
+  isActive: integer("is_active").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+// Events (ENHANCED TABLE with theme support)
 export const eventsTable = pgTable("events", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 200 }).notNull(),
@@ -500,6 +520,10 @@ export const eventsTable = pgTable("events", {
   isInvite: integer("is_invite").notNull().default(0), // 0 = no community, 1 = has community
   inviteDescription: text("invite_description"), // What the user is inviting people to do
   groupName: varchar("group_name", { length: 100 }), // Name for auto-created community
+  // Theme fields
+  themeId: integer("theme_id").references(() => eventThemesTable.id), // null = default theme
+  customFlyerUrl: varchar("custom_flyer_url", { length: 500 }), // Generated or uploaded flyer
+  flyerData: text("flyer_data"), // JSON data for flyer customization
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

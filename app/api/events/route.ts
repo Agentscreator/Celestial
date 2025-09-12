@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
+import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable, eventThemesTable } from "@/src/db/schema"
 import { desc, eq, count, and, gte } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Fetch events with creator info and participant counts
+    // Fetch events with creator info, participant counts, and themes
     const eventsWithDetails = await db
       .select({
         id: eventsTable.id,
@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
         isInvite: eventsTable.isInvite,
         inviteDescription: eventsTable.inviteDescription,
         groupName: eventsTable.groupName,
+        themeId: eventsTable.themeId,
+        customFlyerUrl: eventsTable.customFlyerUrl,
+        flyerData: eventsTable.flyerData,
         createdAt: eventsTable.createdAt,
         updatedAt: eventsTable.updatedAt,
         creator: {
@@ -39,9 +42,26 @@ export async function GET(request: NextRequest) {
           nickname: usersTable.nickname,
           profileImage: usersTable.profileImage,
         },
+        theme: {
+          id: eventThemesTable.id,
+          name: eventThemesTable.name,
+          displayName: eventThemesTable.displayName,
+          description: eventThemesTable.description,
+          primaryColor: eventThemesTable.primaryColor,
+          secondaryColor: eventThemesTable.secondaryColor,
+          accentColor: eventThemesTable.accentColor,
+          textColor: eventThemesTable.textColor,
+          backgroundGradient: eventThemesTable.backgroundGradient,
+          fontFamily: eventThemesTable.fontFamily,
+          fontWeight: eventThemesTable.fontWeight,
+          borderRadius: eventThemesTable.borderRadius,
+          shadowIntensity: eventThemesTable.shadowIntensity,
+          category: eventThemesTable.category,
+        },
       })
       .from(eventsTable)
       .leftJoin(usersTable, eq(eventsTable.createdBy, usersTable.id))
+      .leftJoin(eventThemesTable, eq(eventsTable.themeId, eventThemesTable.id))
       .where(eq(eventsTable.isActive, 1))
       .orderBy(desc(eventsTable.createdAt))
 
@@ -75,6 +95,10 @@ export async function GET(request: NextRequest) {
           isInvite: event.isInvite === 1,
           inviteDescription: event.inviteDescription,
           groupName: event.groupName,
+          themeId: event.themeId,
+          customFlyerUrl: event.customFlyerUrl,
+          flyerData: event.flyerData,
+          theme: event.theme.id ? event.theme : null,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
         }
@@ -98,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, location, date, time, maxParticipants, isInvite, inviteDescription, groupName } = body
+    const { title, description, location, date, time, maxParticipants, isInvite, inviteDescription, groupName, themeId } = body
 
     // Validation
     if (!title?.trim() || !description?.trim() || !location?.trim() || !date || !time) {
@@ -152,6 +176,7 @@ export async function POST(request: NextRequest) {
         isInvite: isInvite ? 1 : 0,
         inviteDescription: isInvite ? inviteDescription?.trim() : null,
         groupName: isInvite ? groupName?.trim() : null,
+        themeId: themeId || null,
       })
       .returning()
 
@@ -200,6 +225,17 @@ export async function POST(request: NextRequest) {
       .where(eq(usersTable.id, session.user.id))
       .limit(1)
 
+    // Fetch theme data if theme was selected
+    let eventTheme = null
+    if (newEvent.themeId) {
+      const [theme] = await db
+        .select()
+        .from(eventThemesTable)
+        .where(eq(eventThemesTable.id, newEvent.themeId))
+        .limit(1)
+      eventTheme = theme || null
+    }
+
     const responseEvent = {
       id: newEvent.id.toString(),
       title: newEvent.title,
@@ -216,6 +252,10 @@ export async function POST(request: NextRequest) {
       isInvite: newEvent.isInvite === 1,
       inviteDescription: newEvent.inviteDescription,
       groupName: newEvent.groupName,
+      themeId: newEvent.themeId,
+      customFlyerUrl: newEvent.customFlyerUrl,
+      flyerData: newEvent.flyerData,
+      theme: eventTheme,
       groupId: groupId,
       createdAt: newEvent.createdAt,
       updatedAt: newEvent.updatedAt,

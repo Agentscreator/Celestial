@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Providers } from "./providers"
 import { MobileAppConfig } from "@/components/mobile-app-config"
 import { AuthStatus } from "@/components/auth-status"
+import { getFontVariables } from "@/lib/fonts"
 import "./globals.css"
 import "../styles/watch.css"
 
@@ -30,7 +31,7 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body>
+      <body className={getFontVariables()}>
         <MobileAppConfig />
         <Providers>
           {children}

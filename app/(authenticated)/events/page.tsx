@@ -14,6 +14,9 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "@/hooks/use-toast"
 import { TypingAnimation } from "@/components/typing-animation"
 import { EventsCalendar } from "@/components/events-calendar"
+import { ThemeSelector, type EventTheme } from "@/components/events/ThemeSelector"
+import { ThemedEventCard } from "@/components/events/ThemedEventCard"
+import { FlyerGenerator } from "@/components/events/FlyerGenerator"
 
 interface Event {
   id: string
@@ -31,6 +34,10 @@ interface Event {
   isInvite?: boolean
   inviteDescription?: string
   groupName?: string
+  themeId?: number | null
+  customFlyerUrl?: string
+  flyerData?: string
+  theme?: EventTheme | null
   createdAt: string
   updatedAt: string
 }
@@ -52,6 +59,12 @@ export default function EventsPage() {
   const [enableInvites, setEnableInvites] = useState(true)
   const [inviteDescription, setInviteDescription] = useState('')
   const [communityName, setCommunityName] = useState('')
+
+  // Theme system state
+  const [themes, setThemes] = useState<EventTheme[]>([])
+  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null)
+  const [themesLoading, setThemesLoading] = useState(false)
+  const [showFlyerPreview, setShowFlyerPreview] = useState(false)
 
   const generateCommunityName = () => {
     if (formData.title.trim()) {
@@ -96,8 +109,31 @@ export default function EventsPage() {
     }
   }
 
+  // Load themes from API
+  const loadThemes = async () => {
+    try {
+      setThemesLoading(true)
+      const response = await fetch('/api/events/themes', {
+        method: 'GET',
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setThemes(data.themes || [])
+      } else {
+        console.error('Failed to load themes:', response.status)
+      }
+    } catch (error) {
+      console.error('Error loading themes:', error)
+    } finally {
+      setThemesLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadEvents()
+    loadThemes()
   }, [])
 
   const handleCreateEvent = async (e: React.FormEvent) => {
@@ -147,6 +183,7 @@ export default function EventsPage() {
           isInvite: enableInvites,
           inviteDescription: enableInvites ? inviteDescription.trim() : null,
           groupName: enableInvites && communityName.trim() ? communityName.trim() : null,
+          themeId: selectedThemeId,
         }),
       })
 
@@ -165,6 +202,7 @@ export default function EventsPage() {
         setEnableInvites(true)
         setInviteDescription('')
         setCommunityName('')
+        setSelectedThemeId(null)
 
         toast({
           title: "Success",
@@ -327,7 +365,7 @@ export default function EventsPage() {
                 Create Event
               </Button>
             </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Event</DialogTitle>
             </DialogHeader>
@@ -465,6 +503,51 @@ export default function EventsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Theme Selection */}
+              <div className="space-y-4 pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Theme Selector */}
+                  <div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {themesLoading ? (
+                        <div className="flex justify-center py-8">
+                          <TypingAnimation />
+                        </div>
+                      ) : (
+                        <ThemeSelector
+                          themes={themes}
+                          selectedThemeId={selectedThemeId}
+                          onThemeSelect={setSelectedThemeId}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Flyer Preview */}
+                  {formData.title && formData.location && formData.date && formData.time && (
+                    <div>
+                      <Label className="text-base font-medium mb-4 block">Event Flyer Preview</Label>
+                      <FlyerGenerator
+                        event={{
+                          title: formData.title,
+                          description: formData.description,
+                          location: formData.location,
+                          date: formData.date,
+                          time: formData.time,
+                          createdByUsername: "Preview"
+                        }}
+                        theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
+                        onPreview={() => setShowFlyerPreview(true)}
+                        onDownload={() => toast({
+                          title: "Download",
+                          description: "Flyer download will be available after event creation!",
+                        })}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
               
               <div className="flex gap-3 pt-4">
                 <Button 
@@ -491,91 +574,14 @@ export default function EventsPage() {
       {/* Events Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
-          <Card key={event.id} className="bg-gray-900/50 backdrop-blur-sm border-gray-700/50 text-white hover:bg-gray-900/70 transition-colors">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-white flex items-center gap-2">
-                {event.title}
-                {event.isInvite && (
-                  <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full">
-                    Community
-                  </span>
-                )}
-              </CardTitle>
-              <div className="flex items-center gap-1 text-sm text-gray-400">
-                <span>by</span>
-                <span className="font-medium text-blue-400">@{event.createdByUsername}</span>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-3">
-              <p className="text-gray-300 text-sm leading-relaxed">{event.description}</p>
-              
-              {event.isInvite && event.inviteDescription && (
-                <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-3">
-                  <p className="text-blue-200 text-sm font-medium mb-1">What you're invited to do:</p>
-                  <p className="text-blue-100 text-sm">{event.inviteDescription}</p>
-                  {event.groupName && (
-                    <p className="text-blue-300 text-xs mt-2">
-                      Join "{event.groupName}" community chat
-                    </p>
-                  )}
-                </div>
-              )}
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-400">
-                  <MapPin className="h-4 w-4" />
-                  <span>{event.location}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Calendar className="h-4 w-4" />
-                  <span>{formatDate(event.date)}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Clock className="h-4 w-4" />
-                  <span>{formatTime(event.time)}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-gray-400">
-                  <Users className="h-4 w-4" />
-                  <span>
-                    {event.currentParticipants}
-                    {event.maxParticipants && ` / ${event.maxParticipants}`} 
-                    {" "}participants
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-            
-            <CardFooter className="pt-4 gap-2">
-              <Button
-                onClick={() => event.hasJoined ? handleLeaveEvent(event.id) : handleJoinEvent(event.id)}
-                className={`flex-1 text-white ${
-                  event.hasJoined 
-                    ? "bg-red-600 hover:bg-red-700" 
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-                disabled={!event.hasJoined && event.maxParticipants ? event.currentParticipants >= event.maxParticipants : false}
-              >
-                {!event.hasJoined && event.maxParticipants && event.currentParticipants >= event.maxParticipants 
-                  ? "Full" 
-                  : event.hasJoined 
-                    ? "Leave" 
-                    : "Join"
-                }
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => handleShareEvent(event)}
-                className="border-gray-600 text-gray-300 hover:bg-gray-800"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
+          <ThemedEventCard
+            key={event.id}
+            event={event}
+            theme={event.theme}
+            onJoin={handleJoinEvent}
+            onLeave={handleLeaveEvent}
+            onShare={handleShareEvent}
+          />
         ))}
       </div>
 
