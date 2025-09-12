@@ -1,0 +1,46 @@
+[
+  {
+    "pkg": "@capacitor/app",
+    "classpath": "CAPAppPlugin"
+  },
+  {
+    "pkg": "@capacitor/camera",
+    "classpath": "CAPCameraPlugin"
+  },
+  {
+    "pkg": "@capacitor/device",
+    "classpath": "CAPDevicePlugin"
+  },
+  {
+    "pkg": "@capacitor/filesystem",
+    "classpath": "CAPFilesystemPlugin"
+  },
+  {
+    "pkg": "@capacitor/haptics",
+    "classpath": "CAPHapticsPlugin"
+  },
+  {
+    "pkg": "@capacitor/keyboard",
+    "classpath": "CAPKeyboardPlugin"
+  },
+  {
+    "pkg": "@capacitor/network",
+    "classpath": "CAPNetworkPlugin"
+  },
+  {
+    "pkg": "@capacitor/preferences",
+    "classpath": "CAPPreferencesPlugin"
+  },
+  {
+    "pkg": "@capacitor/share",
+    "classpath": "CAPSharePlugin"
+  },
+  {
+    "pkg": "@capacitor/splash-screen",
+    "classpath": "CAPSplashScreenPlugin"
+  },
+  {
+    "pkg": "@capacitor/status-bar",
+    "classpath": "CAPStatusBarPlugin"
+  }
+]
