@@ -26,7 +26,8 @@
       "Bash(npx vercel:*)",
       "Bash(npx drizzle-kit:*)",
       "Bash(psql:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(./gradlew:*)"
     ],
     "deny": []
   }

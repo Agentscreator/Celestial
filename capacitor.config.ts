@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     // Use environment variable for URL, fallback to production
-    url: process.env.CAPACITOR_SERVER_URL || 'https://celestial-rouge-one.vercel.app/',
+    url: process.env.CAPACITOR_SERVER_URL || 'https://celestial-rouge-one.vercel.app',
     cleartext: process.env.NODE_ENV === 'development'
   },
   android: {
