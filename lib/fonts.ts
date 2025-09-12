@@ -1,108 +1,139 @@
 // Google Fonts integration for dynamic font loading
 import { Inter, Roboto, Poppins, Montserrat, Open_Sans, Ubuntu, Raleway, Lora, Nunito, Oswald, Roboto_Condensed, Playfair_Display, Crimson_Text, Source_Sans_Pro, Orbitron } from 'next/font/google'
 
-// Define font configurations
+// Define font configurations at module scope
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const roboto = Roboto({ 
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-roboto',
+  display: 'swap',
+})
+
+const poppins = Poppins({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
+  display: 'swap',
+})
+
+const montserrat = Montserrat({ 
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
+})
+
+const openSans = Open_Sans({ 
+  subsets: ['latin'],
+  variable: '--font-open-sans',
+  display: 'swap',
+})
+
+const ubuntu = Ubuntu({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-ubuntu',
+  display: 'swap',
+})
+
+const raleway = Raleway({ 
+  subsets: ['latin'],
+  variable: '--font-raleway',
+  display: 'swap',
+})
+
+const lora = Lora({ 
+  subsets: ['latin'],
+  variable: '--font-lora',
+  display: 'swap',
+})
+
+const nunito = Nunito({ 
+  subsets: ['latin'],
+  variable: '--font-nunito',
+  display: 'swap',
+})
+
+const oswald = Oswald({ 
+  subsets: ['latin'],
+  variable: '--font-oswald',
+  display: 'swap',
+})
+
+const robotoCondensed = Roboto_Condensed({ 
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-roboto-condensed',
+  display: 'swap',
+})
+
+const playfairDisplay = Playfair_Display({ 
+  subsets: ['latin'],
+  variable: '--font-playfair-display',
+  display: 'swap',
+})
+
+const crimsonText = Crimson_Text({ 
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-crimson-text',
+  display: 'swap',
+})
+
+const sourceSansPro = Source_Sans_Pro({ 
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  variable: '--font-source-sans-pro',
+  display: 'swap',
+})
+
+const orbitron = Orbitron({ 
+  subsets: ['latin'],
+  variable: '--font-orbitron',
+  display: 'swap',
+})
+
+// Export fonts object
 export const fonts = {
-  inter: Inter({ 
-    subsets: ['latin'],
-    variable: '--font-inter',
-    display: 'swap',
-  }),
-  roboto: Roboto({ 
-    subsets: ['latin'],
-    weight: ['300', '400', '500', '700'],
-    variable: '--font-roboto',
-    display: 'swap',
-  }),
-  poppins: Poppins({ 
-    subsets: ['latin'],
-    weight: ['400', '500', '600', '700'],
-    variable: '--font-poppins',
-    display: 'swap',
-  }),
-  montserrat: Montserrat({ 
-    subsets: ['latin'],
-    variable: '--font-montserrat',
-    display: 'swap',
-  }),
-  'open-sans': Open_Sans({ 
-    subsets: ['latin'],
-    variable: '--font-open-sans',
-    display: 'swap',
-  }),
-  ubuntu: Ubuntu({ 
-    subsets: ['latin'],
-    weight: ['400', '500', '700'],
-    variable: '--font-ubuntu',
-    display: 'swap',
-  }),
-  raleway: Raleway({ 
-    subsets: ['latin'],
-    variable: '--font-raleway',
-    display: 'swap',
-  }),
-  lora: Lora({ 
-    subsets: ['latin'],
-    variable: '--font-lora',
-    display: 'swap',
-  }),
-  nunito: Nunito({ 
-    subsets: ['latin'],
-    variable: '--font-nunito',
-    display: 'swap',
-  }),
-  oswald: Oswald({ 
-    subsets: ['latin'],
-    variable: '--font-oswald',
-    display: 'swap',
-  }),
-  'roboto-condensed': Roboto_Condensed({ 
-    subsets: ['latin'],
-    weight: ['400', '700'],
-    variable: '--font-roboto-condensed',
-    display: 'swap',
-  }),
-  'playfair-display': Playfair_Display({ 
-    subsets: ['latin'],
-    variable: '--font-playfair-display',
-    display: 'swap',
-  }),
-  'crimson-text': Crimson_Text({ 
-    subsets: ['latin'],
-    weight: ['400', '600'],
-    variable: '--font-crimson-text',
-    display: 'swap',
-  }),
-  'source-sans-pro': Source_Sans_Pro({ 
-    subsets: ['latin'],
-    weight: ['400', '600'],
-    variable: '--font-source-sans-pro',
-    display: 'swap',
-  }),
-  orbitron: Orbitron({ 
-    subsets: ['latin'],
-    variable: '--font-orbitron',
-    display: 'swap',
-  }),
+  inter,
+  roboto,
+  poppins,
+  montserrat,
+  openSans,
+  ubuntu,
+  raleway,
+  lora,
+  nunito,
+  oswald,
+  robotoCondensed,
+  playfairDisplay,
+  crimsonText,
+  sourceSansPro,
+  orbitron,
 }
 
 // Font family mapping to CSS
 export const fontFamilyMap: Record<string, string> = {
-  'Inter': 'var(--font-inter)',
-  'Roboto': 'var(--font-roboto)',
-  'Poppins': 'var(--font-poppins)',
-  'Montserrat': 'var(--font-montserrat)',
-  'Open Sans': 'var(--font-open-sans)',
-  'Ubuntu': 'var(--font-ubuntu)',
-  'Raleway': 'var(--font-raleway)',
-  'Lora': 'var(--font-lora)',
-  'Nunito': 'var(--font-nunito)',
-  'Oswald': 'var(--font-oswald)',
-  'Roboto Condensed': 'var(--font-roboto-condensed)',
-  'Playfair Display': 'var(--font-playfair-display)',
-  'Crimson Text': 'var(--font-crimson-text)',
-  'Source Sans Pro': 'var(--font-source-sans-pro)',
-  'Orbitron': 'var(--font-orbitron)',
+  'Inter': inter.variable,
+  'Roboto': roboto.variable,
+  'Poppins': poppins.variable,
+  'Montserrat': montserrat.variable,
+  'Open Sans': openSans.variable,
+  'Ubuntu': ubuntu.variable,
+  'Raleway': raleway.variable,
+  'Lora': lora.variable,
+  'Nunito': nunito.variable,
+  'Oswald': oswald.variable,
+  'Roboto Condensed': robotoCondensed.variable,
+  'Playfair Display': playfairDisplay.variable,
+  'Crimson Text': crimsonText.variable,
+  'Source Sans Pro': sourceSansPro.variable,
+  'Orbitron': orbitron.variable,
 }
 
 // Function to get all font variable strings for className

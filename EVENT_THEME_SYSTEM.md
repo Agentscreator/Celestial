@@ -131,7 +131,10 @@ ADD COLUMN flyer_data TEXT;
 - `app/layout.tsx` - Added Google Fonts support
 
 ## Development Server
-The system is running at: http://localhost:3001
+The system is running at: http://localhost:3002
+
+## Build Fix Applied
+Fixed Next.js font loader issue by moving all font configurations to module scope as required by Next.js 15.3.3. This ensures proper build compatibility and font optimization.
 
 ## Database Setup
 Run the theme creation script:
