@@ -131,10 +131,18 @@ ADD COLUMN flyer_data TEXT;
 - `app/layout.tsx` - Added Google Fonts support
 
 ## Development Server
-The system is running at: http://localhost:3002
+The system is running at: http://localhost:3003
 
-## Build Fix Applied
-Fixed Next.js font loader issue by moving all font configurations to module scope as required by Next.js 15.3.3. This ensures proper build compatibility and font optimization.
+## Build Fixes Applied
+✅ **Font Loader Issue Fixed**: Moved all font configurations to module scope as required by Next.js 15.3.3
+✅ **Unsupported Font Removed**: Removed `Source Sans Pro` which is not available in Next.js Google Fonts
+✅ **Build Compatibility**: System now builds successfully with proper font optimization
+
+### Supported Fonts (14 Available)
+- Inter, Roboto, Poppins, Montserrat
+- Open Sans, Ubuntu, Raleway, Lora
+- Nunito, Oswald, Roboto Condensed
+- Playfair Display, Crimson Text, Orbitron
 
 ## Database Setup
 Run the theme creation script:

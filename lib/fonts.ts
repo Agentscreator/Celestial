@@ -1,5 +1,5 @@
 // Google Fonts integration for dynamic font loading
-import { Inter, Roboto, Poppins, Montserrat, Open_Sans, Ubuntu, Raleway, Lora, Nunito, Oswald, Roboto_Condensed, Playfair_Display, Crimson_Text, Source_Sans_Pro, Orbitron } from 'next/font/google'
+import { Inter, Roboto, Poppins, Montserrat, Open_Sans, Ubuntu, Raleway, Lora, Nunito, Oswald, Roboto_Condensed, Playfair_Display, Crimson_Text, Orbitron } from 'next/font/google'
 
 // Define font configurations at module scope
 const inter = Inter({ 
@@ -85,12 +85,6 @@ const crimsonText = Crimson_Text({
   display: 'swap',
 })
 
-const sourceSansPro = Source_Sans_Pro({ 
-  subsets: ['latin'],
-  weight: ['400', '600'],
-  variable: '--font-source-sans-pro',
-  display: 'swap',
-})
 
 const orbitron = Orbitron({ 
   subsets: ['latin'],
@@ -113,7 +107,6 @@ export const fonts = {
   robotoCondensed,
   playfairDisplay,
   crimsonText,
-  sourceSansPro,
   orbitron,
 }
 
@@ -132,7 +125,6 @@ export const fontFamilyMap: Record<string, string> = {
   'Roboto Condensed': robotoCondensed.variable,
   'Playfair Display': playfairDisplay.variable,
   'Crimson Text': crimsonText.variable,
-  'Source Sans Pro': sourceSansPro.variable,
   'Orbitron': orbitron.variable,
 }
 
