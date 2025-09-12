@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
           themeId: event.themeId,
           customFlyerUrl: event.customFlyerUrl,
           flyerData: event.flyerData,
-          theme: event.theme.id ? event.theme : null,
+          theme: event.theme && event.theme.id ? event.theme : null,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
         }
@@ -108,6 +108,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events })
   } catch (error) {
     console.error("Events GET error:", error)
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
