@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Upload, X, Loader2, Camera, Square, RotateCw, Mic, MicOff, Music, Zap, Filter, Sparkles, Timer, FlashIcon as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -310,8 +310,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none">
-        <DialogTitle className="sr-only">Create New Post</DialogTitle>
+      <DialogContent 
+        className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none"
+        hideTitle={true}
+        title="Create New Post"
+      >
         
         {mode === 'camera' && (
           // TikTok-style Camera Interface
