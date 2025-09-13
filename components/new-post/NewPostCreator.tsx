@@ -310,10 +310,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent 
+      <DialogContent
         className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none"
         hideTitle={true}
         title="Create New Post"
+        description="Create and share a new video post"
       >
         
         {mode === 'camera' && (

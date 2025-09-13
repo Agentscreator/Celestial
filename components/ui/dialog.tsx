@@ -35,8 +35,9 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideTitle?: boolean
     title?: string
+    description?: string
   }
->(({ className, children, hideTitle = false, title = "Dialog", ...props }, ref) => (
+>(({ className, children, hideTitle = false, title = "Dialog", description = "", ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -50,6 +51,7 @@ const DialogContent = React.forwardRef<
       {hideTitle ? (
         <VisuallyHidden.Root>
           <DialogPrimitive.Title>{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Description>{description}</DialogPrimitive.Description>
         </VisuallyHidden.Root>
       ) : null}
       {children}
