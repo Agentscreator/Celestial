@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Upload, X, Loader2, Camera, Square, RotateCw, Mic, MicOff, Music, Zap, Filter, Sparkles, Timer, FlashIcon as Flash } from "lucide-react"
+import { Upload, X, Loader2, Camera, Square, RotateCw, Mic, MicOff, Music, Zap, Filter, Sparkles, Timer, Flashlight as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 
