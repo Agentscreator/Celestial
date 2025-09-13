@@ -27,7 +27,8 @@
       "Bash(npx drizzle-kit:*)",
       "Bash(psql:*)",
       "Bash(npx tsx:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
