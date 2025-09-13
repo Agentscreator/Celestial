@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/src/db/connection'
+import { db } from '@/src/db'
 import { events, users, eventThemes } from '@/src/db/schema'
 import { eq, and } from 'drizzle-orm'
 
