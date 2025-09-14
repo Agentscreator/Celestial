@@ -20,20 +20,38 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
     // Check if we're running on a native platform
     if (Capacitor.isNativePlatform()) {
       // Request camera permissions - this triggers the native permission dialog
-      const permissions = await Camera.requestPermissions();
-      
-      if (permissions.camera === 'granted') {
-        return { granted: true };
-      } else if (permissions.camera === 'denied') {
-        return { 
-          granted: false, 
-          message: 'Camera permission denied. Please enable camera access in your device settings to record videos.' 
-        };
-      } else {
-        return { 
-          granted: false, 
-          message: 'Camera permission not determined. Please try again.' 
-        };
+      try {
+        const permissions = await Camera.requestPermissions();
+
+        if (permissions.camera === 'granted') {
+          return { granted: true };
+        } else if (permissions.camera === 'denied') {
+          return {
+            granted: false,
+            message: 'Camera permission denied. Please enable camera access in your device settings to record videos.'
+          };
+        } else {
+          return {
+            granted: false,
+            message: 'Camera permission not determined. Please try again.'
+          };
+        }
+      } catch (permissionError) {
+        console.error('Native permission request failed:', permissionError);
+        // Fallback to web API if native fails
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true
+          });
+          stream.getTracks().forEach(track => track.stop());
+          return { granted: true };
+        } catch (webError) {
+          return {
+            granted: false,
+            message: 'Failed to request camera permissions. Please try again or enable camera access in your device settings.'
+          };
+        }
       }
     } else {
       // For web, we still need to use getUserMedia to trigger browser permission dialog
@@ -75,26 +93,48 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
 export async function checkCameraPermissions(): Promise<CameraPermissionResult> {
   try {
     if (Capacitor.isNativePlatform()) {
-      const permissions = await Camera.checkPermissions();
-      
-      if (permissions.camera === 'granted') {
-        return { granted: true };
-      } else {
-        return { 
-          granted: false, 
-          message: 'Camera permission not granted' 
-        };
+      try {
+        const permissions = await Camera.checkPermissions();
+
+        if (permissions.camera === 'granted') {
+          return { granted: true };
+        } else {
+          return {
+            granted: false,
+            message: 'Camera permission not granted'
+          };
+        }
+      } catch (error) {
+        console.error('Native permission check failed:', error);
+        // Fallback to web permission check
+        try {
+          const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          return {
+            granted: permissions.state === 'granted',
+            message: permissions.state === 'granted' ? undefined : 'Camera permission not granted'
+          };
+        } catch (webError) {
+          return { granted: false, message: 'Camera permissions need to be requested' };
+        }
       }
     } else {
-      // For web, we can't check permissions without requesting them
-      // So we'll assume they need to be requested
-      return { granted: false, message: 'Camera permissions need to be requested' };
+      // For web, try to check permissions using the Permissions API
+      try {
+        const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        return {
+          granted: permissions.state === 'granted',
+          message: permissions.state === 'granted' ? undefined : 'Camera permissions need to be requested'
+        };
+      } catch (error) {
+        // Permissions API not supported, assume we need to request
+        return { granted: false, message: 'Camera permissions need to be requested' };
+      }
     }
   } catch (error) {
     console.error('Error checking camera permissions:', error);
-    return { 
-      granted: false, 
-      message: 'Failed to check camera permissions' 
+    return {
+      granted: false,
+      message: 'Failed to check camera permissions'
     };
   }
 }

@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
     },
     Camera: {
       // Configure camera permissions
-      permissions: ['camera', 'photos']
+      permissions: ['camera', 'photos', 'microphone']
     },
     // Apple Watch specific configurations
     Device: {

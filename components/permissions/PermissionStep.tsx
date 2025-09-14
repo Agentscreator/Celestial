@@ -74,20 +74,21 @@ export function PermissionStep({ onComplete, onSkip }: PermissionStepProps) {
 
       switch (permissionId) {
         case "camera":
-          if (typeof navigator !== "undefined" && navigator.mediaDevices) {
-            try {
-              await navigator.mediaDevices.getUserMedia({ video: true })
-              granted = true
-            } catch {
-              granted = false
-            }
+          try {
+            const { requestCameraPermissions } = await import("@/utils/camera")
+            const result = await requestCameraPermissions()
+            granted = result.granted
+          } catch (error) {
+            console.error("Camera permission error:", error)
+            granted = false
           }
           break
 
         case "microphone":
           if (typeof navigator !== "undefined" && navigator.mediaDevices) {
             try {
-              await navigator.mediaDevices.getUserMedia({ audio: true })
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+              stream.getTracks().forEach(track => track.stop())
               granted = true
             } catch {
               granted = false
