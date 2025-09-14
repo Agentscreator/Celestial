@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { postsTable, usersTable, postLikesTable, postCommentsTable, postInvitesTable, postLocationsTable } from "@/src/db/schema"
+import { postsTable, usersTable, postLikesTable, postCommentsTable, postInvitesTable, postLocationsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
 import { desc, eq, count, and } from "drizzle-orm"
 import { put } from "@vercel/blob"
 
@@ -552,42 +552,16 @@ export async function POST(request: NextRequest) {
           })
           
           try {
-            // Call the create-group API endpoint
-            const groupResponse = await fetch(`${request.url.replace('/api/posts', '')}/api/posts/${post[0].id}/create-group`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Cookie': request.headers.get('Cookie') || '',
-              },
-              body: JSON.stringify({
-                groupName: communityName.trim(),
-                maxMembers: Math.min(Math.max(inviteLimit, 1), 100),
-              }),
-            })
-
-            if (groupResponse.ok) {
-              const groupResult = await groupResponse.json()
-              console.log("✅ Group created successfully:", groupResult.group)
-              // Note: We don't return the group in the response to keep it simple
-            } else {
-              const errorText = await groupResponse.text()
-              console.error("❌ Failed to create group:", errorText)
-            }
-          } catch (groupError) {
-            console.error("❌ Error creating group:", groupError)
-          }
-          /*
-          try {
+            // Create group directly in database instead of internal API call
             console.log("About to insert group into database...")
             
-            // Create group without postId first to avoid potential circular dependency
             const newGroup = await db
               .insert(groupsTable)
               .values({
-                name: groupName.trim(),
-                description: `Group created from post`,
+                name: communityName.trim(),
+                description: `Group created from post: ${content?.substring(0, 100)}${content && content.length > 100 ? '...' : ''}`,
                 createdBy: session.user.id,
-                postId: null, // Set to null initially to avoid foreign key issues
+                postId: post[0].id,
                 maxMembers: Math.min(Math.max(inviteLimit, 1), 100),
                 isActive: 1,
               })
@@ -606,24 +580,9 @@ export async function POST(request: NextRequest) {
               })
 
             console.log("✅ GROUP MEMBER ADDED")
-
-            // Now update the group with the postId
-            console.log("About to update group with postId...")
-            const updatedGroup = await db
-              .update(groupsTable)
-              .set({ 
-                postId: post[0].id,
-                description: `Group created from post: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`
-              })
-              .where(eq(groupsTable.id, newGroup[0].id))
-              .returning()
-
-            console.log("✅ GROUP UPDATED WITH POST ID")
-
-            createdGroup = updatedGroup[0] || newGroup[0]
             console.log("✅ AUTO-GROUP CREATED SUCCESSFULLY:", {
-              groupId: createdGroup.id,
-              groupName: createdGroup.name,
+              groupId: newGroup[0].id,
+              groupName: newGroup[0].name,
             })
           } catch (groupError) {
             console.error("❌ GROUP CREATION FAILED:", groupError)
@@ -634,7 +593,7 @@ export async function POST(request: NextRequest) {
             })
             // Don't fail the entire post creation, just log the error
           }
-          */
+
         } else {
           console.log("⏭️ Skipping community creation: no community name provided")
         }
