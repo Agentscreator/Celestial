@@ -29,7 +29,8 @@
       "Bash(npx tsx:*)",
       "Bash(./gradlew:*)",
       "Bash(grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }
