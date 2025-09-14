@@ -57,13 +57,29 @@ export function useCameraPermissions(): UseCameraPermissionsReturn {
 
   const getCameraStreamWithPermission = useCallback(async (options: { facingMode: 'user' | 'environment'; audioEnabled: boolean }): Promise<MediaStream | null> => {
     try {
+      console.log('Getting camera stream with permission check...');
+      
       // First ensure we have permission
-      const hasPermissionNow = hasPermission ?? await requestPermission();
+      let hasPermissionNow = hasPermission;
+      
+      // If we don't know the permission status, check it first
+      if (hasPermissionNow === null) {
+        console.log('Permission status unknown, checking...');
+        hasPermissionNow = await checkPermission();
+      }
+      
+      // If we don't have permission, request it
+      if (!hasPermissionNow) {
+        console.log('No permission, requesting...');
+        hasPermissionNow = await requestPermission();
+      }
       
       if (!hasPermissionNow) {
+        console.log('Permission denied, cannot get camera stream');
         return null;
       }
 
+      console.log('Permission granted, getting camera stream...');
       // Get the camera stream
       const stream = await getCameraStream(options);
       return stream;
@@ -74,6 +90,7 @@ export function useCameraPermissions(): UseCameraPermissionsReturn {
       if (error instanceof Error) {
         if (error.message.includes('denied') || error.message.includes('permission')) {
           errorMessage = "Camera permission denied. Please allow camera access in your device settings.";
+          setHasPermission(false); // Update permission state
         } else {
           errorMessage = error.message;
         }
@@ -87,7 +104,7 @@ export function useCameraPermissions(): UseCameraPermissionsReturn {
       
       return null;
     }
-  }, [hasPermission, requestPermission]);
+  }, [hasPermission, requestPermission, checkPermission]);
 
   return {
     hasPermission,

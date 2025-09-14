@@ -53,13 +53,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Initialize camera with native permissions
   const initCamera = useCallback(async () => {
     // Prevent multiple simultaneous initializations
-    if (cameraLoading || permissionLoading) return
+    if (cameraLoading || permissionLoading) {
+      console.log('Camera initialization already in progress, skipping...')
+      return
+    }
 
+    console.log('Starting camera initialization...')
     setCameraLoading(true)
     setCameraReady(false)
 
     // Stop any existing stream first
     if (streamRef.current) {
+      console.log('Stopping existing camera stream...')
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
     }
@@ -77,7 +82,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         throw new Error('Failed to get camera stream - permission may have been denied')
       }
 
-      console.log('Camera stream obtained:', stream)
+      console.log('Camera stream obtained successfully:', stream)
       streamRef.current = stream
 
       if (videoRef.current) {
@@ -85,24 +90,46 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded')
+          console.log('Video metadata loaded, attempting to play...')
           videoRef.current?.play().then(() => {
-            console.log('Video playing')
+            console.log('Video playing successfully')
             setCameraReady(true)
             setCameraLoading(false)
           }).catch(err => {
             console.error('Error playing video:', err)
             setCameraLoading(false)
+            toast({
+              title: "Camera Error",
+              description: "Failed to start video preview. Please try again.",
+              variant: "destructive",
+            })
           })
+        }
+
+        // Add error handler for video element
+        videoRef.current.onerror = (err) => {
+          console.error('Video element error:', err)
+          setCameraLoading(false)
+          setCameraReady(false)
         }
       }
 
     } catch (error) {
       console.error('Error accessing camera:', error)
       setCameraLoading(false)
-
-      // Error handling is now done in the hook, so we just need to handle the failure
       setCameraReady(false)
+
+      // Show user-friendly error message
+      let errorMessage = "Failed to access camera. Please try again."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+
+      toast({
+        title: "Camera Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
     }
   }, [facingMode, audioEnabled, cameraLoading, permissionLoading, getCameraStreamWithPermission])
 

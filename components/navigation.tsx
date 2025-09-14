@@ -23,7 +23,7 @@ export function Navigation() {
       icon: Home,
       label: "Feed",
       active: pathname === "/feed",
-    },    
+    },
     {
       href: "/events",
       icon: Calendar,
@@ -57,10 +57,10 @@ export function Navigation() {
       title: "Success",
       description: "Your invitation has been posted!",
     });
-    
+
     // Dispatch custom event to refresh feed
     window.dispatchEvent(new CustomEvent('postCreated', { detail: newPost }));
-    
+
     // Navigate to feed page if not already there
     if (pathname !== '/feed') {
       router.push('/feed');
@@ -89,7 +89,7 @@ export function Navigation() {
               <span className="sr-only">{route.label}</span>
             </Link>
           ))}
-          
+
           {/* Create Post Button */}
           <button
             onClick={handleCreatePostClick}
@@ -99,7 +99,7 @@ export function Navigation() {
             <Plus className="h-5 w-5 text-black" />
             <span className="sr-only">Create</span>
           </button>
-          
+
           {routes.slice(2).map((route) => (
             <Link
               key={route.href}
@@ -142,7 +142,7 @@ export function Navigation() {
               <span className="mt-0.5 text-[10px] font-medium">{route.label}</span>
             </Link>
           ))}
-          
+
           {/* Create Post Button */}
           <button
             onClick={handleCreatePostClick}
@@ -153,7 +153,7 @@ export function Navigation() {
             </div>
             <span className="mt-0.5 text-[10px] font-medium text-white">Create</span>
           </button>
-          
+
           {routes.slice(2).map((route) => (
             <Link
               key={route.href}
