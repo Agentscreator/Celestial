@@ -262,8 +262,21 @@ export default function ProfilePage() {
         const response = await fetch(`/api/users/profile/${targetUserId}`)
         if (response.ok) {
           const data = await response.json()
+          
+          // Check if user exists in database
+          if (!data.user) {
+            console.log("❌ User not found in database, signing out...")
+            signOut({ callbackUrl: "/login" })
+            return
+          }
+          
           setUser(data.user)
           setEditedAbout(data.user.about || "")
+        } else if (response.status === 404) {
+          // User not found in database, sign them out
+          console.log("❌ User profile not found (404), signing out...")
+          signOut({ callbackUrl: "/login" })
+          return
         }
 
         // Fetch posts
@@ -282,6 +295,14 @@ export default function ProfilePage() {
         }
       } catch (error: any) {
         console.error("❌ Error fetching profile:", error)
+        
+        // If error contains "User is not defined" or similar, sign out
+        if (error.message?.includes("User") || error.message?.includes("not found") || error.message?.includes("not defined")) {
+          console.log("❌ User-related error, signing out...")
+          signOut({ callbackUrl: "/login" })
+          return
+        }
+        
         toast({
           title: "Error",
           description: "Failed to load profile. Please try again.",

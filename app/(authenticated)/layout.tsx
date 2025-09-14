@@ -7,7 +7,7 @@ import { StreamProvider } from '@/components/providers/StreamProvider'
 import { ErrorBoundary } from '@/components/providers/ErrorBoundary'
 import { StreamVideoProvider } from "@/components/providers/StreamVideoProvider"
 import { MessageNotifications } from "@/components/messages/MessageNotifications"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { requestNotificationPermission } from "@/utils/sound"
 import { useSession, signOut } from "next-auth/react"
 
@@ -19,6 +19,8 @@ export default function AuthenticatedLayout({
   const pathname = usePathname()
   const isFeedPage = pathname === '/feed'
   const { data: session, status } = useSession()
+  const [userValidated, setUserValidated] = useState(false)
+  const [validating, setValidating] = useState(false)
 
   // Global authentication check for authenticated routes
   useEffect(() => {
@@ -27,22 +29,52 @@ export default function AuthenticatedLayout({
     }
   }, [status, session])
 
+  // Validate user exists in database after session is confirmed
+  useEffect(() => {
+    const validateUser = async () => {
+      if (status === "authenticated" && session?.user && !userValidated && !validating) {
+        setValidating(true)
+        try {
+          const response = await fetch("/api/auth/validate-user")
+          const data = await response.json()
+          
+          if (!data.valid) {
+            console.log("❌ User validation failed:", data.reason)
+            signOut({ callbackUrl: "/login" })
+            return
+          }
+          
+          setUserValidated(true)
+        } catch (error) {
+          console.error("❌ Error validating user:", error)
+          signOut({ callbackUrl: "/login" })
+        } finally {
+          setValidating(false)
+        }
+      }
+    }
+
+    validateUser()
+  }, [status, session, userValidated, validating])
+
   // Request notification permission on mount
   useEffect(() => {
     requestNotificationPermission()
   }, [])
 
-  // Show loading while checking authentication
-  if (status === "loading") {
+  // Show loading while checking authentication or validating user
+  if (status === "loading" || (status === "authenticated" && !userValidated)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-lg text-white">Loading...</div>
+        <div className="text-lg text-white">
+          {status === "loading" ? "Loading..." : "Validating user..."}
+        </div>
       </div>
     )
   }
 
-  // Don't render content if not authenticated
-  if (status === "unauthenticated" || !session?.user) {
+  // Don't render content if not authenticated or user not validated
+  if (status === "unauthenticated" || !session?.user || !userValidated) {
     return null
   }
 
