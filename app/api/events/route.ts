@@ -109,9 +109,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Events GET error:", error)
     console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown'
     })
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
@@ -119,18 +119,28 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new event
 export async function POST(request: NextRequest) {
+  let body: any = null
   try {
+    console.log('🚀 Events POST: Starting request processing')
+
     const session = await getServerSession(authOptions)
-    
+    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id })
+
     if (!session?.user?.id) {
+      console.log('❌ Unauthorized: No session or user ID')
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const body = await request.json()
+    console.log('📥 Parsing request body...')
+    body = await request.json()
+    console.log('📋 Request body:', body)
+    
     const { title, description, location, date, time, maxParticipants, isInvite, inviteDescription, groupName, themeId } = body
 
     // Validation
+    console.log('✅ Validating required fields...')
     if (!title?.trim() || !description?.trim() || !location?.trim() || !date || !time) {
+      console.log('❌ Validation failed: Missing required fields')
       return NextResponse.json({ 
         error: "Title, description, location, date, and time are required" 
       }, { status: 400 })
@@ -162,9 +172,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique share token
+    console.log('🔑 Generating share token...')
     const shareToken = randomBytes(32).toString('hex')
+    console.log('✅ Share token generated')
 
     // Create the event
+    console.log('💾 Inserting event into database...')
     const [newEvent] = await db
       .insert(eventsTable)
       .values({
@@ -269,6 +282,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ event: responseEvent })
   } catch (error) {
     console.error("Events POST error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown',
+      cause: error instanceof Error ? error.cause : undefined
+    })
+    
+    // Log the request body for debugging
+    console.error("Request body that caused error:", body)
+    
+    return NextResponse.json({
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+    }, { status: 500 })
   }
 }
