@@ -48,8 +48,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera
   const initCamera = useCallback(async () => {
+    // Prevent multiple simultaneous initializations
+    if (cameraLoading) return
+    
     setCameraLoading(true)
     setCameraReady(false)
+    
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
     
     try {
       console.log('Requesting camera access...')
@@ -114,7 +123,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         variant: "destructive",
       })
     }
-  }, [facingMode, audioEnabled])
+  }, [facingMode, audioEnabled, cameraLoading])
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -123,6 +132,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       streamRef.current = null
     }
     setCameraReady(false)
+    setCameraLoading(false)
   }, [])
 
   // Handle file upload
@@ -412,15 +422,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     return () => {
       stopCamera()
     }
-  }, [isOpen, mode, initCamera, stopCamera])
+  }, [isOpen, mode]) // Removed function dependencies to prevent infinite loop
 
-  // Re-initialize camera when settings change
+  // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
     if (cameraReady && mode === 'camera') {
       stopCamera()
-      setTimeout(initCamera, 100)
+      setTimeout(() => {
+        initCamera()
+      }, 100)
     }
-  }, [facingMode, audioEnabled, cameraReady, mode, initCamera, stopCamera])
+  }, [facingMode, audioEnabled]) // Only depend on the actual settings, not the functions
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
