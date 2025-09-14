@@ -380,12 +380,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Content or media is required" }, { status: 400 })
     }
 
-    // For now, allow posts without media if content is provided
-    if (!content?.trim()) {
-      console.error("❌ VALIDATION ERROR: Content is required")
-      return NextResponse.json({ error: "Content is required" }, { status: 400 })
-    }
-
     let mediaUrl = null
     let mediaType = null
     if (media) {
@@ -446,7 +440,7 @@ export async function POST(request: NextRequest) {
     console.log("=== INSERTING POST INTO DATABASE ===")
     const postData: any = {
       userId: session.user.id,
-      content: content || "",
+      content: content?.trim() || null, // Allow null content for media-only posts
       hasPrivateLocation: hasPrivateLocation ? 1 : 0,
       communityName: communityName?.trim() || null,
     }

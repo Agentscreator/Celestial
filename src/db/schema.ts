@@ -118,7 +118,7 @@ export const postsTable = pgTable("posts", {
   userId: uuid("userId")
     .notNull()
     .references(() => usersTable.id),
-  content: text().notNull(),
+  content: text(), // Made nullable to allow media-only posts
   image: varchar("image", { length: 500 }), // Legacy support during transition
   video: varchar("video", { length: 500 }), // Preferred for new posts
   duration: integer("duration"), // Video duration in seconds (optional)
