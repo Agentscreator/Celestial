@@ -37,6 +37,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showFilterSelector, setShowFilterSelector] = useState(false)
   const [showBeautySlider, setShowBeautySlider] = useState(false)
   const [showTimerSelector, setShowTimerSelector] = useState(false)
+  const [cameraLoading, setCameraLoading] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -47,29 +48,69 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera
   const initCamera = useCallback(async () => {
+    setCameraLoading(true)
+    setCameraReady(false)
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      console.log('Requesting camera access...')
+      
+      // First check if getUserMedia is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported in this browser')
+      }
+
+      const constraints = {
         video: {
-          width: { ideal: 720 },
-          height: { ideal: 1280 },
+          width: { ideal: 720, min: 480 },
+          height: { ideal: 1280, min: 640 },
           facingMode: facingMode
         },
         audio: audioEnabled
-      })
+      }
+
+      console.log('Camera constraints:', constraints)
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      console.log('Camera stream obtained:', stream)
       
       streamRef.current = stream
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded')
+          videoRef.current?.play().then(() => {
+            console.log('Video playing')
+            setCameraReady(true)
+            setCameraLoading(false)
+          }).catch(err => {
+            console.error('Error playing video:', err)
+            setCameraLoading(false)
+          })
+        }
       }
       
-      setCameraReady(true)
     } catch (error) {
       console.error('Error accessing camera:', error)
+      setCameraLoading(false)
+      
+      let errorMessage = "Unable to access camera. Please check permissions."
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = "Camera access denied. Please allow camera permissions and try again."
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = "No camera found. Please connect a camera and try again."
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = "Camera is already in use by another application."
+        }
+      }
+      
       toast({
         title: "Camera Error",
-        description: "Unable to access camera. Please check permissions.",
+        description: errorMessage,
         variant: "destructive",
       })
     }
@@ -331,6 +372,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setShowFilterSelector(false)
     setShowBeautySlider(false)
     setShowTimerSelector(false)
+    setCameraLoading(false)
+    setCameraReady(false)
     stopCamera()
     
     if (recordingIntervalRef.current) {
@@ -382,7 +425,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none"
+        className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none [&>button]:hidden"
         hideTitle={true}
         title="Create New Post"
         description="Create and share a new video post"
@@ -404,7 +447,37 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               }}
               muted
               playsInline
+              autoPlay
             />
+
+            {/* Camera Loading/Permission Overlay */}
+            {(cameraLoading || !cameraReady) && (
+              <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20">
+                {cameraLoading ? (
+                  <>
+                    <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
+                    <p className="text-white text-lg mb-2">Starting camera...</p>
+                    <p className="text-white/70 text-sm text-center px-8">
+                      Please allow camera access when prompted
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-16 h-16 text-white/50 mb-4" />
+                    <p className="text-white text-lg mb-2">Camera not ready</p>
+                    <p className="text-white/70 text-sm text-center px-8 mb-4">
+                      Please check camera permissions and try again
+                    </p>
+                    <Button
+                      onClick={initCamera}
+                      className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-2"
+                    >
+                      Retry Camera
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Top Bar */}
             <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
