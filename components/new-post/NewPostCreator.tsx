@@ -28,6 +28,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [selectedDuration, setSelectedDuration] = useState<'15s' | '60s' | '3m'>('15s')
   const [flashEnabled, setFlashEnabled] = useState(false)
   const [showCaption, setShowCaption] = useState(false)
+  const [speedMode, setSpeedMode] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x')
+  const [filterMode, setFilterMode] = useState<'none' | 'vintage' | 'dramatic' | 'bright' | 'warm'>('none')
+  const [beautyMode, setBeautyMode] = useState(0) // 0-100
+  const [timerEnabled, setTimerEnabled] = useState(false)
+  const [timerDuration, setTimerDuration] = useState<3 | 10>(3)
+  const [showSpeedSelector, setShowSpeedSelector] = useState(false)
+  const [showFilterSelector, setShowFilterSelector] = useState(false)
+  const [showBeautySlider, setShowBeautySlider] = useState(false)
+  const [showTimerSelector, setShowTimerSelector] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -190,6 +199,56 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  // Handle speed mode change
+  const handleSpeedChange = (speed: '0.5x' | '1x' | '2x' | '3x') => {
+    setSpeedMode(speed)
+    setShowSpeedSelector(false)
+    toast({
+      title: "Speed changed",
+      description: `Recording speed set to ${speed}`,
+    })
+  }
+
+  // Handle filter change
+  const handleFilterChange = (filter: 'none' | 'vintage' | 'dramatic' | 'bright' | 'warm') => {
+    setFilterMode(filter)
+    setShowFilterSelector(false)
+    toast({
+      title: "Filter applied",
+      description: filter === 'none' ? 'Filter removed' : `${filter} filter applied`,
+    })
+  }
+
+  // Handle beauty mode change
+  const handleBeautyChange = (value: number) => {
+    setBeautyMode(value)
+    toast({
+      title: "Beauty mode",
+      description: value === 0 ? 'Beauty mode disabled' : `Beauty level: ${value}%`,
+    })
+  }
+
+  // Handle timer toggle
+  const handleTimerToggle = () => {
+    setTimerEnabled(!timerEnabled)
+    setShowTimerSelector(false)
+    toast({
+      title: timerEnabled ? "Timer disabled" : "Timer enabled",
+      description: timerEnabled ? "Timer turned off" : `${timerDuration}s countdown enabled`,
+    })
+  }
+
+  // Get filter CSS class
+  const getFilterClass = () => {
+    switch (filterMode) {
+      case 'vintage': return 'sepia(0.8) contrast(1.2)'
+      case 'dramatic': return 'contrast(1.5) saturate(1.3)'
+      case 'bright': return 'brightness(1.2) saturate(1.1)'
+      case 'warm': return 'sepia(0.3) saturate(1.2) hue-rotate(10deg)'
+      default: return 'none'
+    }
+  }
+
   // Create post
   const handleCreatePost = async () => {
     if (!caption.trim()) {
@@ -268,6 +327,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setRecordingTime(0)
     setMode('camera')
     setShowCaption(false)
+    setShowSpeedSelector(false)
+    setShowFilterSelector(false)
+    setShowBeautySlider(false)
+    setShowTimerSelector(false)
     stopCamera()
     
     if (recordingIntervalRef.current) {
@@ -276,6 +339,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
     
     onClose()
+  }
+
+  // Close all selectors
+  const closeAllSelectors = () => {
+    setShowSpeedSelector(false)
+    setShowFilterSelector(false)
+    setShowBeautySlider(false)
+    setShowTimerSelector(false)
   }
 
   // Remove selected file
@@ -319,13 +390,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         
         {mode === 'camera' && (
           // TikTok-style Camera Interface
-          <div className="relative w-full h-full bg-black overflow-hidden">
+          <div 
+            className="relative w-full h-full bg-black overflow-hidden"
+            onClick={closeAllSelectors}
+          >
             {/* Camera Preview */}
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
               style={{
-                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                filter: getFilterClass()
               }}
               muted
               playsInline
@@ -366,45 +441,179 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               {/* Flip Camera */}
               <button
                 onClick={flipCamera}
-                className="flex flex-col items-center text-white"
+                disabled={isRecording}
+                className="flex flex-col items-center text-white disabled:opacity-50"
               >
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1">
+                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors">
                   <RotateCw className="w-6 h-6" />
                 </div>
                 <span className="text-xs">Flip</span>
               </button>
 
               {/* Speed */}
-              <button className="flex flex-col items-center text-white">
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1">
-                  <Zap className="w-6 h-6" />
-                </div>
-                <span className="text-xs">Speed</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowSpeedSelector(!showSpeedSelector)
+                  }}
+                  className="flex flex-col items-center text-white"
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                    speedMode !== '1x' ? "bg-blue-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Zap className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs">{speedMode}</span>
+                </button>
+                
+                {showSpeedSelector && (
+                  <div 
+                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(['0.5x', '1x', '2x', '3x'] as const).map((speed) => (
+                      <button
+                        key={speed}
+                        onClick={() => handleSpeedChange(speed)}
+                        className={cn(
+                          "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
+                          speedMode === speed ? "text-blue-400" : "text-white"
+                        )}
+                      >
+                        {speed}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Filters */}
-              <button className="flex flex-col items-center text-white">
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1">
-                  <Filter className="w-6 h-6" />
-                </div>
-                <span className="text-xs">Filters</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowFilterSelector(!showFilterSelector)
+                  }}
+                  className="flex flex-col items-center text-white"
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                    filterMode !== 'none' ? "bg-purple-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Filter className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs">Filters</span>
+                </button>
+                
+                {showFilterSelector && (
+                  <div 
+                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[100px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(['none', 'vintage', 'dramatic', 'bright', 'warm'] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => handleFilterChange(filter)}
+                        className={cn(
+                          "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors capitalize",
+                          filterMode === filter ? "text-purple-400" : "text-white"
+                        )}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Beauty */}
-              <button className="flex flex-col items-center text-white">
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <span className="text-xs">Beauty</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowBeautySlider(!showBeautySlider)
+                  }}
+                  className="flex flex-col items-center text-white"
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                    beautyMode > 0 ? "bg-pink-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs">Beauty</span>
+                </button>
+                
+                {showBeautySlider && (
+                  <div 
+                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-4 w-40"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="text-white text-sm mb-2">Beauty: {beautyMode}%</div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={beautyMode}
+                      onChange={(e) => handleBeautyChange(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Timer */}
-              <button className="flex flex-col items-center text-white">
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1">
-                  <Timer className="w-6 h-6" />
-                </div>
-                <span className="text-xs">Timer</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowTimerSelector(!showTimerSelector)
+                  }}
+                  className="flex flex-col items-center text-white"
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                    timerEnabled ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Timer className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs">Timer</span>
+                </button>
+                
+                {showTimerSelector && (
+                  <div 
+                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => setTimerDuration(3)}
+                      className={cn(
+                        "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
+                        timerDuration === 3 ? "text-green-400" : "text-white"
+                      )}
+                    >
+                      3s
+                    </button>
+                    <button
+                      onClick={() => setTimerDuration(10)}
+                      className={cn(
+                        "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
+                        timerDuration === 10 ? "text-green-400" : "text-white"
+                      )}
+                    >
+                      10s
+                    </button>
+                    <button
+                      onClick={handleTimerToggle}
+                      className="block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-1 pt-2"
+                    >
+                      {timerEnabled ? 'Disable' : 'Enable'}
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* Flash */}
               <button
@@ -412,8 +621,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 className="flex flex-col items-center text-white"
               >
                 <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center mb-1",
-                  flashEnabled ? "bg-yellow-500" : "bg-black/30"
+                  "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
+                  flashEnabled ? "bg-yellow-500" : "bg-black/30 hover:bg-black/50"
                 )}>
                   <Flash className="w-6 h-6" />
                 </div>
