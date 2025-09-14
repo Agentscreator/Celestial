@@ -19,7 +19,6 @@ import { TAGS, GENDERS, GENDER_PREFERENCES, PROXIMITY_OPTIONS } from "@/lib/cons
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Eye, EyeOff } from "lucide-react"
 import { isMobileApp } from "@/src/lib/mobile-auth"
-import { PermissionStep } from "@/components/permissions/PermissionStep"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -55,8 +54,6 @@ export default function SignupPage() {
     latitude: 0,
     longitude: 0,
     timezone: "",
-    // Permissions
-    grantedPermissions: [] as string[],
   })
 
   // Get user's location and timezone on component mount
@@ -241,32 +238,29 @@ export default function SignupPage() {
 
       setCurrentStep(2)
     } else if (currentStep === 2) {
-      // Permissions step - just move to next step
-      setCurrentStep(3)
-    } else if (currentStep === 3) {
       // Validate preferences step
       if (!formData.gender) {
         setError("Please select your gender")
         return
       }
 
-      setCurrentStep(4)
-    } else if (currentStep === 4) {
+      setCurrentStep(3)
+    } else if (currentStep === 3) {
       // Validate interests step
       if (formData.interestTags.length === 0) {
         setError("Please select at least one interest")
         return
       }
 
-      setCurrentStep(5)
-    } else if (currentStep === 5) {
+      setCurrentStep(4)
+    } else if (currentStep === 4) {
       // Validate context step
       if (formData.contextTags.length === 0) {
         setError("Please select at least one context")
         return
       }
 
-      setCurrentStep(6)
+      setCurrentStep(5)
     }
   }
 
@@ -276,15 +270,6 @@ export default function SignupPage() {
     }
   }
 
-  const handlePermissionsComplete = (grantedPermissions: string[]) => {
-    setFormData(prev => ({ ...prev, grantedPermissions }))
-    setCurrentStep(3)
-  }
-
-  const handlePermissionsSkip = () => {
-    setFormData(prev => ({ ...prev, grantedPermissions: [] }))
-    setCurrentStep(3)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -318,7 +303,6 @@ export default function SignupPage() {
         interestTags: formData.interestTags,
         contextTags: formData.contextTags,
         intentionTags: formData.intentionTags,
-        grantedPermissions: formData.grantedPermissions,
       }
 
       console.log('Sending registration data:', registrationData)
@@ -383,18 +367,16 @@ export default function SignupPage() {
         <CardHeader className="space-y-3 px-6 pt-8 pb-6">
           <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-white tracking-tight">Create your account</CardTitle>
           <CardDescription className="text-center text-gray-300 text-base leading-relaxed">
-            Step {currentStep} of 6:{" "}
+            Step {currentStep} of 5:{" "}
             {currentStep === 1
               ? "Basic Information"
               : currentStep === 2
-                ? "App Permissions"
+                ? "Preferences"
                 : currentStep === 3
-                  ? "Preferences"
+                  ? "Your Interests"
                   : currentStep === 4
-                    ? "Your Interests"
-                    : currentStep === 5
-                      ? "Your Context"
-                      : "Your Intentions"}
+                    ? "Your Context"
+                    : "Your Intentions"}
           </CardDescription>
           {locationStatus && (
             <p className="text-xs text-center text-gray-400">{locationStatus}</p>
@@ -535,13 +517,6 @@ export default function SignupPage() {
             )}
 
             {currentStep === 2 && (
-              <PermissionStep
-                onComplete={handlePermissionsComplete}
-                onSkip={handlePermissionsSkip}
-              />
-            )}
-
-            {currentStep === 3 && (
               <div className="space-y-6">
                 <div className="space-y-2">
                   <Label className="text-white">I'd like to connect with</Label>
@@ -583,7 +558,7 @@ export default function SignupPage() {
               </div>
             )}
 
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <div className="space-y-4">
                 <div>
                   <h3 className="mb-2 text-lg font-medium text-white">Select your interests</h3>
@@ -599,7 +574,7 @@ export default function SignupPage() {
               </div>
             )}
 
-            {currentStep === 5 && (
+            {currentStep === 4 && (
               <div className="space-y-4">
                 <div>
                   <h3 className="mb-2 text-lg font-medium text-white">What's your context?</h3>
@@ -617,7 +592,7 @@ export default function SignupPage() {
               </div>
             )}
 
-            {currentStep === 6 && (
+            {currentStep === 5 && (
               <div className="space-y-4">
                 <div>
                   <h3 className="mb-2 text-lg font-medium text-white">
@@ -649,9 +624,7 @@ export default function SignupPage() {
                 <div></div>
               )}
 
-              {currentStep === 2 ? (
-                <div></div>
-              ) : currentStep < 6 ? (
+              {currentStep < 5 ? (
                 <Button
                   type="button"
                   onClick={handleNextStep}
