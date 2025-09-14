@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 
 export default function ProfileRedirect() {
   const { data: session, status } = useSession()
@@ -11,8 +11,9 @@ export default function ProfileRedirect() {
   useEffect(() => {
     if (status === "loading") return // Still loading session
     
-    if (status === "unauthenticated") {
-      router.push("/login")
+    if (status === "unauthenticated" || !session?.user) {
+      // Automatically sign out and redirect to login
+      signOut({ callbackUrl: "/login" })
       return
     }
 

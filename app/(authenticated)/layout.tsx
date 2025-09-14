@@ -9,6 +9,7 @@ import { StreamVideoProvider } from "@/components/providers/StreamVideoProvider"
 import { MessageNotifications } from "@/components/messages/MessageNotifications"
 import { useEffect } from "react"
 import { requestNotificationPermission } from "@/utils/sound"
+import { useSession, signOut } from "next-auth/react"
 
 export default function AuthenticatedLayout({
   children,
@@ -17,11 +18,33 @@ export default function AuthenticatedLayout({
 }) {
   const pathname = usePathname()
   const isFeedPage = pathname === '/feed'
+  const { data: session, status } = useSession()
+
+  // Global authentication check for authenticated routes
+  useEffect(() => {
+    if (status === "unauthenticated" || (status !== "loading" && !session?.user)) {
+      signOut({ callbackUrl: "/login" })
+    }
+  }, [status, session])
 
   // Request notification permission on mount
   useEffect(() => {
     requestNotificationPermission()
   }, [])
+
+  // Show loading while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-lg text-white">Loading...</div>
+      </div>
+    )
+  }
+
+  // Don't render content if not authenticated
+  if (status === "unauthenticated" || !session?.user) {
+    return null
+  }
 
   return (
     <ErrorBoundary>

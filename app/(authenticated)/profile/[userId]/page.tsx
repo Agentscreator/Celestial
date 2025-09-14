@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import { Edit, Send, Heart, MessageCircle, Share2, Users, UserPlus, Camera, Check, Eye, Plus, Trash2, X, Play, Reply, ChevronDown, ChevronUp, Loader2, Video } from 'lucide-react'
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import {
   Dialog,
@@ -72,10 +72,17 @@ interface Comment {
 
 export default function ProfilePage() {
   const params = useParams()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const userId = params?.userId as string
   const isOwnProfile = !userId || userId === session?.user?.id
+
+  // Handle authentication state
+  useEffect(() => {
+    if (status === "unauthenticated" || (status !== "loading" && !session?.user)) {
+      signOut({ callbackUrl: "/login" })
+    }
+  }, [status, session])
 
   const [user, setUser] = useState<ProfileUser | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
@@ -287,6 +294,9 @@ export default function ProfilePage() {
 
     if (session) {
       fetchProfile()
+    } else if (session === null) {
+      // User is not authenticated, automatically sign out
+      signOut({ callbackUrl: "/login" })
     }
   }, [userId, session, isOwnProfile, fetchPosts])
 
