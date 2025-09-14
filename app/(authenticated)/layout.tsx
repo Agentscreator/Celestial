@@ -33,17 +33,31 @@ export default function AuthenticatedLayout({
   useEffect(() => {
     const validateUser = async () => {
       if (status === "authenticated" && session?.user && !userValidated && !validating) {
+        console.log("🔍 Starting user validation for:", session.user.id)
         setValidating(true)
         try {
           const response = await fetch("/api/auth/validate-user")
           const data = await response.json()
           
+          console.log("🔍 Validation response:", data)
+          
           if (!data.valid) {
-            console.log("❌ User validation failed:", data.reason)
+            console.log("❌ User validation failed:", data.reason, "User ID:", data.userId)
+            
+            // TEMPORARY: Let's see what users exist in the database
+            try {
+              const debugResponse = await fetch("/api/debug-users")
+              const debugData = await debugResponse.json()
+              console.log("🔍 Debug - Users in database:", debugData)
+            } catch (debugError) {
+              console.log("❌ Debug users fetch failed:", debugError)
+            }
+            
             signOut({ callbackUrl: "/login" })
             return
           }
           
+          console.log("✅ User validation successful")
           setUserValidated(true)
         } catch (error) {
           console.error("❌ Error validating user:", error)
@@ -63,20 +77,30 @@ export default function AuthenticatedLayout({
   }, [])
 
   // Show loading while checking authentication or validating user
-  if (status === "loading" || (status === "authenticated" && !userValidated)) {
+  if (status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
-        <div className="text-lg text-white">
-          {status === "loading" ? "Loading..." : "Validating user..."}
-        </div>
+        <div className="text-lg text-white">Loading...</div>
       </div>
     )
   }
 
-  // Don't render content if not authenticated or user not validated
-  if (status === "unauthenticated" || !session?.user || !userValidated) {
+  // Don't render content if not authenticated
+  if (status === "unauthenticated" || !session?.user) {
     return null
   }
+
+  // TEMPORARY: Skip user validation for debugging
+  // TODO: Re-enable after debugging
+  /*
+  if (!userValidated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-lg text-white">Validating user...</div>
+      </div>
+    )
+  }
+  */
 
   return (
     <ErrorBoundary>
