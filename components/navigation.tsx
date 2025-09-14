@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { useState } from "react"
 import { NewPostCreator } from "@/components/new-post/NewPostCreator"
 import { toast } from "@/hooks/use-toast"
+import { useCameraPermissions } from "@/hooks/use-camera-permissions"
 import { MessageBadge } from "@/components/messages/MessageBadge"
 import { WatchNavigation } from "@/components/watch-navigation"
 
@@ -14,6 +15,7 @@ export function Navigation() {
   const pathname = usePathname()
   const router = useRouter()
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
+  const { requestPermission } = useCameraPermissions()
 
   const routes = [
     {
@@ -41,6 +43,13 @@ export function Navigation() {
       active: pathname === "/profile",
     }
   ]
+
+  const handleCreatePostClick = async () => {
+    // Proactively request camera permissions when user clicks create
+    // This ensures the native permission dialog shows immediately
+    await requestPermission()
+    setIsCreatePostOpen(true)
+  }
 
   const handlePostCreated = (newPost: any) => {
     console.log("New post created:", newPost);
@@ -83,7 +92,7 @@ export function Navigation() {
           
           {/* Create Post Button */}
           <button
-            onClick={() => setIsCreatePostOpen(true)}
+            onClick={handleCreatePostClick}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20"
             aria-label="Create Post"
           >
@@ -136,7 +145,7 @@ export function Navigation() {
           
           {/* Create Post Button */}
           <button
-            onClick={() => setIsCreatePostOpen(true)}
+            onClick={handleCreatePostClick}
             className="flex flex-col items-center justify-center p-2"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white hover:bg-white/90 transition-all transform hover:scale-105 border border-white/20">

@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Upload, X, Loader2, Camera, Square, RotateCw, Mic, MicOff, Music, Zap, Filter, Sparkles, Timer, Flashlight as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
+import { useCameraPermissions } from "@/hooks/use-camera-permissions"
 
 interface NewPostCreatorProps {
   isOpen: boolean
@@ -38,7 +39,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showBeautySlider, setShowBeautySlider] = useState(false)
   const [showTimerSelector, setShowTimerSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
-  
+
+  // Use camera permissions hook
+  const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission } = useCameraPermissions()
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -46,47 +50,39 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Initialize camera
+  // Initialize camera with native permissions
   const initCamera = useCallback(async () => {
     // Prevent multiple simultaneous initializations
-    if (cameraLoading) return
-    
+    if (cameraLoading || permissionLoading) return
+
     setCameraLoading(true)
     setCameraReady(false)
-    
+
     // Stop any existing stream first
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
     }
-    
+
     try {
-      console.log('Requesting camera access...')
-      
-      // First check if getUserMedia is available
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera not supported in this browser')
+      console.log('Requesting native camera permissions and stream...')
+
+      // Use the hook to get camera stream with native permissions
+      const stream = await getCameraStreamWithPermission({
+        facingMode: facingMode,
+        audioEnabled: audioEnabled
+      })
+
+      if (!stream) {
+        throw new Error('Failed to get camera stream - permission may have been denied')
       }
 
-      const constraints = {
-        video: {
-          width: { ideal: 720, min: 480 },
-          height: { ideal: 1280, min: 640 },
-          facingMode: facingMode
-        },
-        audio: audioEnabled
-      }
-
-      console.log('Camera constraints:', constraints)
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       console.log('Camera stream obtained:', stream)
-      
       streamRef.current = stream
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        
+
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
           console.log('Video metadata loaded')
@@ -100,30 +96,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           })
         }
       }
-      
+
     } catch (error) {
       console.error('Error accessing camera:', error)
       setCameraLoading(false)
-      
-      let errorMessage = "Unable to access camera. Please check permissions."
-      
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage = "Camera access denied. Please allow camera permissions and try again."
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = "No camera found. Please connect a camera and try again."
-        } else if (error.name === 'NotReadableError') {
-          errorMessage = "Camera is already in use by another application."
-        }
-      }
-      
-      toast({
-        title: "Camera Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+
+      // Error handling is now done in the hook, so we just need to handle the failure
+      setCameraReady(false)
     }
-  }, [facingMode, audioEnabled, cameraLoading])
+  }, [facingMode, audioEnabled, cameraLoading, permissionLoading, getCameraStreamWithPermission])
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -230,7 +211,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-      
+
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current)
         recordingIntervalRef.current = null
@@ -321,7 +302,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
 
     setIsUploading(true)
-    
+
     try {
       const formData = new FormData()
       formData.append('content', caption.trim())
@@ -335,21 +316,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       if (response.ok) {
         const result = await response.json()
-        
+
         toast({
           title: "Success!",
           description: "Your post has been created",
         })
-        
+
         // Clear form
         setCaption("")
         setSelectedFile(null)
         setPreviewUrl(null)
-        
+
         // Notify parent and close
         onPostCreated?.(result.post)
         onClose()
-        
+
         // Refresh feed
         window.dispatchEvent(new CustomEvent('postCreated'))
       } else {
@@ -385,12 +366,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setCameraLoading(false)
     setCameraReady(false)
     stopCamera()
-    
+
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current)
       recordingIntervalRef.current = null
     }
-    
+
     onClose()
   }
 
@@ -418,7 +399,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     } else {
       stopCamera()
     }
-    
+
     return () => {
       stopCamera()
     }
@@ -442,10 +423,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         title="Create New Post"
         description="Create and share a new video post"
       >
-        
+
         {mode === 'camera' && (
           // TikTok-style Camera Interface
-          <div 
+          <div
             className="relative w-full h-full bg-black overflow-hidden"
             onClick={closeAllSelectors}
           >
@@ -463,14 +444,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             />
 
             {/* Camera Loading/Permission Overlay */}
-            {(cameraLoading || !cameraReady) && (
+            {(cameraLoading || permissionLoading || !cameraReady) && (
               <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20">
-                {cameraLoading ? (
+                {(cameraLoading || permissionLoading) ? (
                   <>
                     <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
-                    <p className="text-white text-lg mb-2">Starting camera...</p>
+                    <p className="text-white text-lg mb-2">
+                      {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
+                    </p>
                     <p className="text-white/70 text-sm text-center px-8">
-                      Please allow camera access when prompted
+                      {permissionLoading
+                        ? 'Please allow camera and microphone access when prompted'
+                        : 'Setting up your camera for recording'
+                      }
                     </p>
                   </>
                 ) : (
@@ -478,13 +464,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <Camera className="w-16 h-16 text-white/50 mb-4" />
                     <p className="text-white text-lg mb-2">Camera not ready</p>
                     <p className="text-white/70 text-sm text-center px-8 mb-4">
-                      Please check camera permissions and try again
+                      {hasPermission === false
+                        ? 'Camera permission required. Please allow access in your device settings.'
+                        : 'Please check camera permissions and try again'
+                      }
                     </p>
                     <Button
                       onClick={initCamera}
                       className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-2"
                     >
-                      Retry Camera
+                      {hasPermission === false ? 'Request Permission' : 'Retry Camera'}
                     </Button>
                   </>
                 )}
@@ -500,7 +489,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               >
                 <X className="h-6 w-6" />
               </Button>
-              
+
               <Button
                 variant="ghost"
                 className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2"
@@ -508,7 +497,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <Music className="h-4 w-4 mr-2" />
                 Add sound
               </Button>
-              
+
               <div className="w-8" /> {/* Spacer for balance */}
             </div>
 
@@ -552,9 +541,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </div>
                   <span className="text-xs">{speedMode}</span>
                 </button>
-                
+
                 {showSpeedSelector && (
-                  <div 
+                  <div
                     className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -591,9 +580,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </div>
                   <span className="text-xs">Filters</span>
                 </button>
-                
+
                 {showFilterSelector && (
-                  <div 
+                  <div
                     className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[100px]"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -630,9 +619,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </div>
                   <span className="text-xs">Beauty</span>
                 </button>
-                
+
                 {showBeautySlider && (
-                  <div 
+                  <div
                     className="absolute right-14 top-0 bg-black/80 rounded-lg p-4 w-40"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -666,9 +655,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </div>
                   <span className="text-xs">Timer</span>
                 </button>
-                
+
                 {showTimerSelector && (
-                  <div 
+                  <div
                     className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -767,7 +756,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       <Square className="w-8 h-8 text-white fill-current" />
                     </button>
                   )}
-                  
+
                   {/* Progress Ring */}
                   {isRecording && (
                     <div className="absolute inset-0 -rotate-90">
@@ -843,7 +832,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               >
                 <X className="h-6 w-6" />
               </Button>
-              
+
               <Button
                 variant="ghost"
                 className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2"
@@ -851,7 +840,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <Music className="h-4 w-4 mr-2" />
                 Add sound
               </Button>
-              
+
               <Button
                 onClick={() => setShowCaption(!showCaption)}
                 className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2"
@@ -871,10 +860,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   maxLength={2000}
                   rows={3}
                 />
-                
+
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-white/60 text-sm">{caption.length}/2000</span>
-                  
+
                   <Button
                     onClick={handleCreatePost}
                     disabled={isUploading || !caption.trim()}
