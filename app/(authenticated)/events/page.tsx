@@ -303,16 +303,44 @@ export default function EventsPage() {
   }
 
   const handleShareEvent = async (event: Event) => {
+    // Check if shareUrl exists
+    if (!event.shareUrl) {
+      toast({
+        title: "Error",
+        description: "Share link is not available for this event.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Try native sharing on mobile devices first
+    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description,
+          url: event.shareUrl,
+        })
+        return
+      } catch (shareError) {
+        // Fall through to clipboard copy if native sharing fails
+        console.log('Native sharing failed, falling back to clipboard')
+      }
+    }
+
+    // Try clipboard copy
     try {
       await navigator.clipboard.writeText(event.shareUrl)
       toast({
         title: "Link copied!",
         description: "The event link has been copied to your clipboard.",
       })
-    } catch (err) {
+    } catch (clipboardError) {
+      // Final fallback: show the URL in a toast
+      console.error('Clipboard access failed:', clipboardError)
       toast({
-        title: "Share",
-        description: `Share this event: ${event.title}`,
+        title: "Share Event",
+        description: `Copy this link: ${event.shareUrl}`,
       })
     }
   }

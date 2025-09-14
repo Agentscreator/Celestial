@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/src/db'
-import { events, users, eventThemes } from '@/src/db/schema'
+import { eventsTable, usersTable, eventThemesTable } from '@/src/db/schema'
 import { eq, and } from 'drizzle-orm'
 
 export async function GET(
@@ -20,18 +20,18 @@ export async function GET(
     // Find the event by share token and include creator info and theme
     const eventWithDetails = await db
       .select({
-        event: events,
+        event: eventsTable,
         creator: {
-          id: users.id,
-          username: users.username,
-          nickname: users.nickname,
+          id: usersTable.id,
+          username: usersTable.username,
+          nickname: usersTable.nickname,
         },
-        theme: eventThemes
+        theme: eventThemesTable
       })
-      .from(events)
-      .leftJoin(users, eq(events.createdBy, users.id))
-      .leftJoin(eventThemes, eq(events.themeId, eventThemes.id))
-      .where(eq(events.shareToken, shareToken))
+      .from(eventsTable)
+      .leftJoin(usersTable, eq(eventsTable.createdBy, usersTable.id))
+      .leftJoin(eventThemesTable, eq(eventsTable.themeId, eventThemesTable.id))
+      .where(eq(eventsTable.shareToken, shareToken))
       .limit(1)
 
     if (eventWithDetails.length === 0) {
@@ -49,8 +49,8 @@ export async function GET(
       title: event.title,
       description: event.description,
       location: event.location,
-      date: event.date,
-      time: event.time,
+      date: event.eventDate,
+      time: event.eventTime,
       maxParticipants: event.maxParticipants,
       currentParticipants: event.currentParticipants,
       createdByUsername: creator?.username || creator?.nickname || "Unknown User",
