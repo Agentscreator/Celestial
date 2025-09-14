@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
 import { eventThemesTable } from "@/src/db/schema"
-import { eq } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 
 // GET - Fetch available event themes
 export async function GET(request: NextRequest) {
@@ -18,15 +18,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
-    let query = db
-      .select()
-      .from(eventThemesTable)
-      .where(eq(eventThemesTable.isActive, 1))
+    // Build where conditions
+    const whereConditions = [eq(eventThemesTable.isActive, 1)]
 
     // Filter by category if provided
+    //Event Theme handler api
     if (category && category !== 'all') {
-      query = query.where(eq(eventThemesTable.category, category))
+      whereConditions.push(eq(eventThemesTable.category, category))
     }
+
+    const query = db
+      .select()
+      .from(eventThemesTable)
+      .where(and(...whereConditions))
 
     const themes = await query.orderBy(eventThemesTable.category, eventThemesTable.name)
 

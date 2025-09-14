@@ -28,7 +28,8 @@
       "Bash(psql:*)",
       "Bash(npx tsx:*)",
       "Bash(./gradlew:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

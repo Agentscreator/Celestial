@@ -11,26 +11,51 @@ export async function POST(
   { params }: { params: { eventId: string } }
 ) {
   try {
+    console.log('🚀 Join Event POST:', { params, eventId: params?.eventId })
+
     const session = await getServerSession(authOptions)
-    
+    console.log('🔐 Session check:', { hasSession: !!session, userId: session?.user?.id })
+
     if (!session?.user?.id) {
+      console.log('❌ Unauthorized: No session or user ID')
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    console.log('📝 Parsing eventId:', params.eventId)
     const eventId = parseInt(params.eventId)
     if (isNaN(eventId)) {
+      console.log('❌ Invalid event ID:', params.eventId)
       return NextResponse.json({ error: "Invalid event ID" }, { status: 400 })
     }
+    console.log('✅ Valid eventId:', eventId)
 
     // Check if event exists and is active
+    console.log('🔍 Searching for event with ID:', eventId)
     const [event] = await db
       .select()
       .from(eventsTable)
       .where(and(eq(eventsTable.id, eventId), eq(eventsTable.isActive, 1)))
       .limit(1)
 
+    console.log('🎯 Event found:', !!event, event ? { id: event.id, title: event.title, isActive: event.isActive } : 'No event found')
+
     if (!event) {
-      return NextResponse.json({ error: "Event not found or inactive" }, { status: 404 })
+      console.log('❌ Event not found or inactive for ID:', eventId)
+
+      // Also check if event exists but is inactive for better debugging
+      const [inactiveEvent] = await db
+        .select()
+        .from(eventsTable)
+        .where(eq(eventsTable.id, eventId))
+        .limit(1)
+
+      if (inactiveEvent) {
+        console.log('📝 Event exists but is inactive:', { id: inactiveEvent.id, isActive: inactiveEvent.isActive })
+        return NextResponse.json({ error: "Event is no longer active" }, { status: 404 })
+      } else {
+        console.log('📝 No event found with this ID at all')
+        return NextResponse.json({ error: "Event not found" }, { status: 404 })
+      }
     }
 
     // Check if event is full
@@ -114,7 +139,16 @@ export async function POST(
     })
   } catch (error) {
     console.error("Event join error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown',
+      eventId: params?.eventId
+    })
+    return NextResponse.json({
+      error: "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+    }, { status: 500 })
   }
 }
 
