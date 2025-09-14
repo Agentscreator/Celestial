@@ -323,9 +323,7 @@ export default function PublicEventInvitePage() {
                 <div className="flex items-center gap-3 text-gray-400">
                   <Users className="h-5 w-5" style={{ color: cardTheme.accentColor }} />
                   <span>
-                    {event.currentParticipants}
-                    {event.maxParticipants && ` / ${event.maxParticipants}`} 
-                    {" "}participants
+                    Join others at this event
                   </span>
                 </div>
               </div>
@@ -340,12 +338,9 @@ export default function PublicEventInvitePage() {
                   backgroundColor: cardTheme.primaryColor,
                   borderRadius: `${cardTheme.borderRadius}px`
                 }}
-                disabled={event.maxParticipants ? event.currentParticipants >= event.maxParticipants : false}
+disabled={false}
               >
-                {event.maxParticipants && event.currentParticipants >= event.maxParticipants 
-                  ? "Event Full" 
-                  : "Sign Up & Join Event"
-                }
+                Sign Up & Join Event
               </Button>
             </Link>
             
