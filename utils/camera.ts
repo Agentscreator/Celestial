@@ -1,5 +1,6 @@
 import { Camera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
+import { setupNativeCamera } from './native-permissions';
 
 export interface CameraPermissionResult {
   granted: boolean;
@@ -58,11 +59,23 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
       } catch (permissionError) {
         console.error('Native permission request failed:', permissionError);
         
-        // For native platforms, don't fallback to web API as it won't work properly
-        return {
-          granted: false,
-          message: 'Failed to request native camera permissions. Please enable camera access in your device settings.'
-        };
+        // Try a fallback approach for native platforms
+        console.log('Trying fallback: direct getUserMedia on native platform...');
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: false // Start with video only on native
+          });
+          console.log('Fallback getUserMedia succeeded on native platform');
+          stream.getTracks().forEach(track => track.stop());
+          return { granted: true };
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          return {
+            granted: false,
+            message: 'Failed to request camera permissions. Please enable camera access in your device settings and restart the app.'
+          };
+        }
       }
     } else {
       console.log('Web platform detected, using getUserMedia...');
@@ -160,32 +173,41 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
   try {
     console.log('Getting camera stream with options:', options);
     
-    // First check/request permissions
-    const permissionResult = await requestCameraPermissions();
-    
-    if (!permissionResult.granted) {
-      throw new Error(permissionResult.message || 'Camera permission denied');
+    if (Capacitor.isNativePlatform()) {
+      console.log('Native platform: using comprehensive native camera setup...');
+      
+      // Use the new native camera setup flow
+      const result = await setupNativeCamera({
+        facingMode: options.facingMode,
+        audioEnabled: options.audioEnabled
+      });
+      
+      if (result.stream) {
+        console.log('✅ Native camera setup successful');
+        return result.stream;
+      } else {
+        console.error('❌ Native camera setup failed:', result.error);
+        throw new Error(result.error || 'Failed to setup native camera');
+      }
+    } else {
+      console.log('Web platform: using standard getUserMedia flow...');
+      
+      // For web platforms, use the standard flow
+      const constraints = {
+        video: {
+          width: { ideal: 720, min: 480 },
+          height: { ideal: 1280, min: 640 },
+          facingMode: options.facingMode
+        },
+        audio: options.audioEnabled
+      };
+
+      console.log('Requesting getUserMedia with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Camera stream obtained successfully on web:', stream);
+      
+      return stream;
     }
-
-    console.log('Permissions granted, requesting media stream...');
-
-    // Now get the camera stream using web APIs
-    // Note: Even on native platforms, we use web APIs for live camera preview
-    // The Capacitor Camera plugin is mainly for taking photos/videos
-    const constraints = {
-      video: {
-        width: { ideal: 720, min: 480 },
-        height: { ideal: 1280, min: 640 },
-        facingMode: options.facingMode
-      },
-      audio: options.audioEnabled
-    };
-
-    console.log('Requesting getUserMedia with constraints:', constraints);
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    console.log('Camera stream obtained successfully:', stream);
-    
-    return stream;
     
   } catch (error) {
     console.error('Error getting camera stream:', error);
@@ -200,6 +222,8 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
         throw new Error('Camera is already in use. Please close other apps using the camera.');
       } else if (error.name === 'OverconstrainedError') {
         throw new Error('Camera constraints not supported. Please try again.');
+      } else if (error.name === 'AbortError') {
+        throw new Error('Camera access was aborted. Please try again.');
       }
     }
     
@@ -225,6 +249,56 @@ export async function takePhoto(direction: CameraDirection = CameraDirection.Rea
   } catch (error) {
     console.error('Error taking photo:', error);
     throw error;
+  }
+}
+
+/**
+ * Request microphone permissions separately (for native platforms)
+ */
+export async function requestMicrophonePermissions(): Promise<CameraPermissionResult> {
+  try {
+    console.log('Requesting microphone permissions...');
+    
+    if (Capacitor.isNativePlatform()) {
+      // On native platforms, microphone permission is usually handled together with camera
+      // But we can try to request it separately via getUserMedia
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: true 
+        });
+        console.log('Microphone permission granted');
+        stream.getTracks().forEach(track => track.stop());
+        return { granted: true };
+      } catch (error) {
+        console.error('Microphone permission failed:', error);
+        return {
+          granted: false,
+          message: 'Microphone permission denied. Please enable microphone access in your device settings.'
+        };
+      }
+    } else {
+      // For web, use getUserMedia
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: true 
+        });
+        console.log('Web microphone permission granted');
+        stream.getTracks().forEach(track => track.stop());
+        return { granted: true };
+      } catch (error) {
+        console.error('Web microphone permission error:', error);
+        return {
+          granted: false,
+          message: 'Microphone access denied. Please allow microphone permissions.'
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error requesting microphone permissions:', error);
+    return {
+      granted: false,
+      message: 'Failed to request microphone permissions.'
+    };
   }
 }
 

@@ -128,39 +128,81 @@ export function CameraPermissionDebugger() {
     
     try {
       // Import our camera utilities
-      const { requestCameraPermissions, getCameraStream } = await import('@/utils/camera');
+      const { getCameraStream } = await import('@/utils/camera');
       
-      addLog('Step 1: Requesting permissions...');
-      const permissionResult = await requestCameraPermissions();
-      addLog(`Permission result: ${JSON.stringify(permissionResult)}`);
+      addLog('Step 1: Getting camera stream (includes permission handling)...');
+      const stream = await getCameraStream({
+        facingMode: 'user',
+        audioEnabled: true
+      });
       
-      if (permissionResult.granted) {
-        addLog('Step 2: Getting camera stream...');
-        const stream = await getCameraStream({
-          facingMode: 'user',
-          audioEnabled: true
+      if (stream) {
+        addLog('✅ Full camera flow successful!');
+        addLog(`Stream tracks: ${stream.getTracks().length}`);
+        
+        // Log track details
+        stream.getTracks().forEach(track => {
+          addLog(`Track: ${track.kind} - ${track.label} - enabled: ${track.enabled}`);
         });
         
-        if (stream) {
-          addLog('✅ Full camera flow successful!');
-          addLog(`Stream tracks: ${stream.getTracks().length}`);
-          
-          // Stop the stream
-          stream.getTracks().forEach(track => track.stop());
-          
-          toast({
-            title: "Success",
-            description: "Full camera flow completed successfully!",
-          });
-        } else {
-          addLog('❌ Failed to get camera stream');
-        }
+        // Stop the stream
+        stream.getTracks().forEach(track => track.stop());
+        
+        toast({
+          title: "Success",
+          description: "Full camera flow completed successfully!",
+        });
       } else {
-        addLog('❌ Permission denied, cannot proceed');
+        addLog('❌ Failed to get camera stream');
       }
     } catch (error) {
       addLog(`❌ Full flow failed: ${error}`);
       console.error('Full flow error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testNativeFlow = async () => {
+    setIsLoading(true);
+    addLog('=== Testing Native Camera Flow ===');
+    
+    try {
+      const { setupNativeCamera } = await import('@/utils/native-permissions');
+      
+      addLog('Testing native camera setup...');
+      const result = await setupNativeCamera({
+        facingMode: 'user',
+        audioEnabled: true
+      });
+      
+      if (result.stream) {
+        addLog('✅ Native camera setup successful!');
+        addLog(`Stream tracks: ${result.stream.getTracks().length}`);
+        
+        // Log track details
+        result.stream.getTracks().forEach(track => {
+          addLog(`Track: ${track.kind} - ${track.label} - enabled: ${track.enabled}`);
+        });
+        
+        // Stop the stream
+        result.stream.getTracks().forEach(track => track.stop());
+        
+        toast({
+          title: "Success",
+          description: "Native camera setup successful!",
+        });
+      } else {
+        addLog(`❌ Native camera setup failed: ${result.error}`);
+        toast({
+          title: "Native Camera Error",
+          description: result.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      addLog(`❌ Native flow failed: ${error}`);
+      console.error('Native flow error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +236,13 @@ export function CameraPermissionDebugger() {
             Test Web Permissions
           </Button>
           <Button 
+            onClick={testNativeFlow} 
+            disabled={isLoading}
+            variant="outline"
+          >
+            Test Native Flow
+          </Button>
+          <Button 
             onClick={testFullFlow} 
             disabled={isLoading}
           >
@@ -225,6 +274,7 @@ export function CameraPermissionDebugger() {
             <li><strong>Platform Info:</strong> Shows what platform you're running on</li>
             <li><strong>Test Native Permissions:</strong> Tests Capacitor's native permission system</li>
             <li><strong>Test Web Permissions:</strong> Tests browser's getUserMedia API</li>
+            <li><strong>Test Native Flow:</strong> Tests the comprehensive native camera setup</li>
             <li><strong>Test Full Flow:</strong> Tests the complete camera permission and stream flow</li>
           </ul>
         </div>
