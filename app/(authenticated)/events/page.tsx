@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Calendar, MapPin, Users, Plus, Share2, Clock } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -43,6 +44,7 @@ interface Event {
 }
 
 export default function EventsPage() {
+  const router = useRouter()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -345,6 +347,10 @@ export default function EventsPage() {
     }
   }
 
+  const handleViewDetails = (eventId: string) => {
+    router.push(`/events/${eventId}`)
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString('en-US', { 
@@ -609,6 +615,7 @@ export default function EventsPage() {
             onJoin={handleJoinEvent}
             onLeave={handleLeaveEvent}
             onShare={handleShareEvent}
+            onViewDetails={handleViewDetails}
           />
         ))}
       </div>

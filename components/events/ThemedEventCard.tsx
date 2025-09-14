@@ -29,9 +29,11 @@ interface ThemedEventCardProps {
   onJoin?: (eventId: string) => void
   onLeave?: (eventId: string) => void
   onShare?: (event: any) => void
+  showFullDetails?: boolean // For detailed view on individual event page
+  onViewDetails?: (eventId: string) => void // Callback for viewing details
 }
 
-export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare }: ThemedEventCardProps) {
+export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFullDetails = false, onViewDetails }: ThemedEventCardProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString('en-US', { 
@@ -207,23 +209,38 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare }: Them
       </CardContent>
       
       <CardFooter className="pt-4 gap-2 px-4 pb-4">
-        <Button
-          onClick={() => event.hasJoined ? onLeave?.(event.id) : onJoin?.(event.id)}
-          className="flex-1 text-white font-medium"
-          style={{
-            backgroundColor: event.hasJoined ? '#dc2626' : cardTheme.primaryColor,
-            borderRadius: `${cardTheme.borderRadius}px`
-          }}
-          disabled={!event.hasJoined && event.maxParticipants ? event.currentParticipants >= event.maxParticipants : false}
-        >
-          {!event.hasJoined && event.maxParticipants && event.currentParticipants >= event.maxParticipants 
-            ? "Full" 
-            : event.hasJoined 
-              ? "Leave" 
-              : "Join"
-          }
-        </Button>
-        
+        {!showFullDetails && event.hasJoined && onViewDetails && (
+          <Button
+            onClick={() => onViewDetails(event.id)}
+            className="flex-1 text-white font-medium"
+            style={{
+              backgroundColor: cardTheme.accentColor,
+              borderRadius: `${cardTheme.borderRadius}px`
+            }}
+          >
+            View Details
+          </Button>
+        )}
+
+        {(!showFullDetails || !event.hasJoined) && (
+          <Button
+            onClick={() => event.hasJoined ? onLeave?.(event.id) : onJoin?.(event.id)}
+            className={event.hasJoined && onViewDetails && !showFullDetails ? "flex-1" : "flex-1 text-white font-medium"}
+            style={{
+              backgroundColor: event.hasJoined ? '#dc2626' : cardTheme.primaryColor,
+              borderRadius: `${cardTheme.borderRadius}px`
+            }}
+            disabled={!event.hasJoined && event.maxParticipants ? event.currentParticipants >= event.maxParticipants : false}
+          >
+            {!event.hasJoined && event.maxParticipants && event.currentParticipants >= event.maxParticipants
+              ? "Full"
+              : event.hasJoined
+                ? (showFullDetails ? "Leave Event" : "Leave")
+                : "Join"
+            }
+          </Button>
+        )}
+
         <Button
           variant="outline"
           onClick={() => onShare?.(event)}

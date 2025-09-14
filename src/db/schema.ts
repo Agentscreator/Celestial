@@ -540,6 +540,26 @@ export const eventParticipantsTable = pgTable("event_participants", {
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 })
 
+// Event Videos (NEW TABLE)
+export const eventVideosTable = pgTable("event_videos", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  eventId: integer("event_id")
+    .notNull()
+    .references(() => eventsTable.id),
+  uploadedBy: uuid("uploaded_by")
+    .notNull()
+    .references(() => usersTable.id),
+  videoUrl: varchar("video_url", { length: 500 }).notNull(),
+  thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+  title: varchar("title", { length: 200 }),
+  description: text("description"),
+  duration: integer("duration"), // Video duration in seconds
+  fileSize: integer("file_size"), // File size in bytes
+  mimeType: varchar("mime_type", { length: 100 }).notNull().default("video/mp4"),
+  isPublic: integer("is_public").notNull().default(1), // 0 = private to event participants, 1 = public
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+})
+
 // Notifications (ENHANCED TABLE)
 export const notificationsTable = pgTable("notifications", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
