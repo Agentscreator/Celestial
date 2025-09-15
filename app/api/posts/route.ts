@@ -421,14 +421,14 @@ export async function POST(request: NextRequest) {
           console.log("✅ MEDIA UPLOADED SUCCESSFULLY:", mediaUrl, "Type:", mediaType)
         } catch (blobError) {
           console.error("❌ BLOB UPLOAD FAILED:", blobError)
+          console.error("Blob error details:", {
+            name: blobError instanceof Error ? blobError.name : "Unknown",
+            message: blobError instanceof Error ? blobError.message : String(blobError),
+            stack: blobError instanceof Error ? blobError.stack : "No stack",
+          })
           
-          // Use a working placeholder URL for fallback
-          mediaUrl = media.type.startsWith("video/") 
-            ? "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-            : "https://via.placeholder.com/400x300.jpg"
-          mediaType = media.type.startsWith("video/") ? "video" : "image"
-          
-          console.log("⚠️ USING FALLBACK URL:", mediaUrl)
+          // Don't use fallback - throw the error so user knows upload failed
+          throw new Error(`Media upload failed: ${blobError instanceof Error ? blobError.message : 'Unknown error'}`)
         }
       } catch (uploadError) {
         console.error("❌ MEDIA UPLOAD FAILED:", uploadError)

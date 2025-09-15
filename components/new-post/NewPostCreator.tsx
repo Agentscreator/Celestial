@@ -211,12 +211,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       recordedChunksRef.current = []
       // Try to create MediaRecorder with audio support
       // Try different codec combinations for audio+video support
+      // Prioritize MP4 for better compatibility with blob storage
       const codecOptions = [
+        'video/mp4',                   // MP4 first for better compatibility
+        'video/webm;codecs=h264,opus', // H264 video + Opus audio
         'video/webm;codecs=vp8,opus',  // VP8 video + Opus audio
         'video/webm;codecs=vp9,opus',  // VP9 video + Opus audio
-        'video/webm;codecs=h264,opus', // H264 video + Opus audio
-        'video/webm',                  // Default WebM
-        'video/mp4'                    // Fallback to MP4
+        'video/webm'                   // Default WebM fallback
       ]
 
       let mediaRecorder: MediaRecorder | null = null
@@ -224,9 +225,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       // Try to find a supported codec
       let codecFound = false
+      console.log('Checking codec support...')
       for (const codec of codecOptions) {
-        if (MediaRecorder.isTypeSupported(codec)) {
-          console.log(`Using codec: ${codec}`)
+        const isSupported = MediaRecorder.isTypeSupported(codec)
+        console.log(`Codec ${codec}: ${isSupported ? 'SUPPORTED' : 'NOT SUPPORTED'}`)
+        if (isSupported) {
+          console.log(`✅ Using codec: ${codec}`)
           mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: codec })
           usedMimeType = codec
           recordingMimeTypeRef.current = codec
@@ -239,8 +243,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       if (!codecFound) {
         console.log('Using default MediaRecorder without codec specification')
         mediaRecorder = new MediaRecorder(streamRef.current)
-        usedMimeType = 'video/webm' // most common default
-        recordingMimeTypeRef.current = 'video/webm'
+        usedMimeType = 'video/mp4' // Try MP4 as default for better compatibility
+        recordingMimeTypeRef.current = 'video/mp4'
       }
 
       if (!mediaRecorder) {
@@ -263,14 +267,35 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         const mimeType = recordingMimeTypeRef.current
         const blob = new Blob(recordedChunksRef.current, { type: mimeType })
 
+        console.log('Recording processed:', {
+          mimeType,
+          blobSize: blob.size,
+          chunksCount: recordedChunksRef.current.length,
+          blobType: blob.type
+        })
+
         // Generate proper filename with extension based on MIME type
         const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
         const filename = `recorded-video-${Date.now()}.${extension}`
 
-        setSelectedFile(new File([blob], filename, { type: mimeType }))
+        console.log('Creating file:', {
+          filename,
+          extension,
+          finalMimeType: mimeType
+        })
+
+        const file = new File([blob], filename, { type: mimeType })
+        setSelectedFile(file)
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
         setMode('preview')
+
+        console.log('File created successfully:', {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          previewUrl: url
+        })
 
         toast({
           title: "Recording complete!",
@@ -448,6 +473,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       return
     }
 
+    console.log('=== CREATING POST ===')
+    console.log('Selected file details:', {
+      name: selectedFile.name,
+      size: selectedFile.size,
+      type: selectedFile.type,
+      lastModified: selectedFile.lastModified
+    })
+
     setIsUploading(true)
 
     try {
@@ -456,13 +489,22 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
 
+      console.log('FormData created, sending request...')
+
       const response = await fetch('/api/posts', {
         method: 'POST',
         body: formData,
       })
 
+      console.log('Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      })
+
       if (response.ok) {
         const result = await response.json()
+        console.log('Post creation successful:', result)
 
         toast({
           title: "Success!",
@@ -484,8 +526,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         // Refresh feed
         window.dispatchEvent(new CustomEvent('postCreated'))
       } else {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create post')
+        const errorText = await response.text()
+        console.error('Post creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        })
+
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText || 'Failed to create post' }
+        }
+
+        throw new Error(errorData.error || 'Failed to create post')
       }
     } catch (error) {
       console.error('Error creating post:', error)
