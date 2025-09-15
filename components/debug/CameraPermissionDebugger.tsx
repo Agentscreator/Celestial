@@ -22,6 +22,31 @@ export function CameraPermissionDebugger() {
     setLogs([]);
   };
 
+  const openDeviceSettings = () => {
+    addLog('=== Opening Device Settings Help ===');
+    addLog('');
+    addLog('📱 ANDROID USERS:');
+    addLog('1. Go to Settings > Apps & notifications');
+    addLog('2. Find "MirroSocial" in the app list');
+    addLog('3. Tap on MirroSocial');
+    addLog('4. Tap "Permissions"');
+    addLog('5. Enable "Camera" and "Microphone"');
+    addLog('');
+    addLog('🍎 iOS USERS:');
+    addLog('1. Go to Settings > Privacy & Security');
+    addLog('2. Tap "Camera"');
+    addLog('3. Find "MirroSocial" and enable it');
+    addLog('4. Go back and tap "Microphone"');
+    addLog('5. Find "MirroSocial" and enable it');
+    addLog('');
+    addLog('After enabling permissions, come back and test again!');
+    
+    toast({
+      title: "Settings Instructions",
+      description: "Check the debug logs for step-by-step instructions to enable camera permissions",
+    });
+  };
+
   const testPlatformInfo = () => {
     addLog('=== Platform Information ===');
     addLog(`Platform: ${Capacitor.getPlatform()}`);
@@ -179,6 +204,7 @@ export function CameraPermissionDebugger() {
     addLog('=== Testing Direct Camera Flow ===');
     
     try {
+      addLog('Platform: ' + Capacitor.getPlatform());
       addLog('Testing direct camera access with audio+video...');
       
       const constraints = {
@@ -213,6 +239,18 @@ export function CameraPermissionDebugger() {
       } catch (error) {
         addLog(`❌ Audio+Video failed: ${error}`);
         
+        if (error instanceof Error && error.name === 'NotAllowedError') {
+          addLog('🔍 Permission denied - this means:');
+          addLog('1. Permission dialog was denied by user, OR');
+          addLog('2. Permissions need to be enabled in device settings, OR');
+          addLog('3. App needs to be rebuilt/reinstalled');
+          addLog('');
+          addLog('📱 To fix this:');
+          addLog('• Go to device Settings > Apps > MirroSocial > Permissions');
+          addLog('• Enable Camera and Microphone permissions');
+          addLog('• Or try uninstalling and reinstalling the app');
+        }
+        
         // Try video only
         addLog('Trying video-only...');
         try {
@@ -229,6 +267,21 @@ export function CameraPermissionDebugger() {
           });
         } catch (videoError) {
           addLog(`❌ Video-only also failed: ${videoError}`);
+          
+          if (videoError instanceof Error && videoError.name === 'NotAllowedError') {
+            addLog('');
+            addLog('🚨 CAMERA PERMISSION COMPLETELY DENIED');
+            addLog('');
+            addLog('📋 TROUBLESHOOTING STEPS:');
+            addLog('1. Check device settings:');
+            addLog('   Settings > Apps > MirroSocial > Permissions > Camera (Enable)');
+            addLog('2. Try uninstalling and reinstalling the app');
+            addLog('3. Make sure camera works in other apps');
+            addLog('4. Restart your device');
+            addLog('');
+            addLog('If none of these work, there may be a system-level issue.');
+          }
+          
           throw videoError;
         }
       }
@@ -236,9 +289,14 @@ export function CameraPermissionDebugger() {
       addLog(`❌ Direct camera flow failed: ${error}`);
       console.error('Direct camera flow error:', error);
       
+      let description = 'Direct camera access failed';
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        description = 'Permission denied. Check device settings: Apps > MirroSocial > Permissions > Camera';
+      }
+      
       toast({
-        title: "Camera Error",
-        description: `Direct camera access failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: "Camera Permission Issue",
+        description,
         variant: "destructive",
       });
     } finally {
@@ -288,6 +346,9 @@ export function CameraPermissionDebugger() {
           </Button>
           <Button onClick={clearLogs} variant="ghost">
             Clear Logs
+          </Button>
+          <Button onClick={openDeviceSettings} variant="outline">
+            📱 Settings Help
           </Button>
         </div>
 
