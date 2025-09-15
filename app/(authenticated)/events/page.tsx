@@ -18,6 +18,7 @@ import { EventsCalendar } from "@/components/events-calendar"
 import { ThemeSelector, type EventTheme } from "@/components/events/ThemeSelector"
 import { ThemedEventCard } from "@/components/events/ThemedEventCard"
 import { FlyerGenerator } from "@/components/events/FlyerGenerator"
+import { EventVideoUpload } from "@/components/events/EventVideoUpload"
 
 interface Event {
   id: string
@@ -69,6 +70,11 @@ export default function EventsPage() {
   const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null)
   const [themesLoading, setThemesLoading] = useState(false)
   const [showFlyerPreview, setShowFlyerPreview] = useState(false)
+
+  // Video upload state
+  const [enableVideoUpload, setEnableVideoUpload] = useState(false)
+  const [eventVideos, setEventVideos] = useState<any[]>([])
+  const [tempEventId, setTempEventId] = useState<string | null>(null)
 
   const generateCommunityName = () => {
     if (formData.title.trim()) {
@@ -194,26 +200,42 @@ export default function EventsPage() {
       if (response.ok) {
         const data = await response.json()
         setEvents([data.event, ...events])
-        setIsCreateModalOpen(false)
-        setFormData({
-          title: "",
-          description: "",
-          location: "",
-          date: "",
-          time: "",
-          maxParticipants: "",
-        })
-        setEnableInvites(true)
-        setInviteDescription('')
-        setCommunityName('')
-        setSelectedThemeId(null)
 
-        toast({
-          title: "Success",
-          description: enableInvites 
-            ? "Your event and community have been created!" 
-            : "Your event has been created!",
-        })
+        // If video upload is enabled, set the temp event ID for video uploads
+        if (enableVideoUpload) {
+          setTempEventId(data.event.id)
+          toast({
+            title: "Event Created",
+            description: enableVideoUpload && eventVideos.length === 0
+              ? "Event created! You can now upload videos before finishing."
+              : "Event created successfully!",
+          })
+        } else {
+          // Close modal immediately if no video upload needed
+          setIsCreateModalOpen(false)
+          setFormData({
+            title: "",
+            description: "",
+            location: "",
+            date: "",
+            time: "",
+            maxParticipants: "",
+          })
+          setEnableInvites(true)
+          setInviteDescription('')
+          setCommunityName('')
+          setSelectedThemeId(null)
+          setEnableVideoUpload(false)
+          setEventVideos([])
+          setTempEventId(null)
+
+          toast({
+            title: "Success",
+            description: enableInvites
+              ? "Your event and community have been created!"
+              : "Your event has been created!",
+          })
+        }
       } else {
         const errorData = await response.json()
         toast({
@@ -351,6 +373,64 @@ export default function EventsPage() {
 
   const handleViewDetails = (eventId: string) => {
     router.push(`/events/${eventId}`)
+  }
+
+  const handleVideoUploaded = (video: any) => {
+    setEventVideos(prev => [...prev, video])
+  }
+
+  const handleFinishEventCreation = () => {
+    setIsCreateModalOpen(false)
+    setFormData({
+      title: "",
+      description: "",
+      location: "",
+      date: "",
+      time: "",
+      maxParticipants: "",
+    })
+    setEnableInvites(true)
+    setInviteDescription('')
+    setCommunityName('')
+    setSelectedThemeId(null)
+    setEnableVideoUpload(false)
+    setEventVideos([])
+    setTempEventId(null)
+
+    toast({
+      title: "Success",
+      description: eventVideos.length > 0
+        ? `Event created with ${eventVideos.length} video${eventVideos.length > 1 ? 's' : ''}!`
+        : "Event created successfully!",
+    })
+  }
+
+  const handleCancelEventCreation = () => {
+    if (tempEventId) {
+      // If we have a temp event ID, the event was already created
+      // We could optionally delete it here, but for now we'll just close
+      toast({
+        title: "Event Saved",
+        description: "Your event has been created. You can add videos later from the event details page.",
+      })
+    }
+
+    setIsCreateModalOpen(false)
+    setFormData({
+      title: "",
+      description: "",
+      location: "",
+      date: "",
+      time: "",
+      maxParticipants: "",
+    })
+    setEnableInvites(true)
+    setInviteDescription('')
+    setCommunityName('')
+    setSelectedThemeId(null)
+    setEnableVideoUpload(false)
+    setEventVideos([])
+    setTempEventId(null)
   }
 
   const formatDate = (dateStr: string) => {
@@ -584,22 +664,97 @@ export default function EventsPage() {
                   )}
                 </div>
               </div>
-              
+
+              {/* Video Upload Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Add Videos</Label>
+                    <p className="text-sm text-gray-400">Upload videos to share with event participants</p>
+                  </div>
+                  <Switch
+                    checked={enableVideoUpload}
+                    onCheckedChange={setEnableVideoUpload}
+                  />
+                </div>
+
+                {enableVideoUpload && tempEventId && (
+                  <div className="space-y-4 pt-4 border-t border-gray-700">
+                    <div className="bg-gray-800/50 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-medium text-white">Event Videos</h4>
+                        <div className="text-xs text-gray-400">
+                          {eventVideos.length} video{eventVideos.length !== 1 ? 's' : ''} uploaded
+                        </div>
+                      </div>
+
+                      <EventVideoUpload
+                        eventId={tempEventId}
+                        onVideoUploaded={handleVideoUploaded}
+                      >
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full border-gray-600 text-white hover:bg-gray-800"
+                        >
+                          <Video className="h-4 w-4 mr-2" />
+                          Add Video
+                        </Button>
+                      </EventVideoUpload>
+
+                      {eventVideos.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {eventVideos.map((video, index) => (
+                            <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
+                              <Video className="h-4 w-4 text-blue-400" />
+                              <span className="text-sm text-white flex-1">
+                                {video.title || `Video ${index + 1}`}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {video.isPublic ? 'Public' : 'Private'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {enableVideoUpload && !tempEventId && (
+                  <div className="text-sm text-gray-400 text-center py-4">
+                    Create the event first to upload videos
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsCreateModalOpen(false)}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelEventCreation}
                   className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Create Event
-                </Button>
+
+                {/* Show different buttons based on state */}
+                {tempEventId ? (
+                  <Button
+                    type="button"
+                    onClick={handleFinishEventCreation}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Finish Event Creation
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {enableVideoUpload ? 'Create Event & Add Videos' : 'Create Event'}
+                  </Button>
+                )}
               </div>
             </form>
           </DialogContent>
