@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, MapPin, Users, Plus, Share2, Clock } from "lucide-react"
+import { Calendar, MapPin, Users, Plus, Share2, Clock, Video } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,6 +41,8 @@ interface Event {
   theme?: EventTheme | null
   createdAt: string
   updatedAt: string
+  videoCount?: number
+  hasVideos?: boolean
 }
 
 export default function EventsPage() {

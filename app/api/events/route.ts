@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable, eventThemesTable } from "@/src/db/schema"
+import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable, eventThemesTable, eventVideosTable } from "@/src/db/schema"
 import { desc, eq, count, and, gte } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       .where(eq(eventsTable.isActive, 1))
       .orderBy(desc(eventsTable.createdAt))
 
-    // Check if current user has joined each event
+    // Check if current user has joined each event and get video counts
     const events = await Promise.all(
       eventsWithDetails.map(async (event) => {
         const [userParticipation] = await db
@@ -79,6 +79,21 @@ export async function GET(request: NextRequest) {
           )
           .limit(1)
 
+        const hasJoined = userParticipation !== undefined
+
+        // Get video count for participants
+        let videoCount = 0
+        let hasVideos = false
+        if (hasJoined) {
+          const [videoCountResult] = await db
+            .select({ count: count() })
+            .from(eventVideosTable)
+            .where(eq(eventVideosTable.eventId, event.id))
+
+          videoCount = videoCountResult?.count || 0
+          hasVideos = videoCount > 0
+        }
+
         return {
           id: event.id.toString(),
           title: event.title,
@@ -91,7 +106,7 @@ export async function GET(request: NextRequest) {
           createdBy: event.createdBy,
           createdByUsername: event.creator?.username || "Unknown User",
           shareUrl: `${process.env.NEXTAUTH_URL}/events/invite/${event.shareToken}`,
-          hasJoined: userParticipation !== undefined,
+          hasJoined,
           isInvite: event.isInvite === 1,
           inviteDescription: event.inviteDescription,
           groupName: event.groupName,
@@ -101,6 +116,8 @@ export async function GET(request: NextRequest) {
           theme: event.theme && event.theme.id ? event.theme : null,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
+          videoCount,
+          hasVideos,
         }
       })
     )

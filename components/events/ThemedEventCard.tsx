@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { Calendar, MapPin, Users, Share2, Clock } from "lucide-react"
+import { Calendar, MapPin, Users, Share2, Clock, Video } from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,8 @@ interface ThemedEventCardProps {
     inviteDescription?: string
     groupName?: string
     customFlyerUrl?: string
+    videoCount?: number
+    hasVideos?: boolean
   }
   theme?: EventTheme | null
   onJoin?: (eventId: string) => void
@@ -201,14 +203,37 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
             <Users className="h-4 w-4" style={{ color: cardTheme.accentColor }} />
             <span>
               {event.currentParticipants}
-              {event.maxParticipants && ` / ${event.maxParticipants}`} 
+              {event.maxParticipants && ` / ${event.maxParticipants}`}
               {" "}participants
             </span>
           </div>
+
+          {event.hasJoined && event.hasVideos && (
+            <div className="flex items-center gap-2 text-gray-400">
+              <Video className="h-4 w-4" style={{ color: cardTheme.accentColor }} />
+              <span>
+                {event.videoCount || 0} video{(event.videoCount || 0) !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
       
       <CardFooter className="pt-4 gap-2 px-4 pb-4">
+        {/* Video Access Button - only for joined users with videos */}
+        {!showFullDetails && event.hasJoined && event.hasVideos && onViewDetails && (
+          <Button
+            onClick={() => onViewDetails(event.id)}
+            variant="outline"
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            style={{ borderRadius: `${cardTheme.borderRadius}px` }}
+            title={`View ${event.videoCount} video${(event.videoCount || 0) !== 1 ? 's' : ''}`}
+          >
+            <Video className="h-4 w-4" />
+          </Button>
+        )}
+
+        {/* Main action button - View Details or Join/Leave */}
         {!showFullDetails && event.hasJoined && onViewDetails && (
           <Button
             onClick={() => onViewDetails(event.id)}
