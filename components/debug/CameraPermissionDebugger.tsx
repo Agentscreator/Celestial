@@ -31,43 +31,54 @@ export function CameraPermissionDebugger() {
 
   const testNativePermissions = async () => {
     setIsLoading(true);
-    addLog('=== Testing Native Camera Permissions ===');
+    addLog('=== Testing Direct getUserMedia Permissions ===');
     
     try {
-      if (!Capacitor.isNativePlatform()) {
-        addLog('Not on native platform, skipping native permission test');
-        return;
-      }
-
-      addLog('Checking current permissions...');
-      const currentPermissions = await Camera.checkPermissions();
-      addLog(`Current permissions: ${JSON.stringify(currentPermissions)}`);
-
-      if (currentPermissions.camera !== 'granted') {
-        addLog('Requesting camera permissions...');
-        const requestResult = await Camera.requestPermissions();
-        addLog(`Permission request result: ${JSON.stringify(requestResult)}`);
+      addLog('Platform: ' + Capacitor.getPlatform());
+      addLog('Testing direct getUserMedia approach...');
+      
+      // Test camera permission
+      try {
+        addLog('Requesting camera access...');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        addLog('✅ Camera access granted!');
+        addLog(`Video tracks: ${stream.getVideoTracks().length}`);
         
-        if (requestResult.camera === 'granted') {
-          addLog('✅ Native camera permission granted!');
-          toast({
-            title: "Success",
-            description: "Native camera permission granted!",
-          });
-        } else {
-          addLog('❌ Native camera permission denied');
-          toast({
-            title: "Permission Denied",
-            description: "Native camera permission was denied",
-            variant: "destructive",
-          });
-        }
-      } else {
-        addLog('✅ Native camera permission already granted!');
+        // Stop the stream
+        stream.getTracks().forEach(track => track.stop());
+        addLog('Camera stream stopped');
+        
+        toast({
+          title: "Success",
+          description: "Camera access granted!",
+        });
+      } catch (error) {
+        addLog(`❌ Camera access failed: ${error}`);
+        
+        toast({
+          title: "Camera Error",
+          description: `Camera access failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: "destructive",
+        });
       }
+      
+      // Test microphone permission
+      try {
+        addLog('Requesting microphone access...');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        addLog('✅ Microphone access granted!');
+        addLog(`Audio tracks: ${stream.getAudioTracks().length}`);
+        
+        // Stop the stream
+        stream.getTracks().forEach(track => track.stop());
+        addLog('Microphone stream stopped');
+      } catch (error) {
+        addLog(`❌ Microphone access failed: ${error}`);
+      }
+      
     } catch (error) {
-      addLog(`❌ Native permission test failed: ${error}`);
-      console.error('Native permission test error:', error);
+      addLog(`❌ Permission test failed: ${error}`);
+      console.error('Permission test error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -163,46 +174,73 @@ export function CameraPermissionDebugger() {
     }
   };
 
-  const testNativeFlow = async () => {
+  const testDirectCameraFlow = async () => {
     setIsLoading(true);
-    addLog('=== Testing Native Camera Flow ===');
+    addLog('=== Testing Direct Camera Flow ===');
     
     try {
-      const { setupNativeCamera } = await import('@/utils/native-permissions');
+      addLog('Testing direct camera access with audio+video...');
       
-      addLog('Testing native camera setup...');
-      const result = await setupNativeCamera({
-        facingMode: 'user',
-        audioEnabled: true
-      });
+      const constraints = {
+        video: {
+          width: { ideal: 720, min: 480 },
+          height: { ideal: 1280, min: 640 },
+          facingMode: 'user'
+        },
+        audio: true
+      };
       
-      if (result.stream) {
-        addLog('✅ Native camera setup successful!');
-        addLog(`Stream tracks: ${result.stream.getTracks().length}`);
+      addLog(`Constraints: ${JSON.stringify(constraints)}`);
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        addLog('✅ Direct camera access successful!');
+        addLog(`Stream tracks: ${stream.getTracks().length}`);
         
         // Log track details
-        result.stream.getTracks().forEach(track => {
+        stream.getTracks().forEach(track => {
           addLog(`Track: ${track.kind} - ${track.label} - enabled: ${track.enabled}`);
         });
         
         // Stop the stream
-        result.stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(track => track.stop());
+        addLog('Stream stopped');
         
         toast({
           title: "Success",
-          description: "Native camera setup successful!",
+          description: "Direct camera access successful!",
         });
-      } else {
-        addLog(`❌ Native camera setup failed: ${result.error}`);
-        toast({
-          title: "Native Camera Error",
-          description: result.error || "Unknown error",
-          variant: "destructive",
-        });
+      } catch (error) {
+        addLog(`❌ Audio+Video failed: ${error}`);
+        
+        // Try video only
+        addLog('Trying video-only...');
+        try {
+          const videoStream = await navigator.mediaDevices.getUserMedia({ video: constraints.video });
+          addLog('✅ Video-only access successful!');
+          addLog(`Video tracks: ${videoStream.getVideoTracks().length}`);
+          
+          videoStream.getTracks().forEach(track => track.stop());
+          addLog('Video stream stopped');
+          
+          toast({
+            title: "Partial Success",
+            description: "Video access works, but audio failed",
+          });
+        } catch (videoError) {
+          addLog(`❌ Video-only also failed: ${videoError}`);
+          throw videoError;
+        }
       }
     } catch (error) {
-      addLog(`❌ Native flow failed: ${error}`);
-      console.error('Native flow error:', error);
+      addLog(`❌ Direct camera flow failed: ${error}`);
+      console.error('Direct camera flow error:', error);
+      
+      toast({
+        title: "Camera Error",
+        description: `Direct camera access failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -226,7 +264,7 @@ export function CameraPermissionDebugger() {
             disabled={isLoading}
             variant="outline"
           >
-            Test Native Permissions
+            Test Direct Permissions
           </Button>
           <Button 
             onClick={testWebPermissions} 
@@ -236,11 +274,11 @@ export function CameraPermissionDebugger() {
             Test Web Permissions
           </Button>
           <Button 
-            onClick={testNativeFlow} 
+            onClick={testDirectCameraFlow} 
             disabled={isLoading}
             variant="outline"
           >
-            Test Native Flow
+            Test Direct Camera Flow
           </Button>
           <Button 
             onClick={testFullFlow} 
@@ -272,9 +310,9 @@ export function CameraPermissionDebugger() {
           <p><strong>Instructions:</strong></p>
           <ul className="list-disc list-inside space-y-1">
             <li><strong>Platform Info:</strong> Shows what platform you're running on</li>
-            <li><strong>Test Native Permissions:</strong> Tests Capacitor's native permission system</li>
+            <li><strong>Test Direct Permissions:</strong> Tests direct getUserMedia permission requests</li>
             <li><strong>Test Web Permissions:</strong> Tests browser's getUserMedia API</li>
-            <li><strong>Test Native Flow:</strong> Tests the comprehensive native camera setup</li>
+            <li><strong>Test Direct Camera Flow:</strong> Tests direct camera access with fallbacks</li>
             <li><strong>Test Full Flow:</strong> Tests the complete camera permission and stream flow</li>
           </ul>
         </div>
