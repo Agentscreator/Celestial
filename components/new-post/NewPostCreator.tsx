@@ -1,10 +1,24 @@
 "use client"
 
-import React, { useState, useRef, useCallback, useEffect } from "react"
+import type React from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Upload, X, Loader2, Camera, Square, RotateCw, Mic, MicOff, Music, Zap, Filter, Sparkles, Timer, Flashlight as Flash } from "lucide-react"
+import {
+  Upload,
+  X,
+  Loader2,
+  Camera,
+  Square,
+  RotateCw,
+  Music,
+  Zap,
+  Filter,
+  Sparkles,
+  Timer,
+  Slash as Flash,
+} from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
@@ -16,7 +30,7 @@ interface NewPostCreatorProps {
 }
 
 export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreatorProps) {
-  const [mode, setMode] = useState<'camera' | 'upload' | 'preview'>('camera')
+  const [mode, setMode] = useState<"camera" | "upload" | "preview">("camera")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [caption, setCaption] = useState("")
@@ -24,13 +38,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [cameraReady, setCameraReady] = useState(false)
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user")
   const [audioEnabled, setAudioEnabled] = useState(true)
-  const [selectedDuration, setSelectedDuration] = useState<'15s' | '60s' | '3m'>('15s')
+  const [selectedDuration, setSelectedDuration] = useState<"15s" | "60s" | "3m">("15s")
   const [flashEnabled, setFlashEnabled] = useState(false)
   const [showCaption, setShowCaption] = useState(false)
-  const [speedMode, setSpeedMode] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x')
-  const [filterMode, setFilterMode] = useState<'none' | 'vintage' | 'dramatic' | 'bright' | 'warm'>('none')
+  const [speedMode, setSpeedMode] = useState<"0.5x" | "1x" | "2x" | "3x">("1x")
+  const [filterMode, setFilterMode] = useState<"none" | "vintage" | "dramatic" | "bright" | "warm">("none")
   const [beautyMode, setBeautyMode] = useState(0) // 0-100
   const [timerEnabled, setTimerEnabled] = useState(false)
   const [timerDuration, setTimerDuration] = useState<3 | 10>(3)
@@ -54,35 +68,35 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const initCamera = useCallback(async () => {
     // Prevent multiple simultaneous initializations
     if (cameraLoading || permissionLoading) {
-      console.log('Camera initialization already in progress, skipping...')
+      console.log("Camera initialization already in progress, skipping...")
       return
     }
 
-    console.log('Starting camera initialization...')
+    console.log("Starting camera initialization...")
     setCameraLoading(true)
     setCameraReady(false)
 
     // Stop any existing stream first
     if (streamRef.current) {
-      console.log('Stopping existing camera stream...')
-      streamRef.current.getTracks().forEach(track => track.stop())
+      console.log("Stopping existing camera stream...")
+      streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
 
     try {
-      console.log('Requesting native camera permissions and stream...')
+      console.log("Requesting native camera permissions and stream...")
 
       // Use the hook to get camera stream with native permissions
       const stream = await getCameraStreamWithPermission({
         facingMode: facingMode,
-        audioEnabled: audioEnabled
+        audioEnabled: audioEnabled,
       })
 
       if (!stream) {
-        throw new Error('Failed to get camera stream - permission may have been denied')
+        throw new Error("Failed to get camera stream - permission may have been denied")
       }
 
-      console.log('Camera stream obtained successfully:', stream)
+      console.log("Camera stream obtained successfully:", stream)
       streamRef.current = stream
 
       if (videoRef.current) {
@@ -90,32 +104,34 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded, attempting to play...')
-          videoRef.current?.play().then(() => {
-            console.log('Video playing successfully')
-            setCameraReady(true)
-            setCameraLoading(false)
-          }).catch(err => {
-            console.error('Error playing video:', err)
-            setCameraLoading(false)
-            toast({
-              title: "Camera Error",
-              description: "Failed to start video preview. Please try again.",
-              variant: "destructive",
+          console.log("Video metadata loaded, attempting to play...")
+          videoRef.current
+            ?.play()
+            .then(() => {
+              console.log("Video playing successfully")
+              setCameraReady(true)
+              setCameraLoading(false)
             })
-          })
+            .catch((err) => {
+              console.error("Error playing video:", err)
+              setCameraLoading(false)
+              toast({
+                title: "Camera Error",
+                description: "Failed to start video preview. Please try again.",
+                variant: "destructive",
+              })
+            })
         }
 
         // Add error handler for video element
         videoRef.current.onerror = (err) => {
-          console.error('Video element error:', err)
+          console.error("Video element error:", err)
           setCameraLoading(false)
           setCameraReady(false)
         }
       }
-
     } catch (error) {
-      console.error('Error accessing camera:', error)
+      console.error("Error accessing camera:", error)
       setCameraLoading(false)
       setCameraReady(false)
 
@@ -136,7 +152,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Stop camera
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
     setCameraReady(false)
@@ -148,7 +164,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     const file = event.target.files?.[0]
     if (file) {
       // Validate file type - only videos allowed
-      if (!file.type.startsWith('video/')) {
+      if (!file.type.startsWith("video/")) {
         toast({
           title: "Invalid file type",
           description: "Please select a video file",
@@ -171,17 +187,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       setSelectedFile(file)
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
-      setMode('preview')
+      setMode("preview")
     }
   }
 
   // Get max recording duration in seconds
   const getMaxDuration = () => {
     switch (selectedDuration) {
-      case '15s': return 15
-      case '60s': return 60
-      case '3m': return 180
-      default: return 15
+      case "15s":
+        return 15
+      case "60s":
+        return 60
+      case "3m":
+        return 180
+      default:
+        return 15
     }
   }
 
@@ -201,11 +221,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
-        setSelectedFile(new File([blob], 'recorded-video.webm', { type: 'video/webm' }))
+        const blob = new Blob(recordedChunksRef.current, { type: "video/webm" })
+        setSelectedFile(new File([blob], "recorded-video.webm", { type: "video/webm" }))
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
-        setMode('preview')
+        setMode("preview")
       }
 
       mediaRecorder.start()
@@ -214,7 +234,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       // Recording timer with auto-stop at max duration
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => {
+        setRecordingTime((prev) => {
           const newTime = prev + 1
           if (newTime >= getMaxDuration()) {
             stopRecording()
@@ -222,9 +242,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           return newTime
         })
       }, 1000)
-
     } catch (error) {
-      console.error('Error starting recording:', error)
+      console.error("Error starting recording:", error)
       toast({
         title: "Recording Error",
         description: "Failed to start recording",
@@ -248,18 +267,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Flip camera
   const flipCamera = useCallback(() => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user')
+    setFacingMode((prev) => (prev === "user" ? "environment" : "user"))
   }, [])
 
   // Format recording time
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   // Handle speed mode change
-  const handleSpeedChange = (speed: '0.5x' | '1x' | '2x' | '3x') => {
+  const handleSpeedChange = (speed: "0.5x" | "1x" | "2x" | "3x") => {
     setSpeedMode(speed)
     setShowSpeedSelector(false)
     toast({
@@ -269,12 +288,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   }
 
   // Handle filter change
-  const handleFilterChange = (filter: 'none' | 'vintage' | 'dramatic' | 'bright' | 'warm') => {
+  const handleFilterChange = (filter: "none" | "vintage" | "dramatic" | "bright" | "warm") => {
     setFilterMode(filter)
     setShowFilterSelector(false)
     toast({
       title: "Filter applied",
-      description: filter === 'none' ? 'Filter removed' : `${filter} filter applied`,
+      description: filter === "none" ? "Filter removed" : `${filter} filter applied`,
     })
   }
 
@@ -283,7 +302,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setBeautyMode(value)
     toast({
       title: "Beauty mode",
-      description: value === 0 ? 'Beauty mode disabled' : `Beauty level: ${value}%`,
+      description: value === 0 ? "Beauty mode disabled" : `Beauty level: ${value}%`,
     })
   }
 
@@ -300,11 +319,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Get filter CSS class
   const getFilterClass = () => {
     switch (filterMode) {
-      case 'vintage': return 'sepia(0.8) contrast(1.2)'
-      case 'dramatic': return 'contrast(1.5) saturate(1.3)'
-      case 'bright': return 'brightness(1.2) saturate(1.1)'
-      case 'warm': return 'sepia(0.3) saturate(1.2) hue-rotate(10deg)'
-      default: return 'none'
+      case "vintage":
+        return "sepia(0.8) contrast(1.2)"
+      case "dramatic":
+        return "contrast(1.5) saturate(1.3)"
+      case "bright":
+        return "brightness(1.2) saturate(1.1)"
+      case "warm":
+        return "sepia(0.3) saturate(1.2) hue-rotate(10deg)"
+      default:
+        return "none"
     }
   }
 
@@ -332,12 +356,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
     try {
       const formData = new FormData()
-      formData.append('content', caption.trim())
-      formData.append('media', selectedFile)
-      formData.append('isInvite', 'false')
+      formData.append("content", caption.trim())
+      formData.append("media", selectedFile)
+      formData.append("isInvite", "false")
 
-      const response = await fetch('/api/posts', {
-        method: 'POST',
+      const response = await fetch("/api/posts", {
+        method: "POST",
         body: formData,
       })
 
@@ -359,13 +383,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         onClose()
 
         // Refresh feed
-        window.dispatchEvent(new CustomEvent('postCreated'))
+        window.dispatchEvent(new CustomEvent("postCreated"))
       } else {
         const error = await response.json()
-        throw new Error(error.error || 'Failed to create post')
+        throw new Error(error.error || "Failed to create post")
       }
     } catch (error) {
-      console.error('Error creating post:', error)
+      console.error("Error creating post:", error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create post",
@@ -384,7 +408,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setIsUploading(false)
     setIsRecording(false)
     setRecordingTime(0)
-    setMode('camera')
+    setMode("camera")
     setShowCaption(false)
     setShowSpeedSelector(false)
     setShowFilterSelector(false)
@@ -421,7 +445,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera when dialog opens and in camera mode
   useEffect(() => {
-    if (isOpen && mode === 'camera') {
+    if (isOpen && mode === "camera") {
       initCamera()
     } else {
       stopCamera()
@@ -434,7 +458,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
-    if (cameraReady && mode === 'camera') {
+    if (cameraReady && mode === "camera") {
       stopCamera()
       setTimeout(() => {
         initCamera()
@@ -445,25 +469,41 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none [&>button]:hidden"
+        className="fixed inset-0 w-screen h-screen max-w-none max-h-none p-0 bg-black border-none rounded-none [&>button]:hidden overflow-hidden"
+        style={{
+          // iOS safe area support
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+          // Prevent iOS bounce scrolling
+          overscrollBehavior: "none",
+          // Ensure full viewport height on mobile
+          height: "100dvh",
+          minHeight: "100dvh",
+        }}
         hideTitle={true}
         title="Create New Post"
         description="Create and share a new video post"
       >
-
-        {mode === 'camera' && (
+        {mode === "camera" && (
           // TikTok-style Camera Interface
           <div
-            className="relative w-full h-full bg-black overflow-hidden"
+            className="relative w-full h-full bg-black overflow-hidden touch-none"
             onClick={closeAllSelectors}
+            style={{
+              WebkitOverflowScrolling: "touch",
+              overscrollBehavior: "none",
+              touchAction: "manipulation",
+            }}
           >
             {/* Camera Preview */}
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
               style={{
-                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
-                filter: getFilterClass()
+                transform: facingMode === "user" ? "scaleX(-1)" : "none",
+                filter: getFilterClass(),
               }}
               muted
               playsInline
@@ -473,17 +513,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {/* Camera Loading/Permission Overlay */}
             {(cameraLoading || permissionLoading || !cameraReady) && (
               <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20">
-                {(cameraLoading || permissionLoading) ? (
+                {cameraLoading || permissionLoading ? (
                   <>
                     <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
                     <p className="text-white text-lg mb-2">
-                      {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
+                      {permissionLoading ? "Requesting permissions..." : "Starting camera..."}
                     </p>
                     <p className="text-white/70 text-sm text-center px-8">
                       {permissionLoading
-                        ? 'Please allow camera and microphone access when prompted'
-                        : 'Setting up your camera for recording'
-                      }
+                        ? "Please allow camera and microphone access when prompted"
+                        : "Setting up your camera for recording"}
                     </p>
                   </>
                 ) : (
@@ -492,15 +531,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <p className="text-white text-lg mb-2">Camera not ready</p>
                     <p className="text-white/70 text-sm text-center px-8 mb-4">
                       {hasPermission === false
-                        ? 'Camera permission required. Please allow access in your device settings.'
-                        : 'Please check camera permissions and try again'
-                      }
+                        ? "Camera permission required. Please allow access in your device settings."
+                        : "Please check camera permissions and try again"}
                     </p>
                     <Button
                       onClick={initCamera}
-                      className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-2"
+                      className="bg-white text-black hover:bg-white/90 rounded-full px-8 py-3 text-base font-medium min-h-[48px]"
                     >
-                      {hasPermission === false ? 'Request Permission' : 'Retry Camera'}
+                      {hasPermission === false ? "Request Permission" : "Retry Camera"}
                     </Button>
                   </>
                 )}
@@ -508,47 +546,51 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             )}
 
             {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
+            <div
+              className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4"
+              style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+            >
               <Button
                 variant="ghost"
                 onClick={handleClose}
-                className="text-white hover:bg-white/10 rounded-full p-2"
+                className="text-white hover:bg-white/10 rounded-full p-3 min-h-[48px] min-w-[48px]"
               >
                 <X className="h-6 w-6" />
               </Button>
-
               <Button
                 variant="ghost"
-                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2"
+                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-6 py-3 text-sm font-medium min-h-[48px]"
               >
                 <Music className="h-4 w-4 mr-2" />
                 Add sound
               </Button>
-
-              <div className="w-8" /> {/* Spacer for balance */}
+              <div className="w-12" /> {/* Spacer for balance */}
             </div>
 
             {/* Recording Timer */}
             {isRecording && (
-              <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  {formatTime(recordingTime)}
+              <div
+                className="absolute left-1/2 transform -translate-x-1/2 z-10"
+                style={{ top: "max(4rem, calc(env(safe-area-inset-top) + 2rem))" }}
+              >
+                <div className="bg-red-500/90 text-white px-4 py-2 rounded-full text-sm font-bold animate-pulse">
+                  ● {formatTime(recordingTime)}
                 </div>
               </div>
             )}
 
             {/* Right Side Controls */}
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-6">
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-8">
               {/* Flip Camera */}
               <button
                 onClick={flipCamera}
                 disabled={isRecording}
-                className="flex flex-col items-center text-white disabled:opacity-50"
+                className="flex flex-col items-center text-white disabled:opacity-50 active:scale-95 transition-transform"
               >
-                <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors">
+                <div className="w-14 h-14 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center mb-2 hover:bg-black/60 transition-colors border border-white/20">
                   <RotateCw className="w-6 h-6" />
                 </div>
-                <span className="text-xs">Flip</span>
+                <span className="text-xs font-medium">Flip</span>
               </button>
 
               {/* Speed */}
@@ -558,29 +600,31 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     e.stopPropagation()
                     setShowSpeedSelector(!showSpeedSelector)
                   }}
-                  className="flex flex-col items-center text-white"
+                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                    speedMode !== '1x' ? "bg-blue-500" : "bg-black/30 hover:bg-black/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-colors backdrop-blur-sm border border-white/20",
+                      speedMode !== "1x" ? "bg-blue-500/90" : "bg-black/40 hover:bg-black/60",
+                    )}
+                  >
                     <Zap className="w-6 h-6" />
                   </div>
-                  <span className="text-xs">{speedMode}</span>
+                  <span className="text-xs font-medium">{speedMode}</span>
                 </button>
 
                 {showSpeedSelector && (
                   <div
-                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
+                    className="absolute right-16 top-0 bg-black/90 backdrop-blur-md rounded-2xl p-3 min-w-[90px] border border-white/20"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {(['0.5x', '1x', '2x', '3x'] as const).map((speed) => (
+                    {(["0.5x", "1x", "2x", "3x"] as const).map((speed) => (
                       <button
                         key={speed}
                         onClick={() => handleSpeedChange(speed)}
                         className={cn(
-                          "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
-                          speedMode === speed ? "text-blue-400" : "text-white"
+                          "block w-full text-left px-4 py-3 text-sm rounded-xl hover:bg-white/10 transition-colors font-medium min-h-[44px]",
+                          speedMode === speed ? "text-blue-400 bg-blue-500/20" : "text-white",
                         )}
                       >
                         {speed}
@@ -597,29 +641,31 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     e.stopPropagation()
                     setShowFilterSelector(!showFilterSelector)
                   }}
-                  className="flex flex-col items-center text-white"
+                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                    filterMode !== 'none' ? "bg-purple-500" : "bg-black/30 hover:bg-black/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-colors backdrop-blur-sm border border-white/20",
+                      filterMode !== "none" ? "bg-purple-500/90" : "bg-black/40 hover:bg-black/60",
+                    )}
+                  >
                     <Filter className="w-6 h-6" />
                   </div>
-                  <span className="text-xs">Filters</span>
+                  <span className="text-xs font-medium">Filters</span>
                 </button>
 
                 {showFilterSelector && (
                   <div
-                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[100px]"
+                    className="absolute right-16 top-0 bg-black/90 backdrop-blur-md rounded-2xl p-3 min-w-[110px] border border-white/20"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {(['none', 'vintage', 'dramatic', 'bright', 'warm'] as const).map((filter) => (
+                    {(["none", "vintage", "dramatic", "bright", "warm"] as const).map((filter) => (
                       <button
                         key={filter}
                         onClick={() => handleFilterChange(filter)}
                         className={cn(
-                          "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors capitalize",
-                          filterMode === filter ? "text-purple-400" : "text-white"
+                          "block w-full text-left px-4 py-3 text-sm rounded-xl hover:bg-white/10 transition-colors capitalize font-medium min-h-[44px]",
+                          filterMode === filter ? "text-purple-400 bg-purple-500/20" : "text-white",
                         )}
                       >
                         {filter}
@@ -636,30 +682,35 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     e.stopPropagation()
                     setShowBeautySlider(!showBeautySlider)
                   }}
-                  className="flex flex-col items-center text-white"
+                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                    beautyMode > 0 ? "bg-pink-500" : "bg-black/30 hover:bg-black/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-colors backdrop-blur-sm border border-white/20",
+                      beautyMode > 0 ? "bg-pink-500/90" : "bg-black/40 hover:bg-black/60",
+                    )}
+                  >
                     <Sparkles className="w-6 h-6" />
                   </div>
-                  <span className="text-xs">Beauty</span>
+                  <span className="text-xs font-medium">Beauty</span>
                 </button>
 
                 {showBeautySlider && (
                   <div
-                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-4 w-40"
+                    className="absolute right-16 top-0 bg-black/90 backdrop-blur-md rounded-2xl p-4 w-48 border border-white/20"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="text-white text-sm mb-2">Beauty: {beautyMode}%</div>
+                    <div className="text-white text-sm mb-3 font-medium">Beauty: {beautyMode}%</div>
                     <input
                       type="range"
                       min="0"
                       max="100"
                       value={beautyMode}
                       onChange={(e) => handleBeautyChange(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                      className="w-full h-3 bg-gray-700 rounded-full appearance-none cursor-pointer slider accent-pink-500"
+                      style={{
+                        background: `linear-gradient(to right, #ec4899 0%, #ec4899 ${beautyMode}%, #374151 ${beautyMode}%, #374151 100%)`,
+                      }}
                     />
                   </div>
                 )}
@@ -672,27 +723,29 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     e.stopPropagation()
                     setShowTimerSelector(!showTimerSelector)
                   }}
-                  className="flex flex-col items-center text-white"
+                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
                 >
-                  <div className={cn(
-                    "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                    timerEnabled ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
-                  )}>
+                  <div
+                    className={cn(
+                      "w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-colors backdrop-blur-sm border border-white/20",
+                      timerEnabled ? "bg-green-500/90" : "bg-black/40 hover:bg-black/60",
+                    )}
+                  >
                     <Timer className="w-6 h-6" />
                   </div>
-                  <span className="text-xs">Timer</span>
+                  <span className="text-xs font-medium">Timer</span>
                 </button>
 
                 {showTimerSelector && (
                   <div
-                    className="absolute right-14 top-0 bg-black/80 rounded-lg p-2 min-w-[80px]"
+                    className="absolute right-16 top-0 bg-black/90 backdrop-blur-md rounded-2xl p-3 min-w-[90px] border border-white/20"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
                       onClick={() => setTimerDuration(3)}
                       className={cn(
-                        "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
-                        timerDuration === 3 ? "text-green-400" : "text-white"
+                        "block w-full text-left px-4 py-3 text-sm rounded-xl hover:bg-white/10 transition-colors font-medium min-h-[44px]",
+                        timerDuration === 3 ? "text-green-400 bg-green-500/20" : "text-white",
                       )}
                     >
                       3s
@@ -700,17 +753,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <button
                       onClick={() => setTimerDuration(10)}
                       className={cn(
-                        "block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors",
-                        timerDuration === 10 ? "text-green-400" : "text-white"
+                        "block w-full text-left px-4 py-3 text-sm rounded-xl hover:bg-white/10 transition-colors font-medium min-h-[44px]",
+                        timerDuration === 10 ? "text-green-400 bg-green-500/20" : "text-white",
                       )}
                     >
                       10s
                     </button>
                     <button
                       onClick={handleTimerToggle}
-                      className="block w-full text-left px-3 py-2 text-sm rounded hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-1 pt-2"
+                      className="block w-full text-left px-4 py-3 text-sm rounded-xl hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-2 pt-3 font-medium min-h-[44px]"
                     >
-                      {timerEnabled ? 'Disable' : 'Enable'}
+                      {timerEnabled ? "Disable" : "Enable"}
                     </button>
                   </div>
                 )}
@@ -719,32 +772,37 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               {/* Flash */}
               <button
                 onClick={() => setFlashEnabled(!flashEnabled)}
-                className="flex flex-col items-center text-white"
+                className="flex flex-col items-center text-white active:scale-95 transition-transform"
               >
-                <div className={cn(
-                  "w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors",
-                  flashEnabled ? "bg-yellow-500" : "bg-black/30 hover:bg-black/50"
-                )}>
+                <div
+                  className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-colors backdrop-blur-sm border border-white/20",
+                    flashEnabled ? "bg-yellow-500/90" : "bg-black/40 hover:bg-black/60",
+                  )}
+                >
                   <Flash className="w-6 h-6" />
                 </div>
-                <span className="text-xs">Flash</span>
+                <span className="text-xs font-medium">Flash</span>
               </button>
             </div>
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-0 left-0 right-0 z-10 pb-8">
+            <div
+              className="absolute bottom-0 left-0 right-0 z-10"
+              style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
+            >
               {/* Duration Selector */}
-              <div className="flex justify-center mb-6">
-                <div className="flex bg-black/30 rounded-full p-1">
-                  {(['3m', '60s', '15s'] as const).map((duration) => (
+              <div className="flex justify-center mb-8">
+                <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/20">
+                  {(["3m", "60s", "15s"] as const).map((duration) => (
                     <button
                       key={duration}
                       onClick={() => setSelectedDuration(duration)}
                       className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                        "px-6 py-3 rounded-full text-sm font-medium transition-all min-h-[44px] min-w-[60px]",
                         selectedDuration === duration
-                          ? "bg-white text-black"
-                          : "text-white hover:bg-white/10"
+                          ? "bg-white text-black shadow-lg"
+                          : "text-white hover:bg-white/10 active:scale-95",
                       )}
                     >
                       {duration}
@@ -754,13 +812,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
 
               {/* Main Controls */}
-              <div className="flex items-center justify-center gap-8">
+              <div className="flex items-center justify-center gap-12 px-8">
                 {/* Effects */}
-                <button className="flex flex-col items-center text-white">
-                  <div className="w-14 h-14 bg-black/30 rounded-2xl flex items-center justify-center mb-1">
-                    <Sparkles className="w-6 h-6" />
+                <button className="flex flex-col items-center text-white active:scale-95 transition-transform">
+                  <div className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2 border border-white/20">
+                    <Sparkles className="w-7 h-7" />
                   </div>
-                  <span className="text-xs">Effects</span>
+                  <span className="text-xs font-medium">Effects</span>
                 </button>
 
                 {/* Record Button */}
@@ -769,34 +827,34 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <button
                       onClick={startRecording}
                       disabled={!cameraReady}
-                      className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all transform hover:scale-105 disabled:opacity-50"
+                      className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 shadow-2xl"
                     >
-                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                        <div className="w-12 h-12 bg-red-500 rounded-full" />
+                      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                        <div className="w-14 h-14 bg-red-500 rounded-full" />
                       </div>
                     </button>
                   ) : (
                     <button
                       onClick={stopRecording}
-                      className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all"
+                      className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all active:scale-95 shadow-2xl"
                     >
-                      <Square className="w-8 h-8 text-white fill-current" />
+                      <Square className="w-10 h-10 text-white fill-current" />
                     </button>
                   )}
 
                   {/* Progress Ring */}
                   {isRecording && (
                     <div className="absolute inset-0 -rotate-90">
-                      <svg className="w-20 h-20">
+                      <svg className="w-24 h-24">
                         <circle
-                          cx="40"
-                          cy="40"
-                          r="38"
+                          cx="48"
+                          cy="48"
+                          r="46"
                           stroke="white"
-                          strokeWidth="2"
+                          strokeWidth="3"
                           fill="none"
-                          strokeDasharray={`${(recordingTime / getMaxDuration()) * 238.76} 238.76`}
-                          className="transition-all duration-1000"
+                          strokeDasharray={`${(recordingTime / getMaxDuration()) * 289} 289`}
+                          className="transition-all duration-1000 drop-shadow-lg"
                         />
                       </svg>
                     </div>
@@ -806,37 +864,37 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 {/* Upload */}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center text-white"
+                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
                 >
-                  <div className="w-14 h-14 bg-black/30 rounded-2xl flex items-center justify-center mb-1">
-                    <Upload className="w-6 h-6" />
+                  <div className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2 border border-white/20">
+                    <Upload className="w-7 h-7" />
                   </div>
-                  <span className="text-xs">Upload</span>
+                  <span className="text-xs font-medium">Upload</span>
                 </button>
               </div>
 
               {/* Bottom Tab Bar */}
-              <div className="flex justify-center mt-6">
-                <div className="flex bg-black/30 rounded-full px-6 py-2">
-                  <button className="text-white font-medium mr-8">Camera</button>
-                  <button className="text-white/60">Templates</button>
+              <div className="flex justify-center mt-8">
+                <div className="flex bg-black/40 backdrop-blur-sm rounded-full px-8 py-3 border border-white/20">
+                  <button className="text-white font-medium mr-12 text-base">Camera</button>
+                  <button className="text-white/60 text-base">Templates</button>
                 </div>
               </div>
             </div>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileUpload} className="hidden" />
           </div>
         )}
 
-        {mode === 'preview' && (
+        {mode === "preview" && (
           // Preview Mode with Caption
-          <div className="relative w-full h-full bg-black">
+          <div
+            className="relative w-full h-full bg-black"
+            style={{
+              overscrollBehavior: "none",
+              touchAction: "manipulation",
+            }}
+          >
             {/* Video Preview */}
             <video
               src={previewUrl || undefined}
@@ -845,24 +903,28 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               autoPlay
               loop
               muted
+              playsInline
             />
 
             {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
+            <div
+              className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4"
+              style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+            >
               <Button
                 variant="ghost"
                 onClick={() => {
-                  setMode('camera')
+                  setMode("camera")
                   removeFile()
                 }}
-                className="text-white hover:bg-white/10 rounded-full p-2"
+                className="text-white hover:bg-white/10 rounded-full p-3 min-h-[48px] min-w-[48px]"
               >
                 <X className="h-6 w-6" />
               </Button>
 
               <Button
                 variant="ghost"
-                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2"
+                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-6 py-3 text-sm font-medium min-h-[48px] backdrop-blur-sm"
               >
                 <Music className="h-4 w-4 mr-2" />
                 Add sound
@@ -870,7 +932,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
               <Button
                 onClick={() => setShowCaption(!showCaption)}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2"
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-3 font-medium min-h-[48px] shadow-lg"
               >
                 Next
               </Button>
@@ -878,27 +940,30 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
             {/* Caption Overlay */}
             {showCaption && (
-              <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-6">
+              <div
+                className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 to-transparent p-6"
+                style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+              >
                 <Textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
                   placeholder="Describe your video..."
-                  className="w-full bg-transparent border-none text-white placeholder:text-white/60 focus:ring-0 resize-none text-lg"
+                  className="w-full bg-black/20 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-lg rounded-2xl p-4 min-h-[120px]"
                   maxLength={2000}
                   rows={3}
                 />
 
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-white/60 text-sm">{caption.length}/2000</span>
+                <div className="flex items-center justify-between mt-6">
+                  <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
 
                   <Button
                     onClick={handleCreatePost}
                     disabled={isUploading || !caption.trim()}
-                    className="bg-red-500 hover:bg-red-600 text-white rounded-full px-8 py-2"
+                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-10 py-3 font-bold text-base min-h-[52px] shadow-xl"
                   >
                     {isUploading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin" />
                         Posting...
                       </div>
                     ) : (
