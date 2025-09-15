@@ -3,9 +3,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,8 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, EyeOff } from "lucide-react"
 import { isMobileApp } from "@/src/lib/mobile-auth"
 
-export default function SignupPage() {
+function SignupPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get('returnTo')
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -339,8 +341,9 @@ export default function SignupPage() {
         throw new Error("Failed to login after registration")
       }
 
-      // Redirect to feed page
-      router.push("/feed")
+      // Redirect to returnTo URL or default to feed page
+      const redirectUrl = returnTo || "/feed"
+      router.push(redirectUrl)
       router.refresh()
     } catch (error) {
       console.error("Registration error:", error)
@@ -665,5 +668,15 @@ export default function SignupPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    </div>}>
+      <SignupPageContent />
+    </Suspense>
   )
 }

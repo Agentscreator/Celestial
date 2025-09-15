@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 
 interface PublicEvent {
   id: string
@@ -38,11 +39,14 @@ interface PublicEvent {
 
 export default function PublicEventInvitePage() {
   const params = useParams()
+  const router = useRouter()
   const shareToken = params.shareToken as string
-  
+  const { data: session, status } = useSession()
+
   const [event, setEvent] = useState<PublicEvent | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [joining, setJoining] = useState(false)
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -106,11 +110,55 @@ export default function PublicEventInvitePage() {
     }
   }, [shareToken])
 
-  const handleJoinClick = () => {
-    toast({
-      title: "Sign up to join!",
-      description: "Create an account to join this event and connect with others.",
-    })
+  const handleJoinClick = async () => {
+    if (!session) {
+      // Redirect to signup with return URL
+      const signupUrl = `/auth/signup?returnTo=${encodeURIComponent(window.location.pathname)}`
+      router.push(signupUrl)
+      return
+    }
+
+    if (!event) return
+
+    try {
+      setJoining(true)
+      const response = await fetch(`/api/events/${event.id}/join`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setEvent(prev => prev ? {
+          ...prev,
+          currentParticipants: data.currentParticipants
+        } : null)
+
+        toast({
+          title: "Joined!",
+          description: "You've successfully joined this event.",
+        })
+
+        // Redirect to the authenticated event page
+        router.push(`/events/${event.id}`)
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to join event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error joining event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to join event",
+        variant: "destructive",
+      })
+    } finally {
+      setJoining(false)
+    }
   }
 
   const handleShare = async () => {
@@ -331,18 +379,26 @@ export default function PublicEventInvitePage() {
           </CardContent>
           
           <CardFooter className="pt-4 gap-3 px-6 pb-6">
-            <Link href="/auth/signup" className="flex-1">
-              <Button
-                className="w-full text-white font-semibold py-3"
-                style={{
-                  backgroundColor: cardTheme.primaryColor,
-                  borderRadius: `${cardTheme.borderRadius}px`
-                }}
-disabled={false}
-              >
-                Sign Up & Join Event
-              </Button>
-            </Link>
+            <Button
+              onClick={handleJoinClick}
+              disabled={joining || status === "loading"}
+              className="flex-1 text-white font-semibold py-3"
+              style={{
+                backgroundColor: cardTheme.primaryColor,
+                borderRadius: `${cardTheme.borderRadius}px`
+              }}
+            >
+              {joining ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Joining...
+                </>
+              ) : session ? (
+                "Join Event"
+              ) : (
+                "Sign Up & Join Event"
+              )}
+            </Button>
             
             <Button
               variant="outline"
