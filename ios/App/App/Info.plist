@@ -29,6 +29,9 @@
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>armv7</string>
+		<string>video-camera</string>
+		<string>microphone</string>
+		<string>front-facing-camera</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
