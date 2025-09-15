@@ -47,6 +47,66 @@ export function CameraPermissionDebugger() {
     });
   };
 
+  const testAdvancedPermissions = async () => {
+    setIsLoading(true);
+    addLog('=== Advanced Permission Test ===');
+    
+    try {
+      const { testDirectPermissions, testPermissionAPI, enumerateDevices } = await import('@/utils/permission-test');
+      
+      // Test 1: Permission API
+      addLog('Testing Permission API...');
+      const permissionStatus = await testPermissionAPI();
+      if (permissionStatus.error) {
+        addLog(`Permission API: ${permissionStatus.error}`);
+      } else {
+        addLog(`Camera permission: ${permissionStatus.camera}`);
+        addLog(`Microphone permission: ${permissionStatus.microphone}`);
+      }
+      
+      // Test 2: Device enumeration
+      addLog('');
+      addLog('Testing device enumeration...');
+      const deviceInfo = await enumerateDevices();
+      if (deviceInfo.error) {
+        addLog(`Device enumeration failed: ${deviceInfo.error}`);
+      } else {
+        addLog(`Total devices: ${deviceInfo.total}`);
+        addLog(`Video devices: ${deviceInfo.video}`);
+        addLog(`Audio devices: ${deviceInfo.audio}`);
+      }
+      
+      // Test 3: Direct permission test
+      addLog('');
+      addLog('Testing direct getUserMedia...');
+      const directTest = await testDirectPermissions();
+      if (directTest.success) {
+        addLog(`✅ Direct test successful! Tracks: ${directTest.tracks}`);
+        toast({
+          title: "Success!",
+          description: "Advanced permission test passed!",
+        });
+      } else {
+        addLog(`❌ Direct test failed: ${directTest.error}`);
+        
+        if (directTest.error?.includes('NotAllowedError')) {
+          addLog('');
+          addLog('🚨 PERMISSION ISSUE DETECTED:');
+          addLog('The app permissions are not properly declared or granted.');
+          addLog('This explains why device settings shows "no permissions required".');
+          addLog('');
+          addLog('SOLUTION: Rebuild and reinstall the app completely.');
+        }
+      }
+      
+    } catch (error) {
+      addLog(`❌ Advanced test failed: ${error}`);
+      console.error('Advanced permission test error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const testPlatformInfo = () => {
     addLog('=== Platform Information ===');
     addLog(`Platform: ${Capacitor.getPlatform()}`);
@@ -349,6 +409,13 @@ export function CameraPermissionDebugger() {
           </Button>
           <Button onClick={openDeviceSettings} variant="outline">
             📱 Settings Help
+          </Button>
+          <Button 
+            onClick={testAdvancedPermissions} 
+            disabled={isLoading}
+            variant="outline"
+          >
+            🔬 Advanced Test
           </Button>
         </div>
 

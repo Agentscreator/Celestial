@@ -10,13 +10,6 @@ const config: CapacitorConfig = {
     url: process.env.CAPACITOR_SERVER_URL || 'https://celestial-rouge-one.vercel.app',
     cleartext: process.env.NODE_ENV === 'development'
   },
-  android: {
-    buildOptions: {
-      keystorePath: 'release-key.keystore',
-      keystoreAlias: 'key0',
-      keystorePassword: 'your_keystore_password'
-    }
-  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 1500,
@@ -30,16 +23,20 @@ const config: CapacitorConfig = {
     },
     App: {
     },
-    Camera: {
-      // Configure camera permissions
-      permissions: ['camera', 'photos', 'microphone']
-    },
     // Apple Watch specific configurations
     Device: {
       watchSupport: true
     },
     Haptics: {
       watchHaptics: true
+    }
+  },
+  // Android specific settings
+  android: {
+    buildOptions: {
+      keystorePath: 'release-key.keystore',
+      keystoreAlias: 'key0',
+      keystorePassword: 'your_keystore_password'
     }
   },
   // iOS specific settings
