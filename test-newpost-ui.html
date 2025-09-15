@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewPost UI Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #000;
+            color: white;
+        }
+        .test-info {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0052a3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>NewPost UI Test - iOS Debugging</h1>
+        <p><strong>User Agent:</strong> <span id="userAgent"></span></p>
+        <p><strong>Platform:</strong> <span id="platform"></span></p>
+        <p><strong>Is iOS:</strong> <span id="isIOS"></span></p>
+        <p><strong>Viewport:</strong> <span id="viewport"></span></p>
+        <p><strong>Screen:</strong> <span id="screen"></span></p>
+    </div>
+
+    <div class="test-info">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Open your Next.js app at <a href="http://localhost:3000" style="color: #66ccff;">http://localhost:3000</a></li>
+            <li>Navigate to the feed page</li>
+            <li>Tap the "Create" button (+ icon) in the navigation</li>
+            <li>Look for the red "✅ NewPost UI Loaded - iOS Test" indicator</li>
+            <li>Check if you can see the camera interface or upload interface</li>
+        </ol>
+    </div>
+
+    <div class="test-info">
+        <h2>Expected Behavior</h2>
+        <ul>
+            <li>✅ Red test indicator should be visible at top-left</li>
+            <li>✅ Black fullscreen background should cover entire screen</li>
+            <li>✅ Either camera interface OR upload interface should be visible</li>
+            <li>✅ Close button (X) should be visible at top-left</li>
+            <li>✅ Debug info should show in development mode (top-right)</li>
+        </ul>
+    </div>
+
+    <script>
+        // Display device info
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        document.getElementById('platform').textContent = navigator.platform;
+        document.getElementById('isIOS').textContent = /iPad|iPhone|iPod/.test(navigator.userAgent) ? 'YES' : 'NO';
+        document.getElementById('viewport').textContent = `${window.innerWidth} x ${window.innerHeight}`;
+        document.getElementById('screen').textContent = `${screen.width} x ${screen.height}`;
+    </script>
+</body>
+</html>

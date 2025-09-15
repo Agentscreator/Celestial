@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { FullscreenDialog } from "./FullscreenDialog"
 import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Sparkles, Timer, Flashlight as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -16,6 +16,17 @@ interface NewPostCreatorProps {
 }
 
 export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreatorProps) {
+  // Debug logging for iOS
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🎥 NewPostCreator opened', {
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR',
+        isIOS: typeof window !== 'undefined' ? /iPad|iPhone|iPod/.test(window.navigator.userAgent) : false,
+        viewport: typeof window !== 'undefined' ? { width: window.innerWidth, height: window.innerHeight } : null
+      })
+    }
+  }, [isOpen])
+
   const [mode, setMode] = useState<'camera' | 'upload' | 'preview'>('camera')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -221,7 +232,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       ]
 
       let mediaRecorder: MediaRecorder | null = null
-      let usedMimeType = 'video/webm' // default fallback
 
       // Try to find a supported codec
       let codecFound = false
@@ -232,7 +242,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         if (isSupported) {
           console.log(`✅ Using codec: ${codec}`)
           mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: codec })
-          usedMimeType = codec
           recordingMimeTypeRef.current = codec
           codecFound = true
           break
@@ -243,7 +252,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       if (!codecFound) {
         console.log('Using default MediaRecorder without codec specification')
         mediaRecorder = new MediaRecorder(streamRef.current)
-        usedMimeType = 'video/mp4' // Try MP4 as default for better compatibility
         recordingMimeTypeRef.current = 'video/mp4'
       }
 
@@ -754,561 +762,639 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             width: 24px;
           }
         }
+        /* iOS Safari fixes */
+        .ios-fullscreen {
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          height: 100vh !important;
+          height: 100dvh !important;
+          max-width: none !important;
+          max-height: none !important;
+          transform: none !important;
+          z-index: 9999 !important;
+        }
+        /* Prevent iOS Safari zoom on input focus */
+        input, textarea, select {
+          font-size: 16px !important;
+        }
+        /* Fix iOS Safari viewport issues */
+        @supports (-webkit-touch-callout: none) {
+          .ios-fullscreen {
+            height: -webkit-fill-available !important;
+          }
+        }
       `}</style>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent
-          className="w-[100vw] h-[100vh] max-w-none max-h-none p-0 bg-black border-none rounded-none [&>button]:hidden overflow-hidden"
-          hideTitle={true}
-          title="Create New Post"
-          description="Create and share a new video post"
-        >
+      <FullscreenDialog isOpen={isOpen} onClose={handleClose}>
 
-          {mode === 'camera' && (
-            // TikTok-style Camera Interface
-            <div
-              className="relative w-full h-full bg-black overflow-hidden"
-              onClick={closeAllSelectors}
-            >
-              {/* Camera Preview */}
-              <video
-                ref={videoRef}
-                className={cn(
-                  "w-full h-full object-cover",
-                  isRecording && "ring-4 ring-red-500 ring-inset"
-                )}
-                style={{
-                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
-                  filter: getFilterClass()
-                }}
-                muted
-                playsInline
-                autoPlay
-              />
+        {mode === 'upload' && (
+          // Upload Mode
+          <div className="relative w-full h-full bg-black ios-fullscreen flex flex-col items-center justify-center p-8">
+            <div className="absolute top-4 left-4 z-10">
+              <Button
+                variant="ghost"
+                onClick={handleClose}
+                className="text-white hover:bg-white/10 rounded-full p-3"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
 
-              {/* Recording Overlay */}
-              {isRecording && (
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute inset-0 border-4 border-red-500 animate-pulse" />
-                  <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    REC
-                  </div>
-                </div>
+            <div className="text-center max-w-md">
+              <Upload className="w-16 h-16 text-white/70 mx-auto mb-6" />
+              <h2 className="text-white text-2xl font-bold mb-4">Upload Video</h2>
+              <p className="text-white/70 text-base mb-8">
+                Select a video file from your device to share
+              </p>
+
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-4 text-lg font-medium w-full mb-4"
+              >
+                <Upload className="w-5 h-5 mr-2" />
+                Choose Video File
+              </Button>
+
+              <Button
+                onClick={() => setMode('camera')}
+                variant="outline"
+                className="border-white/30 text-white hover:bg-white/10 rounded-full px-8 py-3 w-full"
+              >
+                Try Camera Instead
+              </Button>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
+        )}
+
+        {mode === 'camera' && (
+          // TikTok-style Camera Interface
+          <div
+            className="relative w-full h-full bg-black overflow-hidden ios-fullscreen"
+            onClick={closeAllSelectors}
+          >
+            {/* Camera Preview */}
+            <video
+              ref={videoRef}
+              className={cn(
+                "w-full h-full object-cover",
+                isRecording && "ring-4 ring-red-500 ring-inset"
               )}
+              style={{
+                transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                filter: getFilterClass()
+              }}
+              muted
+              playsInline
+              autoPlay
+            />
 
-              {/* Camera Loading/Permission Overlay */}
-              {(cameraLoading || permissionLoading || !cameraReady) && (
-                <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20">
-                  {(cameraLoading || permissionLoading) ? (
-                    <>
-                      <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
-                      <p className="text-white text-lg mb-2">
-                        {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
-                      </p>
-                      <p className="text-white/70 text-sm text-center px-8">
-                        {permissionLoading
-                          ? 'Please allow camera and microphone access when prompted'
-                          : 'Setting up your camera for recording'
-                        }
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-16 h-16 text-white/50 mb-4" />
-                      <p className="text-white text-lg mb-2">Camera not ready</p>
-                      <p className="text-white/70 text-sm text-center px-8 mb-4">
-                        {hasPermission === false
-                          ? 'Camera permission required. If you just granted permission, tap "Retry Camera" below.'
-                          : 'Please check camera permissions and try again'
-                        }
-                      </p>
-                      {hasPermission === false && (
-                        <p className="text-white/50 text-xs text-center px-8 mb-4">
-                          On iOS: Settings → MirroSocial → Camera → Allow
-                        </p>
-                      )}
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          onClick={initCamera}
-                          className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-2 font-medium"
-                        >
-                          {hasPermission === false ? 'Retry Camera' : 'Retry Camera'}
-                        </Button>
-                        {hasPermission === false && (
-                          <Button
-                            onClick={() => {
-                              // Try to open settings (this will work on some platforms)
-                              if (window.location.protocol === 'capacitor:') {
-                                // On native app, this might help guide users
-                                toast({
-                                  title: "Open Settings",
-                                  description: "Please go to Settings → MirroSocial → Camera and enable camera access, then return to the app.",
-                                  duration: 8000,
-                                })
-                              }
-                            }}
-                            variant="outline"
-                            className="border-white/30 text-white hover:bg-white/10 rounded-full px-6 py-2 text-sm"
-                          >
-                            Open Settings Guide
-                          </Button>
-                        )}
-                      </div>
-                    </>
-                  )}
+            {/* Recording Overlay */}
+            {isRecording && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute inset-0 border-4 border-red-500 animate-pulse" />
+                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  REC
                 </div>
-              )}
-
-              {/* Top Bar */}
-              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
-                <Button
-                  variant="ghost"
-                  onClick={handleClose}
-                  className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2 min-h-[40px] text-sm"
-                >
-                  <Music className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Add sound</span>
-                  <span className="sm:hidden">Sound</span>
-                </Button>
-
-                <div className="w-12" /> {/* Spacer for balance */}
               </div>
+            )}
 
-              {/* Recording Timer */}
-              {isRecording && (
-                <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className="bg-red-500 text-white px-4 py-2 rounded-full text-base font-bold flex items-center gap-2 shadow-lg">
-                    <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
-                    {formatTime(recordingTime)}
-                  </div>
-                  <div className="text-center mt-2">
-                    <div className="text-white/80 text-sm bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-                      Tap ⏹️ to stop recording
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Debug State Display - Remove this after testing */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="absolute top-4 right-4 z-50 bg-black/80 text-white p-2 rounded text-xs">
-                  <div>Recording: {isRecording ? 'YES' : 'NO'}</div>
-                  <div>Stopping: {isStoppingRecording ? 'YES' : 'NO'}</div>
-                  <div>Time: {recordingTime}s</div>
-                </div>
-              )}
-
-              {/* Right Side Controls */}
-              <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
-                {/* Flip Camera */}
-                <button
-                  onClick={flipCamera}
-                  disabled={isRecording}
-                  className="flex flex-col items-center text-white disabled:opacity-50 touch-manipulation"
-                >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors active:scale-95">
-                    <RotateCw className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </div>
-                  <span className="text-xs font-medium">Flip</span>
-                </button>
-
-                {/* Speed */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowSpeedSelector(!showSpeedSelector)
-                    }}
-                    className="flex flex-col items-center text-white touch-manipulation"
-                  >
-                    <div className={cn(
-                      "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                      speedMode !== '1x' ? "bg-blue-500" : "bg-black/30 hover:bg-black/50"
-                    )}>
-                      <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">{speedMode}</span>
-                  </button>
-
-                  {showSpeedSelector && (
-                    <div
-                      className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[80px] border border-white/10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {(['0.5x', '1x', '2x', '3x'] as const).map((speed) => (
-                        <button
-                          key={speed}
-                          onClick={() => handleSpeedChange(speed)}
-                          className={cn(
-                            "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
-                            speedMode === speed ? "text-blue-400 bg-blue-500/20" : "text-white"
-                          )}
+            {/* Camera Loading/Permission Overlay */}
+            {(cameraLoading || permissionLoading || !cameraReady) && (
+              <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20 p-4">
+                {(cameraLoading || permissionLoading) ? (
+                  <>
+                    <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
+                    <p className="text-white text-lg mb-2 text-center">
+                      {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
+                    </p>
+                    <p className="text-white/70 text-sm text-center px-4">
+                      {permissionLoading
+                        ? 'Please allow camera and microphone access when prompted'
+                        : 'Setting up your camera for recording'
+                      }
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-16 h-16 text-white/50 mb-4" />
+                    <p className="text-white text-lg mb-2 text-center">Camera not ready</p>
+                    <p className="text-white/70 text-sm text-center px-4 mb-4">
+                      {hasPermission === false
+                        ? 'Camera permission required. If you just granted permission, tap "Retry Camera" below.'
+                        : 'Please check camera permissions and try again'
+                      }
+                    </p>
+                    {hasPermission === false && (
+                      <p className="text-white/50 text-xs text-center px-4 mb-4">
+                        On iOS: Settings → MirroSocial → Camera → Allow
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                      <Button
+                        onClick={initCamera}
+                        className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-3 font-medium w-full"
+                      >
+                        {hasPermission === false ? 'Retry Camera' : 'Retry Camera'}
+                      </Button>
+                      <Button
+                        onClick={() => setMode('upload')}
+                        variant="outline"
+                        className="border-white/30 text-white hover:bg-white/10 rounded-full px-6 py-3 w-full"
+                      >
+                        Upload Video Instead
+                      </Button>
+                      {hasPermission === false && (
+                        <Button
+                          onClick={() => {
+                            toast({
+                              title: "Camera Settings",
+                              description: "Go to Settings → MirroSocial → Camera and enable camera access, then return to the app.",
+                              duration: 8000,
+                            })
+                          }}
+                          variant="ghost"
+                          className="text-white/70 hover:bg-white/5 rounded-full px-6 py-2 text-sm w-full"
                         >
-                          {speed}
-                        </button>
-                      ))}
+                          Settings Help
+                        </Button>
+                      )}
                     </div>
-                  )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Test visibility indicator - Always visible */}
+            <div className="absolute top-2 left-2 z-[9999] bg-red-500 text-white px-2 py-1 text-xs rounded shadow-lg">
+              ✅ NewPost UI Loaded - iOS Test
+            </div>
+
+            {/* Top Bar */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
+              <Button
+                variant="ghost"
+                onClick={handleClose}
+                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2 min-h-[40px] text-sm"
+              >
+                <Music className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Add sound</span>
+                <span className="sm:hidden">Sound</span>
+              </Button>
+
+              <div className="w-12" /> {/* Spacer for balance */}
+            </div>
+
+            {/* Recording Timer */}
+            {isRecording && (
+              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+                <div className="bg-red-500 text-white px-4 py-2 rounded-full text-base font-bold flex items-center gap-2 shadow-lg">
+                  <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                  {formatTime(recordingTime)}
                 </div>
-
-                {/* Filters */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowFilterSelector(!showFilterSelector)
-                    }}
-                    className="flex flex-col items-center text-white touch-manipulation"
-                  >
-                    <div className={cn(
-                      "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                      filterMode !== 'none' ? "bg-purple-500" : "bg-black/30 hover:bg-black/50"
-                    )}>
-                      <Filter className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">Filters</span>
-                  </button>
-
-                  {showFilterSelector && (
-                    <div
-                      className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[100px] border border-white/10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {(['none', 'vintage', 'dramatic', 'bright', 'warm'] as const).map((filter) => (
-                        <button
-                          key={filter}
-                          onClick={() => handleFilterChange(filter)}
-                          className={cn(
-                            "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors capitalize touch-manipulation",
-                            filterMode === filter ? "text-purple-400 bg-purple-500/20" : "text-white"
-                          )}
-                        >
-                          {filter}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div className="text-center mt-2">
+                  <div className="text-white/80 text-sm bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+                    Tap ⏹️ to stop recording
+                  </div>
                 </div>
+              </div>
+            )}
 
-                {/* Beauty */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowBeautySlider(!showBeautySlider)
-                    }}
-                    className="flex flex-col items-center text-white touch-manipulation"
-                  >
-                    <div className={cn(
-                      "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                      beautyMode > 0 ? "bg-pink-500" : "bg-black/30 hover:bg-black/50"
-                    )}>
-                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">Beauty</span>
-                  </button>
+            {/* Debug State Display - Remove this after testing */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="absolute top-4 right-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
+                <div>Recording: {isRecording ? 'YES' : 'NO'}</div>
+                <div>Stopping: {isStoppingRecording ? 'YES' : 'NO'}</div>
+                <div>Time: {recordingTime}s</div>
+                <div>Camera Ready: {cameraReady ? 'YES' : 'NO'}</div>
+                <div>Camera Loading: {cameraLoading ? 'YES' : 'NO'}</div>
+                <div>Permission Loading: {permissionLoading ? 'YES' : 'NO'}</div>
+                <div>Has Permission: {hasPermission === null ? 'UNKNOWN' : hasPermission ? 'YES' : 'NO'}</div>
+                <div>Mode: {mode}</div>
+                <div>Platform: {typeof window !== 'undefined' ? window.navigator.userAgent.includes('iPhone') ? 'iOS' : 'Other' : 'SSR'}</div>
+              </div>
+            )}
 
-                  {showBeautySlider && (
-                    <div
-                      className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-4 w-44 border border-white/10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="text-white text-sm mb-3 font-medium">Beauty: {beautyMode}%</div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={beautyMode}
-                        onChange={(e) => handleBeautyChange(Number(e.target.value))}
-                        className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider touch-manipulation"
-                        style={{
-                          background: `linear-gradient(to right, #ec4899 0%, #ec4899 ${beautyMode}%, #374151 ${beautyMode}%, #374151 100%)`
-                        }}
-                      />
-                    </div>
-                  )}
+            {/* Right Side Controls */}
+            <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
+              {/* Flip Camera */}
+              <button
+                onClick={flipCamera}
+                disabled={isRecording}
+                className="flex flex-col items-center text-white disabled:opacity-50 touch-manipulation"
+              >
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors active:scale-95">
+                  <RotateCw className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
+                <span className="text-xs font-medium">Flip</span>
+              </button>
 
-                {/* Timer */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowTimerSelector(!showTimerSelector)
-                    }}
-                    className="flex flex-col items-center text-white touch-manipulation"
-                  >
-                    <div className={cn(
-                      "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                      timerEnabled ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
-                    )}>
-                      <Timer className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">Timer</span>
-                  </button>
-
-                  {showTimerSelector && (
-                    <div
-                      className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[80px] border border-white/10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() => setTimerDuration(3)}
-                        className={cn(
-                          "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
-                          timerDuration === 3 ? "text-green-400 bg-green-500/20" : "text-white"
-                        )}
-                      >
-                        3s
-                      </button>
-                      <button
-                        onClick={() => setTimerDuration(10)}
-                        className={cn(
-                          "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
-                          timerDuration === 10 ? "text-green-400 bg-green-500/20" : "text-white"
-                        )}
-                      >
-                        10s
-                      </button>
-                      <button
-                        onClick={handleTimerToggle}
-                        className="block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-1 pt-3 touch-manipulation"
-                      >
-                        {timerEnabled ? 'Disable' : 'Enable'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Flash */}
+              {/* Speed */}
+              <div className="relative">
                 <button
-                  onClick={() => setFlashEnabled(!flashEnabled)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowSpeedSelector(!showSpeedSelector)
+                  }}
                   className="flex flex-col items-center text-white touch-manipulation"
                 >
                   <div className={cn(
                     "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                    flashEnabled ? "bg-yellow-500" : "bg-black/30 hover:bg-black/50"
+                    speedMode !== '1x' ? "bg-blue-500" : "bg-black/30 hover:bg-black/50"
                   )}>
-                    <Flash className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <Zap className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                  <span className="text-xs font-medium">Flash</span>
+                  <span className="text-xs font-medium">{speedMode}</span>
                 </button>
-              </div>
 
-              {/* Bottom Controls */}
-              <div className="absolute bottom-0 left-0 right-0 z-10 pb-6 sm:pb-8 safe-area-bottom">
-                {/* Duration Selector */}
-                <div className="flex justify-center mb-4 sm:mb-6 px-4">
-                  <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/10">
-                    {(['3m', '60s', '30s', '15s'] as const).map((duration) => (
+                {showSpeedSelector && (
+                  <div
+                    className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[80px] border border-white/10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(['0.5x', '1x', '2x', '3x'] as const).map((speed) => (
                       <button
-                        key={duration}
-                        onClick={() => setSelectedDuration(duration)}
+                        key={speed}
+                        onClick={() => handleSpeedChange(speed)}
                         className={cn(
-                          "px-4 py-2 sm:px-5 sm:py-3 rounded-full text-sm font-medium transition-all touch-manipulation min-w-[60px]",
-                          selectedDuration === duration
-                            ? "bg-white text-black shadow-lg"
-                            : "text-white hover:bg-white/10 active:bg-white/20"
+                          "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
+                          speedMode === speed ? "text-blue-400 bg-blue-500/20" : "text-white"
                         )}
                       >
-                        {duration}
+                        {speed}
                       </button>
                     ))}
                   </div>
-                </div>
-
-                {/* Main Controls */}
-                <div className="flex items-center justify-center gap-6 sm:gap-8 px-4">
-                  {/* Effects */}
-                  <button className="flex flex-col items-center text-white touch-manipulation">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-1 hover:bg-black/60 transition-colors active:scale-95 border border-white/10">
-                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">Effects</span>
-                  </button>
-
-                  {/* Record Button */}
-                  <div className="relative">
-                    {!isRecording ? (
-                      <button
-                        onClick={startRecording}
-                        disabled={!cameraReady}
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation"
-                      >
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center">
-                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-500 rounded-full" />
-                        </div>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopRecording}
-                        disabled={isStoppingRecording}
-                        className={cn(
-                          "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500",
-                          isStoppingRecording
-                            ? "bg-red-400 cursor-not-allowed"
-                            : "bg-red-600 hover:bg-red-700 active:scale-90"
-                        )}
-                        style={{ minWidth: '80px', minHeight: '80px' }}
-                      >
-                        {isStoppingRecording ? (
-                          <Loader2 className="w-6 h-6 text-white animate-spin" />
-                        ) : (
-                          <Square className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white" />
-                        )}
-                      </button>
-                    )}
-
-                    {/* Progress Ring */}
-                    {isRecording && (
-                      <div className="absolute inset-0 -rotate-90">
-                        <svg className="w-20 h-20 sm:w-24 sm:h-24">
-                          <circle
-                            cx="40"
-                            cy="40"
-                            r="38"
-                            stroke="white"
-                            strokeWidth="3"
-                            fill="none"
-                            strokeDasharray={`${(recordingTime / getMaxDuration()) * 238.76} 238.76`}
-                            className="transition-all duration-1000"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Upload */}
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex flex-col items-center text-white touch-manipulation"
-                  >
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-1 hover:bg-black/60 transition-colors active:scale-95 border border-white/10">
-                      <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </div>
-                    <span className="text-xs font-medium">Upload</span>
-                  </button>
-                </div>
-
-                {/* Bottom Tab Bar */}
-                <div className="flex justify-center mt-4 sm:mt-6 px-4">
-                  <div className="flex bg-black/40 backdrop-blur-sm rounded-full px-6 py-2 border border-white/10">
-                    <button className="text-white font-medium mr-6 sm:mr-8 px-2 py-1 touch-manipulation">Camera</button>
-                    <button className="text-white/60 px-2 py-1 touch-manipulation hover:text-white/80 transition-colors">Templates</button>
-                  </div>
-                </div>
+                )}
               </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </div>
-          )}
-
-          {mode === 'preview' && (
-            // Preview Mode with Caption
-            <div className="relative w-full h-full bg-black">
-              {/* Video Preview */}
-              <video
-                src={previewUrl || undefined}
-                className="w-full h-full object-cover"
-                controls={false}
-                autoPlay
-                loop
-                muted
-                playsInline
-              />
-
-              {/* Top Bar */}
-              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setMode('camera')
-                    removeFile()
+              {/* Filters */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowFilterSelector(!showFilterSelector)
                   }}
-                  className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+                  className="flex flex-col items-center text-white touch-manipulation"
                 >
-                  <X className="h-6 w-6" />
-                </Button>
+                  <div className={cn(
+                    "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
+                    filterMode !== 'none' ? "bg-purple-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Filter className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <span className="text-xs font-medium">Filters</span>
+                </button>
 
-                <Button
-                  variant="ghost"
-                  className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full px-4 py-2 min-h-[40px] text-sm border border-white/10"
-                >
-                  <Music className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Add sound</span>
-                  <span className="sm:hidden">Sound</span>
-                </Button>
-
-                <Button
-                  onClick={() => setShowCaption(!showCaption)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
-                >
-                  Next
-                </Button>
+                {showFilterSelector && (
+                  <div
+                    className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[100px] border border-white/10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(['none', 'vintage', 'dramatic', 'bright', 'warm'] as const).map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => handleFilterChange(filter)}
+                        className={cn(
+                          "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors capitalize touch-manipulation",
+                          filterMode === filter ? "text-purple-400 bg-purple-500/20" : "text-white"
+                        )}
+                      >
+                        {filter}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Caption Overlay */}
-              {showCaption && (
-                <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 sm:p-6 safe-area-bottom">
-                  <Textarea
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Describe your video..."
-                    className="w-full bg-black/40 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-base sm:text-lg rounded-lg p-3 sm:p-4"
-                    maxLength={2000}
-                    rows={3}
-                  />
-
-                  <div className="flex items-center justify-between mt-4 gap-4">
-                    <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
-
-                    <Button
-                      onClick={handleCreatePost}
-                      disabled={isUploading || !caption.trim()}
-                      className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all"
-                    >
-                      {isUploading ? (
-                        <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="hidden sm:inline">Posting...</span>
-                          <span className="sm:hidden">...</span>
-                        </div>
-                      ) : (
-                        "Post"
-                      )}
-                    </Button>
+              {/* Beauty */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowBeautySlider(!showBeautySlider)
+                  }}
+                  className="flex flex-col items-center text-white touch-manipulation"
+                >
+                  <div className={cn(
+                    "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
+                    beautyMode > 0 ? "bg-pink-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
-                </div>
-              )}
+                  <span className="text-xs font-medium">Beauty</span>
+                </button>
 
-              {/* Tap to add caption hint */}
-              {!showCaption && (
-                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-                  <button
-                    onClick={() => setShowCaption(true)}
-                    className="bg-black/40 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm border border-white/20 hover:bg-black/60 transition-colors touch-manipulation"
+                {showBeautySlider && (
+                  <div
+                    className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-4 w-44 border border-white/10"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Tap to add caption
-                  </button>
+                    <div className="text-white text-sm mb-3 font-medium">Beauty: {beautyMode}%</div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={beautyMode}
+                      onChange={(e) => handleBeautyChange(Number(e.target.value))}
+                      className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider touch-manipulation"
+                      style={{
+                        background: `linear-gradient(to right, #ec4899 0%, #ec4899 ${beautyMode}%, #374151 ${beautyMode}%, #374151 100%)`
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Timer */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowTimerSelector(!showTimerSelector)
+                  }}
+                  className="flex flex-col items-center text-white touch-manipulation"
+                >
+                  <div className={cn(
+                    "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
+                    timerEnabled ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
+                  )}>
+                    <Timer className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <span className="text-xs font-medium">Timer</span>
+                </button>
+
+                {showTimerSelector && (
+                  <div
+                    className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[80px] border border-white/10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => setTimerDuration(3)}
+                      className={cn(
+                        "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
+                        timerDuration === 3 ? "text-green-400 bg-green-500/20" : "text-white"
+                      )}
+                    >
+                      3s
+                    </button>
+                    <button
+                      onClick={() => setTimerDuration(10)}
+                      className={cn(
+                        "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
+                        timerDuration === 10 ? "text-green-400 bg-green-500/20" : "text-white"
+                      )}
+                    >
+                      10s
+                    </button>
+                    <button
+                      onClick={handleTimerToggle}
+                      className="block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-1 pt-3 touch-manipulation"
+                    >
+                      {timerEnabled ? 'Disable' : 'Enable'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Flash */}
+              <button
+                onClick={() => setFlashEnabled(!flashEnabled)}
+                className="flex flex-col items-center text-white touch-manipulation"
+              >
+                <div className={cn(
+                  "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
+                  flashEnabled ? "bg-yellow-500" : "bg-black/30 hover:bg-black/50"
+                )}>
+                  <Flash className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-              )}
+                <span className="text-xs font-medium">Flash</span>
+              </button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {/* Bottom Controls */}
+            <div className="absolute bottom-0 left-0 right-0 z-10 pb-6 sm:pb-8 safe-area-bottom">
+              {/* Duration Selector */}
+              <div className="flex justify-center mb-4 sm:mb-6 px-4">
+                <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/10">
+                  {(['3m', '60s', '30s', '15s'] as const).map((duration) => (
+                    <button
+                      key={duration}
+                      onClick={() => setSelectedDuration(duration)}
+                      className={cn(
+                        "px-4 py-2 sm:px-5 sm:py-3 rounded-full text-sm font-medium transition-all touch-manipulation min-w-[60px]",
+                        selectedDuration === duration
+                          ? "bg-white text-black shadow-lg"
+                          : "text-white hover:bg-white/10 active:bg-white/20"
+                      )}
+                    >
+                      {duration}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Main Controls */}
+              <div className="flex items-center justify-center gap-6 sm:gap-8 px-4">
+                {/* Effects */}
+                <button className="flex flex-col items-center text-white touch-manipulation">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-1 hover:bg-black/60 transition-colors active:scale-95 border border-white/10">
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <span className="text-xs font-medium">Effects</span>
+                </button>
+
+                {/* Record Button */}
+                <div className="relative">
+                  {!isRecording ? (
+                    <button
+                      onClick={startRecording}
+                      disabled={!cameraReady}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg touch-manipulation"
+                    >
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-500 rounded-full" />
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={stopRecording}
+                      disabled={isStoppingRecording}
+                      className={cn(
+                        "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500",
+                        isStoppingRecording
+                          ? "bg-red-400 cursor-not-allowed"
+                          : "bg-red-600 hover:bg-red-700 active:scale-90"
+                      )}
+                      style={{ minWidth: '80px', minHeight: '80px' }}
+                    >
+                      {isStoppingRecording ? (
+                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                      ) : (
+                        <Square className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white" />
+                      )}
+                    </button>
+                  )}
+
+                  {/* Progress Ring */}
+                  {isRecording && (
+                    <div className="absolute inset-0 -rotate-90">
+                      <svg className="w-20 h-20 sm:w-24 sm:h-24">
+                        <circle
+                          cx="40"
+                          cy="40"
+                          r="38"
+                          stroke="white"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeDasharray={`${(recordingTime / getMaxDuration()) * 238.76} 238.76`}
+                          className="transition-all duration-1000"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center text-white touch-manipulation"
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-1 hover:bg-black/60 transition-colors active:scale-95 border border-white/10">
+                    <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <span className="text-xs font-medium">Upload</span>
+                </button>
+              </div>
+
+              {/* Bottom Tab Bar */}
+              <div className="flex justify-center mt-4 sm:mt-6 px-4">
+                <div className="flex bg-black/40 backdrop-blur-sm rounded-full px-6 py-2 border border-white/10">
+                  <button className="text-white font-medium mr-6 sm:mr-8 px-2 py-1 touch-manipulation">Camera</button>
+                  <button className="text-white/60 px-2 py-1 touch-manipulation hover:text-white/80 transition-colors">Templates</button>
+                </div>
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
+        )}
+
+        {mode === 'preview' && (
+          // Preview Mode with Caption
+          <div className="relative w-full h-full bg-black ios-fullscreen">
+            {/* Video Preview */}
+            <video
+              src={previewUrl || undefined}
+              className="w-full h-full object-cover"
+              controls={false}
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+
+            {/* Top Bar */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setMode('camera')
+                  removeFile()
+                }}
+                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full px-4 py-2 min-h-[40px] text-sm border border-white/10"
+              >
+                <Music className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Add sound</span>
+                <span className="sm:hidden">Sound</span>
+              </Button>
+
+              <Button
+                onClick={() => setShowCaption(!showCaption)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
+              >
+                Next
+              </Button>
+            </div>
+
+            {/* Caption Overlay */}
+            {showCaption && (
+              <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 sm:p-6 safe-area-bottom">
+                <Textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Describe your video..."
+                  className="w-full bg-black/40 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-base sm:text-lg rounded-lg p-3 sm:p-4"
+                  maxLength={2000}
+                  rows={3}
+                />
+
+                <div className="flex items-center justify-between mt-4 gap-4">
+                  <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
+
+                  <Button
+                    onClick={handleCreatePost}
+                    disabled={isUploading || !caption.trim()}
+                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all"
+                  >
+                    {isUploading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Posting...</span>
+                        <span className="sm:hidden">...</span>
+                      </div>
+                    ) : (
+                      "Post"
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Tap to add caption hint */}
+            {!showCaption && (
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+                <button
+                  onClick={() => setShowCaption(true)}
+                  className="bg-black/40 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm border border-white/20 hover:bg-black/60 transition-colors touch-manipulation"
+                >
+                  Tap to add caption
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </FullscreenDialog>
     </>
   )
 }
