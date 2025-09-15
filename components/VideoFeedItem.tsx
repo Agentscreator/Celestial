@@ -468,7 +468,7 @@ const VideoFeedItem = ({
             onError={(e) => {
               const url = getMediaUrl();
               console.error('❌ Image error for post:', post.id, 'URL:', url);
-              console.error('Error details:', e.currentTarget.error);
+              console.error('Error details:', e.currentTarget.onerror);
               
               // Try to validate the URL
               fetch('/api/validate-media', {
@@ -665,7 +665,7 @@ const VideoFeedItem = ({
         postUser={{
           username: post.user.username,
           nickname: post.user.nickname,
-          profileImage: getBestImageUrl(post.user),
+          profileImage: getBestImageUrl(post.user) || undefined,
         }}
         onCommentCountChange={handleCommentCountChange}
       />
