@@ -44,6 +44,15 @@ export function Navigation() {
     }
   ]
 
+  // Debug routes - only show in development or for testing
+  const debugRoutes = [
+    {
+      href: "/debug-camera",
+      label: "🎥 Camera Debug",
+      active: pathname === "/debug-camera",
+    }
+  ]
+
   const handleCreatePostClick = async () => {
     // Proactively request camera permissions when user clicks create
     // This ensures the native permission dialog shows immediately
@@ -116,11 +125,32 @@ export function Navigation() {
             </Link>
           ))}
         </div>
-        <div className="h-10"></div> {/* Spacer */}
+
+        {/* Debug Camera Link */}
+        <div className="flex flex-col items-center">
+          <Link
+            href="/debug-camera"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-800 border border-gray-600 hover:bg-gray-700 transition-colors"
+            title="Debug Camera"
+          >
+            <span className="text-sm">🎥</span>
+          </Link>
+        </div>
       </div>
 
       {/* Mobile navigation (bottom) */}
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-black pb-safe-bottom md:hidden">
+        {/* Debug Camera Link - Floating button */}
+        <div className="absolute -top-12 right-4">
+          <Link
+            href="/debug-camera"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 border border-gray-600 hover:bg-gray-700 transition-colors"
+            title="Debug Camera"
+          >
+            <span className="text-lg">🎥</span>
+          </Link>
+        </div>
+
         <div className="flex h-16 items-center justify-around px-2">
           {routes.slice(0, 2).map((route) => (
             <Link
