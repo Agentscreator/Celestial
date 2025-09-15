@@ -20,12 +20,23 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
     console.log('Platform:', Capacitor.getPlatform());
     
     // Step 1: Check if Camera plugin is available
-    if (!Capacitor.isPluginAvailable('Camera')) {
-      console.error('Camera plugin not available');
-      return {
-        granted: false,
-        message: 'Camera plugin not available. Please ensure the app is properly built for native platforms.'
-      };
+    const isCameraPluginAvailable = Capacitor.isPluginAvailable('Camera');
+    console.log('Camera plugin available:', isCameraPluginAvailable);
+    
+    if (!isCameraPluginAvailable) {
+      console.warn('Camera plugin not available via isPluginAvailable, trying direct import...');
+      
+      // Try to use the Camera plugin directly as a fallback
+      try {
+        const testPermissions = await Camera.checkPermissions();
+        console.log('Direct Camera plugin access successful:', testPermissions);
+      } catch (directError) {
+        console.error('Direct Camera plugin access failed:', directError);
+        return {
+          granted: false,
+          message: 'Camera plugin not available. This might be a web environment or the plugin is not properly installed.'
+        };
+      }
     }
 
     // Step 2: Check current permissions
@@ -181,16 +192,60 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
   try {
     console.log('=== Complete Native Camera Setup ===');
     
-    // Step 1: Request native permissions
+    // Step 1: Try native permissions first
     const permissionResult = await requestNativeCameraPermissions();
+    
+    // If native permissions fail, try direct getUserMedia as fallback
     if (!permissionResult.granted) {
-      return { 
-        stream: null, 
-        error: permissionResult.message || 'Camera permission denied' 
-      };
+      console.log('Native permissions failed, trying direct getUserMedia fallback...');
+      
+      try {
+        const constraints = {
+          video: {
+            width: { ideal: 720, min: 480 },
+            height: { ideal: 1280, min: 640 },
+            facingMode: options.facingMode
+          },
+          audio: options.audioEnabled
+        };
+
+        console.log('Attempting direct getUserMedia with constraints:', constraints);
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('✅ Direct getUserMedia fallback successful');
+        return { stream };
+        
+      } catch (fallbackError) {
+        console.error('Direct getUserMedia fallback also failed:', fallbackError);
+        
+        // Try video-only as last resort
+        if (options.audioEnabled) {
+          try {
+            console.log('Trying video-only as last resort...');
+            const videoOnlyConstraints = {
+              video: {
+                width: { ideal: 720, min: 480 },
+                height: { ideal: 1280, min: 640 },
+                facingMode: options.facingMode
+              }
+            };
+            
+            const videoStream = await navigator.mediaDevices.getUserMedia(videoOnlyConstraints);
+            console.log('✅ Video-only fallback successful');
+            return { stream: videoStream };
+            
+          } catch (videoError) {
+            console.error('Video-only fallback failed:', videoError);
+          }
+        }
+        
+        return { 
+          stream: null, 
+          error: permissionResult.message || 'All camera access methods failed' 
+        };
+      }
     }
 
-    // Step 2: Test media access
+    // Step 2: Native permissions granted, test media access
     const mediaTest = await testNativeMediaAccess({ 
       video: true, 
       audio: options.audioEnabled 
