@@ -18,6 +18,8 @@ import {
   Sparkles,
   Timer,
   Slash as Flash,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -54,7 +56,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showTimerSelector, setShowTimerSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
 
-  // Use camera permissions hook
+  // Hooks and refs
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission } = useCameraPermissions()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -512,35 +514,44 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
             {/* Camera Loading/Permission Overlay */}
             {(cameraLoading || permissionLoading || !cameraReady) && (
-              <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20">
+              <div className="absolute inset-0 bg-gradient-to-b from-black via-black/95 to-black flex flex-col items-center justify-center z-20 p-8">
                 {cameraLoading || permissionLoading ? (
-                  <>
-                    <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
-                    <p className="text-white text-lg mb-2">
-                      {permissionLoading ? "Requesting permissions..." : "Starting camera..."}
-                    </p>
-                    <p className="text-white/70 text-sm text-center px-8">
-                      {permissionLoading
-                        ? "Please allow camera and microphone access when prompted"
-                        : "Setting up your camera for recording"}
-                    </p>
-                  </>
+                  <div className="text-center space-y-6">
+                    <div className="relative">
+                      <div className="w-20 h-20 border-4 border-white/20 rounded-full"></div>
+                      <div className="absolute inset-0 w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="text-white text-xl font-semibold">
+                        {permissionLoading ? "Requesting Permissions" : "Starting Camera"}
+                      </h3>
+                      <p className="text-white/70 text-base text-center max-w-sm leading-relaxed">
+                        {permissionLoading
+                          ? "Please allow camera and microphone access when prompted to continue"
+                          : "Setting up your camera for the best recording experience"}
+                      </p>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <Camera className="w-16 h-16 text-white/50 mb-4" />
-                    <p className="text-white text-lg mb-2">Camera not ready</p>
-                    <p className="text-white/70 text-sm text-center px-8 mb-4">
-                      {hasPermission === false
-                        ? "Camera permission required. Please allow access in your device settings."
-                        : "Please check camera permissions and try again"}
-                    </p>
+                  <div className="text-center space-y-6">
+                    <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center">
+                      <Camera className="w-10 h-10 text-white/60" />
+                    </div>
+                    <div className="space-y-3">
+                      <h3 className="text-white text-xl font-semibold">Camera Not Ready</h3>
+                      <p className="text-white/70 text-base text-center max-w-sm leading-relaxed">
+                        {hasPermission === false
+                          ? "Camera permission is required to record videos. Please allow access in your device settings."
+                          : "Unable to access camera. Please check your permissions and try again."}
+                      </p>
+                    </div>
                     <Button
                       onClick={initCamera}
-                      className="bg-white text-black hover:bg-white/90 rounded-full px-8 py-3 text-base font-medium min-h-[48px]"
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-full px-8 py-3 text-base font-semibold min-h-[48px] shadow-xl transition-all duration-200 transform hover:scale-105"
                     >
-                      {hasPermission === false ? "Request Permission" : "Retry Camera"}
+                      {hasPermission === false ? "Grant Permission" : "Try Again"}
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -580,18 +591,37 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             )}
 
             {/* Right Side Controls */}
-            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-8">
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-6">
               {/* Flip Camera */}
-              <button
-                onClick={flipCamera}
-                disabled={isRecording}
-                className="flex flex-col items-center text-white disabled:opacity-50 active:scale-95 transition-transform"
-              >
-                <div className="w-14 h-14 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center mb-2 hover:bg-black/60 transition-colors border border-white/20">
-                  <RotateCw className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-medium">Flip</span>
-              </button>
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={flipCamera}
+                  disabled={isRecording}
+                  className="w-14 h-14 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-black/60 transition-all duration-200 border border-white/20 disabled:opacity-50 active:scale-95"
+                >
+                  <RotateCw className="w-6 h-6 text-white" />
+                </button>
+                <span className="text-xs font-medium text-white mt-2">Flip</span>
+              </div>
+
+              {/* Audio Toggle */}
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={() => setAudioEnabled(!audioEnabled)}
+                  disabled={isRecording}
+                  className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-sm border border-white/20 disabled:opacity-50 active:scale-95",
+                    audioEnabled ? "bg-green-500/90" : "bg-black/40 hover:bg-black/60"
+                  )}
+                >
+                  {audioEnabled ? (
+                    <Volume2 className="w-6 h-6 text-white" />
+                  ) : (
+                    <VolumeX className="w-6 h-6 text-white" />
+                  )}
+                </button>
+                <span className="text-xs font-medium text-white mt-2">Audio</span>
+              </div>
 
               {/* Speed */}
               <div className="relative">
@@ -792,17 +822,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
             >
               {/* Duration Selector */}
-              <div className="flex justify-center mb-8">
-                <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/20">
-                  {(["3m", "60s", "15s"] as const).map((duration) => (
+              <div className="flex justify-center mb-6">
+                <div className="flex bg-black/50 backdrop-blur-md rounded-full p-1.5 border border-white/30 shadow-xl">
+                  {(["15s", "60s", "3m"] as const).map((duration) => (
                     <button
                       key={duration}
                       onClick={() => setSelectedDuration(duration)}
                       className={cn(
-                        "px-6 py-3 rounded-full text-sm font-medium transition-all min-h-[44px] min-w-[60px]",
+                        "px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 min-h-[40px] min-w-[55px]",
                         selectedDuration === duration
-                          ? "bg-white text-black shadow-lg"
-                          : "text-white hover:bg-white/10 active:scale-95",
+                          ? "bg-white text-black shadow-lg transform scale-105"
+                          : "text-white hover:bg-white/15 active:scale-95",
                       )}
                     >
                       {duration}
@@ -812,72 +842,82 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
 
               {/* Main Controls */}
-              <div className="flex items-center justify-center gap-12 px-8">
+              <div className="flex items-end justify-center gap-8 px-6">
                 {/* Effects */}
-                <button className="flex flex-col items-center text-white active:scale-95 transition-transform">
-                  <div className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2 border border-white/20">
-                    <Sparkles className="w-7 h-7" />
-                  </div>
-                  <span className="text-xs font-medium">Effects</span>
-                </button>
+                <div className="flex flex-col items-center">
+                  <button className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 hover:bg-black/60 transition-all duration-200 active:scale-95">
+                    <Sparkles className="w-7 h-7 text-white" />
+                  </button>
+                  <span className="text-xs font-medium text-white mt-2">Effects</span>
+                </div>
 
                 {/* Record Button */}
-                <div className="relative">
+                <div className="relative flex flex-col items-center">
                   {!isRecording ? (
                     <button
                       onClick={startRecording}
                       disabled={!cameraReady}
-                      className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 shadow-2xl"
+                      className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-50 shadow-2xl border-4 border-white/20"
                     >
-                      <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-                        <div className="w-14 h-14 bg-red-500 rounded-full" />
+                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                        <div className="w-12 h-12 bg-red-500 rounded-full" />
                       </div>
                     </button>
                   ) : (
                     <button
                       onClick={stopRecording}
-                      className="w-24 h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all active:scale-95 shadow-2xl"
+                      className="w-20 h-20 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all duration-200 active:scale-95 shadow-2xl border-4 border-white/20"
                     >
-                      <Square className="w-10 h-10 text-white fill-current" />
+                      <Square className="w-8 h-8 text-white fill-current" />
                     </button>
                   )}
 
                   {/* Progress Ring */}
                   {isRecording && (
                     <div className="absolute inset-0 -rotate-90">
-                      <svg className="w-24 h-24">
+                      <svg className="w-20 h-20">
                         <circle
-                          cx="48"
-                          cy="48"
-                          r="46"
+                          cx="40"
+                          cy="40"
+                          r="38"
                           stroke="white"
-                          strokeWidth="3"
+                          strokeWidth="2"
                           fill="none"
-                          strokeDasharray={`${(recordingTime / getMaxDuration()) * 289} 289`}
+                          strokeDasharray={`${(recordingTime / getMaxDuration()) * 239} 239`}
                           className="transition-all duration-1000 drop-shadow-lg"
                         />
                       </svg>
                     </div>
                   )}
+
+                  {/* Recording Status */}
+                  {!isRecording && cameraReady && (
+                    <span className="text-xs font-medium text-white mt-2">Hold to record</span>
+                  )}
                 </div>
 
                 {/* Upload */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center text-white active:scale-95 transition-transform"
-                >
-                  <div className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-2 border border-white/20">
-                    <Upload className="w-7 h-7" />
-                  </div>
-                  <span className="text-xs font-medium">Upload</span>
-                </button>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-16 h-16 bg-black/40 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 hover:bg-black/60 transition-all duration-200 active:scale-95"
+                  >
+                    <Upload className="w-7 h-7 text-white" />
+                  </button>
+                  <span className="text-xs font-medium text-white mt-2">Upload</span>
+                </div>
               </div>
 
               {/* Bottom Tab Bar */}
-              <div className="flex justify-center mt-8">
-                <div className="flex bg-black/40 backdrop-blur-sm rounded-full px-8 py-3 border border-white/20">
-                  <button className="text-white font-medium mr-12 text-base">Camera</button>
-                  <button className="text-white/60 text-base">Templates</button>
+              <div className="flex justify-center mt-6">
+                <div className="flex bg-black/50 backdrop-blur-md rounded-full px-6 py-2.5 border border-white/30 shadow-lg">
+                  <button className="text-white font-semibold px-4 py-1 text-base">
+                    Camera
+                  </button>
+                  <div className="w-px bg-white/20 mx-3"></div>
+                  <button className="text-white/60 hover:text-white/80 transition-colors px-4 py-1 text-base">
+                    Templates
+                  </button>
                 </div>
               </div>
             </div>
@@ -941,35 +981,46 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {/* Caption Overlay */}
             {showCaption && (
               <div
-                className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 to-transparent p-6"
-                style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+                className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black via-black/90 to-transparent p-6"
+                style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}
               >
-                <Textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Describe your video..."
-                  className="w-full bg-black/20 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-lg rounded-2xl p-4 min-h-[120px]"
-                  maxLength={2000}
-                  rows={3}
-                />
+                <div className="space-y-4">
+                  <Textarea
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Describe your video... What's happening?"
+                    className="w-full bg-black/30 backdrop-blur-sm border border-white/30 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-base rounded-2xl p-4 min-h-[100px] transition-all duration-200"
+                    maxLength={2000}
+                    rows={3}
+                  />
 
-                <div className="flex items-center justify-between mt-6">
-                  <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-white/60 text-sm font-medium">
+                        {caption.length}/2000
+                      </span>
+                      {caption.length > 1800 && (
+                        <span className="text-yellow-400 text-xs">
+                          {2000 - caption.length} characters left
+                        </span>
+                      )}
+                    </div>
 
-                  <Button
-                    onClick={handleCreatePost}
-                    disabled={isUploading || !caption.trim()}
-                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-10 py-3 font-bold text-base min-h-[52px] shadow-xl"
-                  >
-                    {isUploading ? (
-                      <div className="flex items-center gap-3">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Posting...
-                      </div>
-                    ) : (
-                      "Post"
-                    )}
-                  </Button>
+                    <Button
+                      onClick={handleCreatePost}
+                      disabled={isUploading || !caption.trim()}
+                      className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:from-gray-500 disabled:to-gray-600 text-white rounded-full px-8 py-3 font-bold text-base min-h-[48px] shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
+                    >
+                      {isUploading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Posting...</span>
+                        </div>
+                      ) : (
+                        "Share"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
