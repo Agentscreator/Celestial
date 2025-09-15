@@ -55,5 +55,27 @@
 	<string>This app needs access to save videos to your photo library.</string>
 	<key>NSVideoSubscriberAccountUsageDescription</key>
 	<string>This app uses video recording features.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to tag your posts and connect with nearby friends.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to tag your posts and connect with nearby friends.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>This app needs access to your contacts to help you find and connect with friends.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app uses Face ID for secure authentication and login.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app needs access to your music library to add background music to your videos.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app uses motion data to enhance video recording features and effects.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app uses speech recognition to add captions and transcribe your videos.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app uses Bluetooth to connect with compatible accessories and devices.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app uses Bluetooth to connect with compatible accessories and devices.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to your calendar to schedule and remind you about events.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>This app needs access to your reminders to help you stay organized with your social activities.</string>
 </dict>
 </plist>
