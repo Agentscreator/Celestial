@@ -170,6 +170,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         return
       }
 
+      // Clean up any existing preview URL before creating new one
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+
       setSelectedFile(file)
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
@@ -195,6 +200,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     console.log('Starting recording...')
 
     try {
+      // Clean up any existing preview URL and file before starting new recording
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+        setPreviewUrl(null)
+      }
+      setSelectedFile(null)
+
+      // Clear previous recording chunks
       recordedChunksRef.current = []
       // Try to create MediaRecorder with audio support
       // Try different codec combinations for audio+video support
@@ -456,7 +469,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           description: "Your post has been created",
         })
 
-        // Clear form
+        // Clear form and clean up blob URL
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl)
+        }
         setCaption("")
         setSelectedFile(null)
         setPreviewUrl(null)
@@ -485,6 +501,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Close and cleanup
   const handleClose = () => {
+    // Clean up blob URLs to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
     setCaption("")
     setSelectedFile(null)
     setPreviewUrl(null)
@@ -501,6 +522,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setCameraLoading(false)
     setCameraReady(false)
     stopCamera()
+
+    // Clear recorded chunks to ensure fresh recording
+    recordedChunksRef.current = []
 
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current)
@@ -520,6 +544,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Remove selected file
   const removeFile = () => {
+    // Revoke the existing blob URL to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
     setSelectedFile(null)
     setPreviewUrl(null)
     if (fileInputRef.current) {
@@ -620,6 +648,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
     }
   }, [isOpen, mode, cameraReady, cameraLoading, hasPermission, checkPermission, initCamera])
+
+  // Cleanup blob URLs on component unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   return (
     <>
