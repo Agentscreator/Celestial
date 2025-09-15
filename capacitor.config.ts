@@ -23,6 +23,9 @@ const config: CapacitorConfig = {
     },
     App: {
     },
+    Camera: {
+      permissions: ['camera', 'photos']
+    },
     // Apple Watch specific configurations
     Device: {
       watchSupport: true
