@@ -26,7 +26,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [cameraReady, setCameraReady] = useState(false)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
   const [audioEnabled] = useState(true)
-  const [selectedDuration, setSelectedDuration] = useState<'15s' | '60s' | '3m'>('15s')
+  const [selectedDuration, setSelectedDuration] = useState<'15s' | '30s' | '60s' | '3m'>('30s')
   const [flashEnabled, setFlashEnabled] = useState(false)
   const [showCaption, setShowCaption] = useState(false)
   const [speedMode, setSpeedMode] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x')
@@ -50,6 +50,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const recordingMimeTypeRef = useRef<string>('video/webm')
 
   // Initialize camera with native permissions
   const initCamera = useCallback(async () => {
@@ -180,9 +181,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const getMaxDuration = () => {
     switch (selectedDuration) {
       case '15s': return 15
+      case '30s': return 30
       case '60s': return 60
       case '3m': return 180
-      default: return 15
+      default: return 30
     }
   }
 
@@ -194,33 +196,76 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
     try {
       recordedChunksRef.current = []
-      const mediaRecorder = new MediaRecorder(streamRef.current)
+      // Try to create MediaRecorder with audio support
+      // Try different codec combinations for audio+video support
+      const codecOptions = [
+        'video/webm;codecs=vp8,opus',  // VP8 video + Opus audio
+        'video/webm;codecs=vp9,opus',  // VP9 video + Opus audio
+        'video/webm;codecs=h264,opus', // H264 video + Opus audio
+        'video/webm',                  // Default WebM
+        'video/mp4'                    // Fallback to MP4
+      ]
+
+      let mediaRecorder: MediaRecorder | null = null
+      let usedMimeType = 'video/webm' // default fallback
+
+      // Try to find a supported codec
+      let codecFound = false
+      for (const codec of codecOptions) {
+        if (MediaRecorder.isTypeSupported(codec)) {
+          console.log(`Using codec: ${codec}`)
+          mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: codec })
+          usedMimeType = codec
+          recordingMimeTypeRef.current = codec
+          codecFound = true
+          break
+        }
+      }
+
+      // Fallback if no specific codec is supported
+      if (!codecFound) {
+        console.log('Using default MediaRecorder without codec specification')
+        mediaRecorder = new MediaRecorder(streamRef.current)
+        usedMimeType = 'video/webm' // most common default
+        recordingMimeTypeRef.current = 'video/webm'
+      }
+
+      if (!mediaRecorder) {
+        throw new Error('Failed to create MediaRecorder')
+      }
+
       mediaRecorderRef.current = mediaRecorder
 
-      mediaRecorder.ondataavailable = (event) => {
+      mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data)
         }
       }
 
-      mediaRecorder.onstop = () => {
+      mediaRecorderRef.current.onstop = () => {
         console.log('MediaRecorder stopped, processing recording...')
         setIsRecording(false)
         setIsStoppingRecording(false)
 
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
-        setSelectedFile(new File([blob], 'recorded-video.webm', { type: 'video/webm' }))
+        const mimeType = recordingMimeTypeRef.current
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType })
+
+        // Generate proper filename with extension based on MIME type
+        const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
+        const filename = `recorded-video-${Date.now()}.${extension}`
+
+        setSelectedFile(new File([blob], filename, { type: mimeType }))
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
         setMode('preview')
 
         toast({
           title: "Recording complete!",
-          description: "Your video is ready for preview",
+          description: "Your video with audio is ready for preview",
         })
       }
 
-      mediaRecorder.start()
+      mediaRecorderRef.current.start()
       setIsRecording(true)
       setRecordingTime(0)
       console.log('Recording started, isRecording set to true')
@@ -970,7 +1015,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 {/* Duration Selector */}
                 <div className="flex justify-center mb-4 sm:mb-6 px-4">
                   <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/10">
-                    {(['3m', '60s', '15s'] as const).map((duration) => (
+                    {(['3m', '60s', '30s', '15s'] as const).map((duration) => (
                       <button
                         key={duration}
                         onClick={() => setSelectedDuration(duration)}
