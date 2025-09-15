@@ -39,6 +39,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showBeautySlider, setShowBeautySlider] = useState(false)
   const [showTimerSelector, setShowTimerSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
+  const [isStoppingRecording, setIsStoppingRecording] = useState(false)
 
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
@@ -201,11 +202,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
 
       mediaRecorder.onstop = () => {
+        console.log('MediaRecorder stopped, processing recording...')
+        setIsStoppingRecording(false)
+
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
         setSelectedFile(new File([blob], 'recorded-video.webm', { type: 'video/webm' }))
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
         setMode('preview')
+
+        toast({
+          title: "Recording complete!",
+          description: "Your video is ready for preview",
+        })
       }
 
       mediaRecorder.start()
@@ -235,16 +244,62 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop()
+    // Prevent double-clicks
+    if (isStoppingRecording || !isRecording) {
+      console.log('Stop recording ignored - already stopping or not recording')
+      return
+    }
+
+    console.log('Stop recording called, isRecording:', isRecording, 'mediaRecorder:', mediaRecorderRef.current?.state)
+
+    try {
+      // Set stopping state to prevent double-clicks
+      setIsStoppingRecording(true)
+
+      // Clear the recording state immediately
       setIsRecording(false)
 
+      // Clear the timer interval
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current)
         recordingIntervalRef.current = null
       }
+
+      // Stop the media recorder if it exists and is recording
+      if (mediaRecorderRef.current) {
+        const recorder = mediaRecorderRef.current
+
+        if (recorder.state === 'recording') {
+          console.log('Stopping MediaRecorder...')
+          recorder.stop()
+        } else if (recorder.state === 'paused') {
+          console.log('MediaRecorder was paused, stopping...')
+          recorder.stop()
+        } else {
+          console.log('MediaRecorder state:', recorder.state, '- triggering onstop manually')
+          // If recorder is in an unexpected state, trigger the onstop handler manually
+          if (recorder.onstop) {
+            recorder.onstop(new Event('stop'))
+          }
+        }
+      } else {
+        console.log('No MediaRecorder found')
+        toast({
+          title: "Recording stopped",
+          description: "Recording has been stopped",
+        })
+        setIsStoppingRecording(false)
+      }
+    } catch (error) {
+      console.error('Error stopping recording:', error)
+      setIsStoppingRecording(false)
+      toast({
+        title: "Recording Error",
+        description: "There was an issue stopping the recording, but it has been stopped.",
+        variant: "destructive",
+      })
     }
-  }, [isRecording])
+  }, [isRecording, isStoppingRecording])
 
   // Flip camera
   const flipCamera = useCallback(() => {
@@ -383,6 +438,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setPreviewUrl(null)
     setIsUploading(false)
     setIsRecording(false)
+    setIsStoppingRecording(false)
     setRecordingTime(0)
     setMode('camera')
     setShowCaption(false)
@@ -670,9 +726,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               {/* Recording Timer */}
               {isRecording && (
                 <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
-                  <div className="bg-red-500 text-white px-4 py-2 rounded-full text-base font-bold flex items-center gap-2">
+                  <div className="bg-red-500 text-white px-4 py-2 rounded-full text-base font-bold flex items-center gap-2 shadow-lg">
                     <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
                     {formatTime(recordingTime)}
+                  </div>
+                  <div className="text-center mt-2">
+                    <div className="text-white/80 text-sm bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
+                      Tap ⏹️ to stop
+                    </div>
                   </div>
                 </div>
               )}
@@ -921,9 +982,20 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     ) : (
                       <button
                         onClick={stopRecording}
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all active:scale-95 shadow-lg touch-manipulation"
+                        disabled={isStoppingRecording}
+                        className={cn(
+                          "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-white/20",
+                          isStoppingRecording
+                            ? "bg-red-400 cursor-not-allowed"
+                            : "bg-red-600 hover:bg-red-700 active:scale-90"
+                        )}
+                        style={{ minWidth: '80px', minHeight: '80px' }}
                       >
-                        <Square className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-current" />
+                        {isStoppingRecording ? (
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        ) : (
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-sm" />
+                        )}
                       </button>
                     )}
 
