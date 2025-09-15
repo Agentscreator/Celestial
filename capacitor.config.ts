@@ -22,15 +22,13 @@ const config: CapacitorConfig = {
       splashImmersive: true
     },
     App: {
+      // Enable app state change events
+      handleAppStateChange: true
     },
     Camera: {
+      // Request permissions when camera is first used
       permissions: ['camera', 'photos']
     },
-    // Ensure permissions are properly requested
-    PermissionsPlugin: {
-      permissions: ['camera', 'microphone', 'photos']
-    },
-    // Apple Watch specific configurations
     Device: {
       watchSupport: true
     },
