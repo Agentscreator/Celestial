@@ -23,7 +23,7 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
       console.log('Using native Capacitor Camera permissions...');
       
       try {
-        // Request permissions using Capacitor Camera plugin
+        // First try to request permissions using Capacitor Camera plugin
         const permissions = await Camera.requestPermissions({
           permissions: ['camera', 'photos']
         });
@@ -34,13 +34,32 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
         const photosGranted = permissions.photos === 'granted';
         
         if (cameraGranted && photosGranted) {
-          console.log('✅ All camera permissions granted');
+          console.log('✅ All camera permissions granted via requestPermissions');
           return { granted: true };
-        } else {
+        }
+        
+        // If requestPermissions didn't work, try to trigger permission by using camera
+        console.log('Permissions not granted via requestPermissions, trying camera access...');
+        
+        try {
+          await Camera.getPhoto({
+            quality: 90,
+            allowEditing: false,
+            resultType: CameraResultType.Uri,
+            source: CameraSource.Camera,
+            saveToGallery: false
+          });
+          
+          console.log('✅ Camera permissions granted via camera usage');
+          return { granted: true };
+          
+        } catch (cameraError) {
+          console.log('Camera access also failed:', cameraError);
+          
           let message = 'Camera permissions required. ';
           if (!cameraGranted) message += 'Please allow camera access. ';
           if (!photosGranted) message += 'Please allow photo library access. ';
-          message += 'You can enable these in your device Settings.';
+          message += 'You can enable these in your device Settings → Apps → MirroSocial → Permissions.';
           
           return { 
             granted: false, 
@@ -51,7 +70,7 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
         console.error('Native camera permission request failed:', error);
         return {
           granted: false,
-          message: 'Failed to request camera permissions. Please enable camera access in your device Settings.'
+          message: 'Failed to request camera permissions. Please enable camera access in your device Settings → Apps → MirroSocial → Permissions.'
         };
       }
     } else {

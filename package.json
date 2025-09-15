@@ -28,7 +28,8 @@
     "watch:test": "node scripts/watch-dev.js test",
     "watch:build": "node scripts/watch-dev.js build",
     "watch:sync": "node scripts/watch-dev.js sync",
-    "watch:dev": "node scripts/watch-dev.js dev"
+    "watch:dev": "node scripts/watch-dev.js dev",
+    "fix-permissions": "node fix-native-permissions.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.2",

@@ -1,4 +1,5 @@
 import { PermissionsDebug } from '../../components/PermissionsDebug';
+import { ForceNativePermissions } from '../../components/ForceNativePermissions';
 
 export default function PermissionsTestPage() {
   return (
@@ -10,6 +11,8 @@ export default function PermissionsTestPage() {
             Use this page to test and debug app permissions on native platforms.
           </p>
         </div>
+        
+        <ForceNativePermissions />
         
         <PermissionsDebug />
         
