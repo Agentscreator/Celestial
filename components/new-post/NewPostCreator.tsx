@@ -190,6 +190,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const startRecording = useCallback(() => {
     if (!streamRef.current) return
 
+    console.log('Starting recording...')
+
     try {
       recordedChunksRef.current = []
       const mediaRecorder = new MediaRecorder(streamRef.current)
@@ -203,6 +205,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       mediaRecorder.onstop = () => {
         console.log('MediaRecorder stopped, processing recording...')
+        setIsRecording(false)
         setIsStoppingRecording(false)
 
         const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
@@ -220,6 +223,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       mediaRecorder.start()
       setIsRecording(true)
       setRecordingTime(0)
+      console.log('Recording started, isRecording set to true')
 
       // Recording timer with auto-stop at max duration
       recordingIntervalRef.current = setInterval(() => {
@@ -246,7 +250,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const stopRecording = useCallback(() => {
     // Prevent double-clicks
     if (isStoppingRecording || !isRecording) {
-      console.log('Stop recording ignored - already stopping or not recording')
+      console.log('Stop recording ignored - already stopping or not recording', { isStoppingRecording, isRecording })
       return
     }
 
@@ -255,9 +259,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     try {
       // Set stopping state to prevent double-clicks
       setIsStoppingRecording(true)
-
-      // Clear the recording state immediately
-      setIsRecording(false)
+      console.log('Set isStoppingRecording to true')
 
       // Clear the timer interval
       if (recordingIntervalRef.current) {
@@ -272,26 +274,31 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         if (recorder.state === 'recording') {
           console.log('Stopping MediaRecorder...')
           recorder.stop()
+          // Don't set isRecording to false here - let the onstop handler do it
         } else if (recorder.state === 'paused') {
           console.log('MediaRecorder was paused, stopping...')
           recorder.stop()
         } else {
           console.log('MediaRecorder state:', recorder.state, '- triggering onstop manually')
           // If recorder is in an unexpected state, trigger the onstop handler manually
+          setIsRecording(false)
+          setIsStoppingRecording(false)
           if (recorder.onstop) {
             recorder.onstop(new Event('stop'))
           }
         }
       } else {
         console.log('No MediaRecorder found')
+        setIsRecording(false)
+        setIsStoppingRecording(false)
         toast({
           title: "Recording stopped",
           description: "Recording has been stopped",
         })
-        setIsStoppingRecording(false)
       }
     } catch (error) {
       console.error('Error stopping recording:', error)
+      setIsRecording(false)
       setIsStoppingRecording(false)
       toast({
         title: "Recording Error",
@@ -628,7 +635,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               {/* Camera Preview */}
               <video
                 ref={videoRef}
-                className="w-full h-full object-cover"
+                className={cn(
+                  "w-full h-full object-cover",
+                  isRecording && "ring-4 ring-red-500 ring-inset"
+                )}
                 style={{
                   transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
                   filter: getFilterClass()
@@ -637,6 +647,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 playsInline
                 autoPlay
               />
+
+              {/* Recording Overlay */}
+              {isRecording && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 border-4 border-red-500 animate-pulse" />
+                  <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    REC
+                  </div>
+                </div>
+              )}
 
               {/* Camera Loading/Permission Overlay */}
               {(cameraLoading || permissionLoading || !cameraReady) && (
@@ -732,9 +753,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </div>
                   <div className="text-center mt-2">
                     <div className="text-white/80 text-sm bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-                      Tap ⏹️ to stop
+                      Tap ⏹️ to stop recording
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Debug State Display - Remove this after testing */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="absolute top-4 right-4 z-50 bg-black/80 text-white p-2 rounded text-xs">
+                  <div>Recording: {isRecording ? 'YES' : 'NO'}</div>
+                  <div>Stopping: {isStoppingRecording ? 'YES' : 'NO'}</div>
+                  <div>Time: {recordingTime}s</div>
                 </div>
               )}
 
@@ -984,7 +1014,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                         onClick={stopRecording}
                         disabled={isStoppingRecording}
                         className={cn(
-                          "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-white/20",
+                          "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500",
                           isStoppingRecording
                             ? "bg-red-400 cursor-not-allowed"
                             : "bg-red-600 hover:bg-red-700 active:scale-90"
@@ -994,7 +1024,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                         {isStoppingRecording ? (
                           <Loader2 className="w-6 h-6 text-white animate-spin" />
                         ) : (
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-sm" />
+                          <Square className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white" />
                         )}
                       </button>
                     )}
