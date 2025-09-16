@@ -59,7 +59,7 @@ export default function EventsPage() {
     time: "",
     maxParticipants: "",
   })
-  
+
   // Community invitation state
   const [enableInvites, setEnableInvites] = useState(true)
   const [inviteDescription, setInviteDescription] = useState('')
@@ -95,7 +95,7 @@ export default function EventsPage() {
         method: 'GET',
         credentials: 'include',
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setEvents(data.events || [])
@@ -127,7 +127,7 @@ export default function EventsPage() {
         method: 'GET',
         credentials: 'include',
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setThemes(data.themes || [])
@@ -148,7 +148,7 @@ export default function EventsPage() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.title || !formData.description || !formData.location || !formData.date || !formData.time) {
       toast({
         title: "Error",
@@ -263,8 +263,8 @@ export default function EventsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setEvents(events.map(event => 
-          event.id === eventId 
+        setEvents(events.map(event =>
+          event.id === eventId
             ? { ...event, currentParticipants: data.currentParticipants, hasJoined: true }
             : event
         ))
@@ -300,8 +300,8 @@ export default function EventsPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setEvents(events.map(event => 
-          event.id === eventId 
+        setEvents(events.map(event =>
+          event.id === eventId
             ? { ...event, currentParticipants: data.currentParticipants, hasJoined: false }
             : event
         ))
@@ -435,11 +435,11 @@ export default function EventsPage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
@@ -447,10 +447,10 @@ export default function EventsPage() {
     const [hours, minutes] = timeStr.split(':')
     const date = new Date()
     date.setHours(parseInt(hours), parseInt(minutes))
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     })
   }
 
@@ -470,10 +470,10 @@ export default function EventsPage() {
           <h1 className="text-3xl font-light text-white">Events</h1>
           <p className="text-gray-400 mt-1">Create and discover amazing experiences</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <EventsCalendar events={events} />
-          
+
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -481,284 +481,284 @@ export default function EventsPage() {
                 Create Event
               </Button>
             </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Event</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateEvent} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Event Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="What's the event?"
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Tell people what to expect..."
-                  className="bg-gray-800 border-gray-600 text-white"
-                  rows={3}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="location">Location *</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  placeholder="Where will it happen?"
-                  className="bg-gray-800 border-gray-600 text-white"
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+            <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Event</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateEvent} className="space-y-4">
                 <div>
-                  <Label htmlFor="date">Date *</Label>
+                  <Label htmlFor="title">Event Title *</Label>
                   <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="What's the event?"
                     className="bg-gray-800 border-gray-600 text-white"
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <Label htmlFor="time">Time *</Label>
+                  <Label htmlFor="description">Description *</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Tell people what to expect..."
+                    className="bg-gray-800 border-gray-600 text-white"
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="location">Location *</Label>
                   <Input
-                    id="time"
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData({...formData, time: e.target.value})}
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Where will it happen?"
                     className="bg-gray-800 border-gray-600 text-white"
                     required
                   />
                 </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="maxParticipants">Max Participants (optional)</Label>
-                <Input
-                  id="maxParticipants"
-                  type="number"
-                  value={formData.maxParticipants}
-                  onChange={(e) => setFormData({...formData, maxParticipants: e.target.value})}
-                  placeholder="Leave empty for unlimited"
-                  className="bg-gray-800 border-gray-600 text-white"
-                  min="2"
-                />
-              </div>
 
-              {/* Community Invitation Settings */}
-              <div className="space-y-4 pt-4 border-t border-gray-700">
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-base font-medium">Enable Community</Label>
-                    <p className="text-sm text-gray-400">Create a community chat for event participants</p>
+                    <Label htmlFor="date">Date *</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      required
+                    />
                   </div>
-                  <Switch
-                    checked={enableInvites}
-                    onCheckedChange={setEnableInvites}
+
+                  <div>
+                    <Label htmlFor="time">Time *</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={formData.time}
+                      onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                      className="bg-gray-800 border-gray-600 text-white"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="maxParticipants">Max Participants (optional)</Label>
+                  <Input
+                    id="maxParticipants"
+                    type="number"
+                    value={formData.maxParticipants}
+                    onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
+                    placeholder="Leave empty for unlimited"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    min="2"
                   />
                 </div>
 
-                {enableInvites && (
-                  <div className="space-y-4 pt-4 border-t border-gray-700">
+                {/* Community Invitation Settings */}
+                <div className="space-y-4 pt-4 border-t border-gray-700">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-sm font-medium">What are you inviting people to do?</Label>
-                      <Textarea
-                        placeholder="e.g., Join me for a coffee meetup, Come hiking with me, Let's play basketball..."
-                        value={inviteDescription}
-                        onChange={(e) => setInviteDescription(e.target.value)}
-                        className="bg-gray-800 border-gray-600 text-white mt-2"
-                        maxLength={200}
-                        rows={2}
-                      />
-                      <div className="text-right text-sm text-gray-400 mt-1">
-                        {inviteDescription.length}/200
-                      </div>
+                      <Label className="text-base font-medium">Enable Community</Label>
+                      <p className="text-sm text-gray-400">Create a community chat for event participants</p>
                     </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label className="text-sm font-medium">Community Name</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={generateCommunityName}
-                          className="text-xs text-blue-400 hover:text-blue-300"
-                        >
-                          Generate
-                        </Button>
-                      </div>
-                      <Input
-                        placeholder="Name your community..."
-                        value={communityName}
-                        onChange={(e) => setCommunityName(e.target.value)}
-                        className="bg-gray-800 border-gray-600 text-white"
-                        maxLength={50}
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        People who join will be added to this community chat
-                      </p>
-                    </div>
+                    <Switch
+                      checked={enableInvites}
+                      onCheckedChange={setEnableInvites}
+                    />
                   </div>
-                )}
-              </div>
 
-              {/* Theme Selection */}
-              <div className="space-y-4 pt-4 border-t border-gray-700">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Theme Selector */}
-                  <div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {themesLoading ? (
-                        <div className="flex justify-center py-8">
-                          <TypingAnimation />
-                        </div>
-                      ) : (
-                        <ThemeSelector
-                          themes={themes}
-                          selectedThemeId={selectedThemeId}
-                          onThemeSelect={setSelectedThemeId}
+                  {enableInvites && (
+                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                      <div>
+                        <Label className="text-sm font-medium">What are you inviting people to do?</Label>
+                        <Textarea
+                          placeholder="e.g., Join me for a coffee meetup, Come hiking with me, Let's play basketball..."
+                          value={inviteDescription}
+                          onChange={(e) => setInviteDescription(e.target.value)}
+                          className="bg-gray-800 border-gray-600 text-white mt-2"
+                          maxLength={200}
+                          rows={2}
                         />
-                      )}
-                    </div>
-                  </div>
+                        <div className="text-right text-sm text-gray-400 mt-1">
+                          {inviteDescription.length}/200
+                        </div>
+                      </div>
 
-                  {/* Flyer Preview */}
-                  {formData.title && formData.location && formData.date && formData.time && (
-                    <div>
-                      <Label className="text-base font-medium mb-4 block">Event Flyer Preview</Label>
-                      <FlyerGenerator
-                        event={{
-                          title: formData.title,
-                          description: formData.description,
-                          location: formData.location,
-                          date: formData.date,
-                          time: formData.time,
-                          createdByUsername: "Preview"
-                        }}
-                        theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
-                        onPreview={() => setShowFlyerPreview(true)}
-                        onDownload={() => toast({
-                          title: "Download",
-                          description: "Flyer download will be available after event creation!",
-                        })}
-                      />
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm font-medium">Community Name</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={generateCommunityName}
+                            className="text-xs text-blue-400 hover:text-blue-300"
+                          >
+                            Generate
+                          </Button>
+                        </div>
+                        <Input
+                          placeholder="Name your community..."
+                          value={communityName}
+                          onChange={(e) => setCommunityName(e.target.value)}
+                          className="bg-gray-800 border-gray-600 text-white"
+                          maxLength={50}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">
+                          People who join will be added to this community chat
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* Video Upload Section */}
-              <div className="space-y-4 pt-4 border-t border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-base font-medium">Add Videos</Label>
-                    <p className="text-sm text-gray-400">Upload videos to share with event participants</p>
+                {/* Theme Selection */}
+                <div className="space-y-4 pt-4 border-t border-gray-700">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Theme Selector */}
+                    <div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {themesLoading ? (
+                          <div className="flex justify-center py-8">
+                            <TypingAnimation />
+                          </div>
+                        ) : (
+                          <ThemeSelector
+                            themes={themes}
+                            selectedThemeId={selectedThemeId}
+                            onThemeSelect={setSelectedThemeId}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Flyer Preview */}
+                    {formData.title && formData.location && formData.date && formData.time && (
+                      <div>
+                        <Label className="text-base font-medium mb-4 block">Event Flyer Preview</Label>
+                        <FlyerGenerator
+                          event={{
+                            title: formData.title,
+                            description: formData.description,
+                            location: formData.location,
+                            date: formData.date,
+                            time: formData.time,
+                            createdByUsername: "Preview"
+                          }}
+                          theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
+                          onPreview={() => setShowFlyerPreview(true)}
+                          onDownload={() => toast({
+                            title: "Download",
+                            description: "Flyer download will be available after event creation!",
+                          })}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <Switch
-                    checked={enableVideoUpload}
-                    onCheckedChange={setEnableVideoUpload}
-                  />
                 </div>
 
-                {enableVideoUpload && tempEventId && (
-                  <div className="space-y-4 pt-4 border-t border-gray-700">
-                    <div className="bg-gray-800/50 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-medium text-white">Event Videos</h4>
-                        <div className="text-xs text-gray-400">
-                          {eventVideos.length} video{eventVideos.length !== 1 ? 's' : ''} uploaded
-                        </div>
-                      </div>
-
-                      <EventVideoUpload
-                        eventId={tempEventId}
-                        onVideoUploaded={handleVideoUploaded}
-                      >
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full border-gray-600 text-white hover:bg-gray-800"
-                        >
-                          <Video className="h-4 w-4 mr-2" />
-                          Add Video
-                        </Button>
-                      </EventVideoUpload>
-
-                      {eventVideos.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {eventVideos.map((video, index) => (
-                            <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
-                              <Video className="h-4 w-4 text-blue-400" />
-                              <span className="text-sm text-white flex-1">
-                                {video.title || `Video ${index + 1}`}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {video.isPublic ? 'Public' : 'Private'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                {/* Video Upload Section */}
+                <div className="space-y-4 pt-4 border-t border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-base font-medium">Add Videos</Label>
+                      <p className="text-sm text-gray-400">Upload videos to share with event participants</p>
                     </div>
+                    <Switch
+                      checked={enableVideoUpload}
+                      onCheckedChange={setEnableVideoUpload}
+                    />
                   </div>
-                )}
 
-                {enableVideoUpload && !tempEventId && (
-                  <div className="text-sm text-gray-400 text-center py-4">
-                    Create the event first to upload videos
-                  </div>
-                )}
-              </div>
+                  {enableVideoUpload && tempEventId && (
+                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                      <div className="bg-gray-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-medium text-white">Event Videos</h4>
+                          <div className="text-xs text-gray-400">
+                            {eventVideos.length} video{eventVideos.length !== 1 ? 's' : ''} uploaded
+                          </div>
+                        </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancelEventCreation}
-                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
-                >
-                  Cancel
-                </Button>
+                        <EventVideoUpload
+                          eventId={tempEventId}
+                          onVideoUploaded={handleVideoUploaded}
+                        >
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full border-gray-600 text-white hover:bg-gray-800"
+                          >
+                            <Video className="h-4 w-4 mr-2" />
+                            Add Video
+                          </Button>
+                        </EventVideoUpload>
 
-                {/* Show different buttons based on state */}
-                {tempEventId ? (
+                        {eventVideos.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            {eventVideos.map((video, index) => (
+                              <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
+                                <Video className="h-4 w-4 text-blue-400" />
+                                <span className="text-sm text-white flex-1">
+                                  {video.title || `Video ${index + 1}`}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  {video.isPublic ? 'Public' : 'Private'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {enableVideoUpload && !tempEventId && (
+                    <div className="text-sm text-gray-400 text-center py-4">
+                      Create the event first to upload videos
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
                   <Button
                     type="button"
-                    onClick={handleFinishEventCreation}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    variant="outline"
+                    onClick={handleCancelEventCreation}
+                    className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
                   >
-                    Finish Event Creation
+                    Cancel
                   </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {enableVideoUpload ? 'Create Event & Add Videos' : 'Create Event'}
-                  </Button>
-                )}
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+
+                  {/* Show different buttons based on state */}
+                  {tempEventId ? (
+                    <Button
+                      type="button"
+                      onClick={handleFinishEventCreation}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Finish Event Creation
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {enableVideoUpload ? 'Create Event & Add Videos' : 'Create Event'}
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

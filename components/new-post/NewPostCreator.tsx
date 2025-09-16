@@ -777,7 +777,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             <video
               ref={videoRef}
               className={cn(
-                "w-full h-full object-cover",
+                "w-full h-full object-contain bg-black",
                 isRecording && "ring-4 ring-red-500 ring-inset"
               )}
               style={{
@@ -1240,7 +1240,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {/* Video Preview */}
             <video
               src={previewUrl || undefined}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               controls={false}
               autoPlay
               loop

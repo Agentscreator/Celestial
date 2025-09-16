@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Zoom Fix Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: black;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .info {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .error {
+            background: #d32f2f;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Camera Zoom Fix Test</h1>
+        
+        <div class="video-container">
+            <video id="video" autoplay muted playsinline></video>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start Camera</button>
+            <button id="flipBtn" disabled>Flip Camera</button>
+            <button id="stopBtn" disabled>Stop Camera</button>
+        </div>
+        
+        <div id="info" class="info">
+            <strong>Status:</strong> <span id="status">Ready to start</span><br>
+            <strong>Resolution:</strong> <span id="resolution">-</span><br>
+            <strong>Facing Mode:</strong> <span id="facingMode">environment</span>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div class="info">
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Click "Start Camera" to begin</li>
+                <li>Check if the video appears zoomed out (not cropped)</li>
+                <li>Try flipping between front and back cameras</li>
+                <li>Verify the video fills the container without excessive cropping</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const startBtn = document.getElementById('startBtn');
+        const flipBtn = document.getElementById('flipBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const resolution = document.getElementById('resolution');
+        const facingModeSpan = document.getElementById('facingMode');
+        const errorDiv = document.getElementById('error');
+        
+        let currentStream = null;
+        let currentFacingMode = 'environment';
+        
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            status.textContent = 'Error';
+        }
+        
+        function hideError() {
+            errorDiv.style.display = 'none';
+        }
+        
+        function updateStatus(text) {
+            status.textContent = text;
+        }
+        
+        function updateResolution() {
+            if (video.videoWidth && video.videoHeight) {
+                resolution.textContent = `${video.videoWidth} x ${video.videoHeight}`;
+            }
+        }
+        
+        async function startCamera() {
+            hideError();
+            updateStatus('Starting camera...');
+            
+            try {
+                // Stop any existing stream
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Updated constraints to prevent zoom
+                const constraints = {
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1280, max: 1920 },
+                        height: { ideal: 720, max: 1080 },
+                        aspectRatio: { ideal: 16/9 }
+                    },
+                    audio: false
+                };
+                
+                console.log('Requesting camera with constraints:', constraints);
+                
+                try {
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                } catch (error) {
+                    console.log('Detailed constraints failed, trying simple constraints:', error);
+                    
+                    // Fallback to simple constraints
+                    const simpleConstraints = {
+                        video: {
+                            facingMode: currentFacingMode
+                        }
+                    };
+                    
+                    currentStream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
+                }
+                
+                video.srcObject = currentStream;
+                
+                video.onloadedmetadata = () => {
+                    updateResolution();
+                    updateStatus('Camera active');
+                    startBtn.disabled = true;
+                    flipBtn.disabled = false;
+                    stopBtn.disabled = false;
+                };
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                showError(`Camera error: ${error.message}`);
+            }
+        }
+        
+        async function flipCamera() {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            facingModeSpan.textContent = currentFacingMode;
+            await startCamera();
+        }
+        
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            
+            video.srcObject = null;
+            updateStatus('Camera stopped');
+            resolution.textContent = '-';
+            
+            startBtn.disabled = false;
+            flipBtn.disabled = true;
+            stopBtn.disabled = true;
+        }
+        
+        startBtn.addEventListener('click', startCamera);
+        flipBtn.addEventListener('click', flipCamera);
+        stopBtn.addEventListener('click', stopCamera);
+        
+        // Update resolution when video metadata loads
+        video.addEventListener('loadedmetadata', updateResolution);
+    </script>
+</body>
+</html>

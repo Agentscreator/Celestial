@@ -204,9 +204,11 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
     // This bypasses Capacitor Camera plugin issues
     const constraints = {
       video: {
-        width: { ideal: 720, min: 480 },
-        height: { ideal: 1280, min: 640 },
-        facingMode: options.facingMode
+        facingMode: options.facingMode,
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        aspectRatio: { ideal: 16/9 }, // Standard aspect ratio to prevent cropping
+        frameRate: { ideal: 30 }
       },
       audio: options.audioEnabled
     };
@@ -218,16 +220,33 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
       return stream;
       
     } catch (error) {
-      console.error('getUserMedia failed:', error);
+      console.error('getUserMedia failed with constraints:', error);
       
-      // If audio+video failed, try video-only
-      if (options.audioEnabled) {
+      // Try with simpler constraints if the detailed ones failed
+      try {
+        const simpleConstraints = {
+          video: {
+            facingMode: options.facingMode
+          },
+          audio: options.audioEnabled
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
+        return stream;
+        
+      } catch (simpleError) {
+        console.error('Simple getUserMedia also failed:', simpleError);
+        
+        // If audio+video failed, try video-only
+        if (options.audioEnabled) {
         try {
           const videoOnlyConstraints = {
             video: {
-              width: { ideal: 720, min: 480 },
-              height: { ideal: 1280, min: 640 },
-              facingMode: options.facingMode
+              facingMode: options.facingMode,
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+              aspectRatio: { ideal: 16/9 }, // Standard aspect ratio to prevent cropping
+              frameRate: { ideal: 30 }
             }
           };
           
@@ -236,11 +255,27 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
           
         } catch (videoError) {
           console.error('Video-only stream also failed:', videoError);
-          throw videoError;
+          
+          // Final fallback - try with just facingMode
+          try {
+            const fallbackConstraints = {
+              video: {
+                facingMode: options.facingMode
+              }
+            };
+            
+            const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+            return fallbackStream;
+            
+          } catch (fallbackError) {
+            console.error('All camera constraint attempts failed:', fallbackError);
+            throw fallbackError;
+          }
         }
       } else {
-        throw error;
+        throw simpleError;
       }
+    }
     }
     
   } catch (error) {
