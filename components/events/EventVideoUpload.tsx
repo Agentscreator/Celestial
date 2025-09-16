@@ -49,7 +49,6 @@ export function EventVideoUpload({ eventId, onVideoUploaded, children }: EventVi
   // Start camera recording
   const startRecording = useCallback(async () => {
     try {
-      console.log('Starting video recording...')
 
       // Get camera stream with permissions
       const stream = await getCameraStreamWithPermission({

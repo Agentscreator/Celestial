@@ -30,7 +30,8 @@
       "Bash(./gradlew:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

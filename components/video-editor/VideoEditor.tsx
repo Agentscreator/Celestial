@@ -62,7 +62,6 @@ export function VideoEditor({ onSave, onExport }: VideoEditorProps) {
     if (file) {
       const url = URL.createObjectURL(file);
       // TODO: Add video clip to timeline
-      console.log('File uploaded:', url);
     }
   };
 

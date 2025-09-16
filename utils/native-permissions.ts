@@ -16,12 +16,9 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
   }
 
   try {
-    console.log('=== Native Camera Permission Flow ===');
-    console.log('Platform:', Capacitor.getPlatform());
     
     // Step 1: Check if Camera plugin is available
     const isCameraPluginAvailable = Capacitor.isPluginAvailable('Camera');
-    console.log('Camera plugin available:', isCameraPluginAvailable);
     
     if (!isCameraPluginAvailable) {
       console.warn('Camera plugin not available via isPluginAvailable, trying direct import...');
@@ -29,7 +26,6 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
       // Try to use the Camera plugin directly as a fallback
       try {
         const testPermissions = await Camera.checkPermissions();
-        console.log('Direct Camera plugin access successful:', testPermissions);
       } catch (directError) {
         console.error('Direct Camera plugin access failed:', directError);
         return {
@@ -40,11 +36,9 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
     }
 
     // Step 2: Check current permissions
-    console.log('Checking current camera permissions...');
     let currentPermissions;
     try {
       currentPermissions = await Camera.checkPermissions();
-      console.log('Current permissions:', currentPermissions);
     } catch (checkError) {
       console.error('Failed to check permissions:', checkError);
       return {
@@ -55,13 +49,11 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
 
     // Step 3: If already granted, return success
     if (currentPermissions.camera === 'granted') {
-      console.log('✅ Camera permission already granted');
       return { granted: true };
     }
 
     // Step 4: If denied, guide user to settings
     if (currentPermissions.camera === 'denied') {
-      console.log('❌ Camera permission previously denied');
       return {
         granted: false,
         shouldShowSettings: true,
@@ -70,11 +62,9 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
     }
 
     // Step 5: Request permissions
-    console.log('Requesting camera permissions...');
     let requestResult;
     try {
       requestResult = await Camera.requestPermissions();
-      console.log('Permission request result:', requestResult);
     } catch (requestError) {
       console.error('Failed to request permissions:', requestError);
       return {
@@ -85,17 +75,14 @@ export async function requestNativeCameraPermissions(): Promise<NativePermission
 
     // Step 6: Handle request result
     if (requestResult.camera === 'granted') {
-      console.log('✅ Camera permission granted');
       return { granted: true };
     } else if (requestResult.camera === 'denied') {
-      console.log('❌ Camera permission denied by user');
       return {
         granted: false,
         shouldShowSettings: true,
         message: 'Camera permission denied. Please enable camera access in your device settings to use this feature.'
       };
     } else {
-      console.log('⚠️ Camera permission not determined');
       return {
         granted: false,
         message: 'Camera permission status unclear. Please try again or check your device settings.'
@@ -120,7 +107,6 @@ export async function testNativeMediaAccess(options: { video: boolean; audio: bo
   }
 
   try {
-    console.log('Testing native media access with options:', options);
     
     const constraints: MediaStreamConstraints = {};
     
@@ -136,14 +122,11 @@ export async function testNativeMediaAccess(options: { video: boolean; audio: bo
       constraints.audio = true;
     }
 
-    console.log('getUserMedia constraints:', constraints);
     
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    console.log('✅ Native media access successful:', stream);
     
     // Log track details
     stream.getTracks().forEach(track => {
-      console.log(`Track: ${track.kind} - ${track.label} - enabled: ${track.enabled}`);
     });
     
     // Clean up
@@ -190,14 +173,12 @@ export async function testNativeMediaAccess(options: { video: boolean; audio: bo
  */
 export async function setupNativeCamera(options: { facingMode: 'user' | 'environment'; audioEnabled: boolean }): Promise<{ stream: MediaStream | null; error?: string }> {
   try {
-    console.log('=== Complete Native Camera Setup ===');
     
     // Step 1: Try native permissions first
     const permissionResult = await requestNativeCameraPermissions();
     
     // If native permissions fail, try direct getUserMedia as fallback
     if (!permissionResult.granted) {
-      console.log('Native permissions failed, trying direct getUserMedia fallback...');
       
       try {
         const constraints = {
@@ -209,9 +190,7 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
           audio: options.audioEnabled
         };
 
-        console.log('Attempting direct getUserMedia with constraints:', constraints);
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        console.log('✅ Direct getUserMedia fallback successful');
         return { stream };
         
       } catch (fallbackError) {
@@ -220,7 +199,6 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
         // Try video-only as last resort
         if (options.audioEnabled) {
           try {
-            console.log('Trying video-only as last resort...');
             const videoOnlyConstraints = {
               video: {
                 width: { ideal: 720, min: 480 },
@@ -230,7 +208,6 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
             };
             
             const videoStream = await navigator.mediaDevices.getUserMedia(videoOnlyConstraints);
-            console.log('✅ Video-only fallback successful');
             return { stream: videoStream };
             
           } catch (videoError) {
@@ -254,7 +231,6 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
     if (!mediaTest.granted) {
       // Try without audio if audio failed
       if (options.audioEnabled) {
-        console.log('Retrying without audio...');
         const videoOnlyTest = await testNativeMediaAccess({ 
           video: true, 
           audio: false 
@@ -271,7 +247,6 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
           };
           
           const stream = await navigator.mediaDevices.getUserMedia(constraints);
-          console.log('✅ Video-only stream obtained');
           return { stream };
         }
       }
@@ -293,7 +268,6 @@ export async function setupNativeCamera(options: { facingMode: 'user' | 'environ
     };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    console.log('✅ Complete camera setup successful');
     
     return { stream };
     

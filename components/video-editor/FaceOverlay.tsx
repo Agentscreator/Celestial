@@ -80,14 +80,12 @@ export function FaceOverlay({ onConfigChange }: FaceOverlayProps) {
     
     setIsRecording(true);
     // TODO: Implement actual recording logic with MediaRecorder
-    console.log('Started recording face overlay');
   }, []);
 
   // Stop recording
   const stopRecording = useCallback(() => {
     setIsRecording(false);
     // TODO: Save recorded video as overlay
-    console.log('Stopped recording face overlay');
   }, []);
 
   // Update configuration

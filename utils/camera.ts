@@ -17,10 +17,8 @@ export interface CameraStreamOptions {
  */
 export async function requestCameraPermissions(): Promise<CameraPermissionResult> {
   try {
-    console.log('Requesting camera permissions, platform:', Capacitor.getPlatform());
     
     if (Capacitor.isNativePlatform()) {
-      console.log('Using native Capacitor Camera permissions...');
       
       try {
         // First try to request permissions using Capacitor Camera plugin
@@ -28,18 +26,15 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
           permissions: ['camera', 'photos']
         });
         
-        console.log('Native camera permissions result:', permissions);
         
         const cameraGranted = permissions.camera === 'granted';
         const photosGranted = permissions.photos === 'granted';
         
         if (cameraGranted && photosGranted) {
-          console.log('✅ All camera permissions granted via requestPermissions');
           return { granted: true };
         }
         
         // If requestPermissions didn't work, try to trigger permission by using camera
-        console.log('Permissions not granted via requestPermissions, trying camera access...');
         
         try {
           await Camera.getPhoto({
@@ -50,11 +45,9 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
             saveToGallery: false
           });
           
-          console.log('✅ Camera permissions granted via camera usage');
           return { granted: true };
           
         } catch (cameraError) {
-          console.log('Camera access also failed:', cameraError);
           
           let message = 'Camera permissions required. ';
           if (!cameraGranted) message += 'Please allow camera access. ';
@@ -74,20 +67,16 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
         };
       }
     } else {
-      console.log('Using web getUserMedia for permissions...');
       
       // Use getUserMedia for web platforms
       try {
-        console.log('Attempting getUserMedia for permission check...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: true, 
           audio: true 
         });
-        console.log('✅ Camera and microphone permissions granted');
         
         // Stop the stream immediately as we just wanted to check permissions
         stream.getTracks().forEach(track => {
-          console.log(`Stopping ${track.kind} track: ${track.label}`);
           track.stop();
         });
         
@@ -98,15 +87,12 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
         
         // If audio+video failed, try video only
         try {
-          console.log('Attempting video-only getUserMedia...');
           const videoStream = await navigator.mediaDevices.getUserMedia({ 
             video: true 
           });
-          console.log('✅ Camera permission granted (video-only)');
           
           videoStream.getTracks().forEach(track => {
-            console.log(`Stopping ${track.kind} track: ${track.label}`);
-            track.stop();
+              track.stop();
           });
           
           return { granted: true };
@@ -159,15 +145,12 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
  */
 export async function checkCameraPermissions(): Promise<CameraPermissionResult> {
   try {
-    console.log('Checking camera permissions, platform:', Capacitor.getPlatform());
     
     if (Capacitor.isNativePlatform()) {
-      console.log('Checking native camera permissions...');
       
       try {
         // Check permissions using Capacitor Camera plugin
         const permissions = await Camera.checkPermissions();
-        console.log('Native camera permissions status:', permissions);
         
         const cameraGranted = permissions.camera === 'granted';
         const photosGranted = permissions.photos === 'granted';
@@ -184,19 +167,16 @@ export async function checkCameraPermissions(): Promise<CameraPermissionResult> 
         };
       }
     } else {
-      console.log('Checking web camera permissions...');
       
       // Try to use the Permissions API (available on most modern browsers and WebView)
       try {
         const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        console.log('Permission API check result:', permissions.state);
         
         return {
           granted: permissions.state === 'granted',
           message: permissions.state === 'granted' ? undefined : 'Camera permissions need to be requested'
         };
       } catch (error) {
-        console.log('Permissions API not supported, cannot check current status');
         // Permissions API not supported, we'll need to request to find out
         return { 
           granted: false, 
@@ -219,8 +199,6 @@ export async function checkCameraPermissions(): Promise<CameraPermissionResult> 
  */
 export async function getCameraStream(options: CameraStreamOptions): Promise<MediaStream | null> {
   try {
-    console.log('Getting camera stream with options:', options);
-    console.log('Platform:', Capacitor.getPlatform());
     
     // Use direct getUserMedia approach for all platforms
     // This bypasses Capacitor Camera plugin issues
@@ -233,12 +211,9 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
       audio: options.audioEnabled
     };
 
-    console.log('Requesting getUserMedia with constraints:', constraints);
     
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('✅ Camera stream obtained successfully:', stream);
-      console.log('Stream tracks:', stream.getTracks().map(track => `${track.kind}: ${track.label}`));
       
       return stream;
       
@@ -247,7 +222,6 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
       
       // If audio+video failed, try video-only
       if (options.audioEnabled) {
-        console.log('Retrying without audio...');
         try {
           const videoOnlyConstraints = {
             video: {
@@ -258,7 +232,6 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
           };
           
           const videoStream = await navigator.mediaDevices.getUserMedia(videoOnlyConstraints);
-          console.log('✅ Video-only stream obtained:', videoStream);
           return videoStream;
           
         } catch (videoError) {
@@ -298,10 +271,8 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
  */
 export async function takePhoto(facingMode: 'user' | 'environment' = 'environment') {
   try {
-    console.log('Taking photo with facingMode:', facingMode);
     
     if (Capacitor.isNativePlatform()) {
-      console.log('Using native camera for photo...');
       
       // Use native Capacitor Camera plugin
       const image = await Camera.getPhoto({
@@ -313,11 +284,9 @@ export async function takePhoto(facingMode: 'user' | 'environment' = 'environmen
         saveToGallery: false
       });
       
-      console.log('Native photo captured:', image);
       return { webPath: image.webPath, format: image.format };
       
     } else {
-      console.log('Using web canvas approach for photo...');
       
       // Get camera stream
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -372,10 +341,8 @@ export async function takePhoto(facingMode: 'user' | 'environment' = 'environmen
  */
 export async function requestMicrophonePermissions(): Promise<CameraPermissionResult> {
   try {
-    console.log('Requesting microphone permissions...');
     
     if (Capacitor.isNativePlatform()) {
-      console.log('Using native microphone permission request...');
       
       // On native platforms, try to request microphone permission through getUserMedia
       // This will trigger the native permission dialog
@@ -383,7 +350,6 @@ export async function requestMicrophonePermissions(): Promise<CameraPermissionRe
         const stream = await navigator.mediaDevices.getUserMedia({ 
           audio: true 
         });
-        console.log('✅ Native microphone permission granted');
         stream.getTracks().forEach(track => track.stop());
         return { granted: true };
       } catch (error) {
@@ -400,14 +366,12 @@ export async function requestMicrophonePermissions(): Promise<CameraPermissionRe
         };
       }
     } else {
-      console.log('Using web microphone permission request...');
       
       // For web, use getUserMedia
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
           audio: true 
         });
-        console.log('✅ Web microphone permission granted');
         stream.getTracks().forEach(track => track.stop());
         return { granted: true };
       } catch (error) {
@@ -440,7 +404,6 @@ export async function getCameraDevices() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(device => device.kind === 'videoinput');
-    console.log('Available camera devices:', videoDevices);
     return videoDevices;
   } catch (error) {
     console.error('Error getting camera devices:', error);

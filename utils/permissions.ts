@@ -22,7 +22,6 @@ export class PermissionsManager {
     try {
       // Check camera permissions using native Capacitor Camera plugin
       const cameraPermissions = await Camera.checkPermissions();
-      console.log('Native camera permissions check:', cameraPermissions);
       
       return {
         camera: cameraPermissions.camera === 'granted',
@@ -45,19 +44,16 @@ export class PermissionsManager {
     }
 
     try {
-      console.log('Requesting native camera permissions...');
       
       // Request permissions using native Capacitor Camera plugin
       const permissions = await Camera.requestPermissions({
         permissions: ['camera', 'photos']
       });
       
-      console.log('Native camera permission result:', permissions);
       
       const granted = permissions.camera === 'granted' && permissions.photos === 'granted';
       
       if (!granted) {
-        console.log('Native permissions not fully granted, trying alternative approach...');
         
         // Try to trigger permission by attempting to use camera
         try {
@@ -72,7 +68,6 @@ export class PermissionsManager {
           // If we get here, permissions were granted
           return true;
         } catch (cameraError) {
-          console.log('Camera access failed:', cameraError);
           return false;
         }
       }
@@ -90,14 +85,12 @@ export class PermissionsManager {
     }
 
     try {
-      console.log('Requesting native microphone permissions...');
       
       // Use getUserMedia to trigger native microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: true 
       });
       
-      console.log('Microphone permission granted');
       
       // Stop the stream immediately
       stream.getTracks().forEach(track => track.stop());
@@ -126,7 +119,6 @@ export class PermissionsManager {
     }
 
     try {
-      console.log('Initializing all native permissions...');
       
       // Request camera permissions first
       await this.requestCameraPermissions();
@@ -134,7 +126,6 @@ export class PermissionsManager {
       // Request microphone permissions
       await this.requestMicrophonePermissions();
       
-      console.log('Permission initialization complete');
     } catch (error) {
       console.error('Error during permission initialization:', error);
     }

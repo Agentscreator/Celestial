@@ -16,16 +16,6 @@ interface NewPostCreatorProps {
 }
 
 export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreatorProps) {
-  // Debug logging for iOS
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🎥 NewPostCreator opened', {
-        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR',
-        isIOS: typeof window !== 'undefined' ? /iPad|iPhone|iPod/.test(window.navigator.userAgent) : false,
-        viewport: typeof window !== 'undefined' ? { width: window.innerWidth, height: window.innerHeight } : null
-      })
-    }
-  }, [isOpen])
 
   const [mode, setMode] = useState<'camera' | 'upload' | 'preview'>('camera')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -67,23 +57,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const initCamera = useCallback(async () => {
     // Prevent multiple simultaneous initializations
     if (cameraLoading || permissionLoading) {
-      console.log('Camera initialization already in progress, skipping...')
       return
     }
 
-    console.log('Starting camera initialization...')
     setCameraLoading(true)
     setCameraReady(false)
 
     // Stop any existing stream first
     if (streamRef.current) {
-      console.log('Stopping existing camera stream...')
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
     }
 
     try {
-      console.log('Requesting native camera permissions and stream...')
 
       // Use the hook to get camera stream with native permissions
       const stream = await getCameraStreamWithPermission({
@@ -95,7 +81,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         throw new Error('Failed to get camera stream - permission may have been denied')
       }
 
-      console.log('Camera stream obtained successfully:', stream)
       streamRef.current = stream
 
       if (videoRef.current) {
@@ -103,9 +88,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded, attempting to play...')
           videoRef.current?.play().then(() => {
-            console.log('Video playing successfully')
             setCameraReady(true)
             setCameraLoading(false)
           }).catch(err => {
@@ -208,7 +191,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const startRecording = useCallback(() => {
     if (!streamRef.current) return
 
-    console.log('Starting recording...')
 
     try {
       // Clean up any existing preview URL and file before starting new recording
@@ -235,12 +217,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       // Try to find a supported codec
       let codecFound = false
-      console.log('Checking codec support...')
       for (const codec of codecOptions) {
         const isSupported = MediaRecorder.isTypeSupported(codec)
-        console.log(`Codec ${codec}: ${isSupported ? 'SUPPORTED' : 'NOT SUPPORTED'}`)
         if (isSupported) {
-          console.log(`✅ Using codec: ${codec}`)
           mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: codec })
           recordingMimeTypeRef.current = codec
           codecFound = true
@@ -250,7 +229,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       // Fallback if no specific codec is supported
       if (!codecFound) {
-        console.log('Using default MediaRecorder without codec specification')
         mediaRecorder = new MediaRecorder(streamRef.current)
         recordingMimeTypeRef.current = 'video/mp4'
       }
@@ -268,29 +246,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
 
       mediaRecorderRef.current.onstop = () => {
-        console.log('MediaRecorder stopped, processing recording...')
         setIsRecording(false)
         setIsStoppingRecording(false)
 
         const mimeType = recordingMimeTypeRef.current
         const blob = new Blob(recordedChunksRef.current, { type: mimeType })
 
-        console.log('Recording processed:', {
-          mimeType,
-          blobSize: blob.size,
-          chunksCount: recordedChunksRef.current.length,
-          blobType: blob.type
-        })
 
         // Generate proper filename with extension based on MIME type
         const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
         const filename = `recorded-video-${Date.now()}.${extension}`
 
-        console.log('Creating file:', {
-          filename,
-          extension,
-          finalMimeType: mimeType
-        })
 
         const file = new File([blob], filename, { type: mimeType })
         setSelectedFile(file)
@@ -298,12 +264,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         setPreviewUrl(url)
         setMode('preview')
 
-        console.log('File created successfully:', {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          previewUrl: url
-        })
 
         toast({
           title: "Recording complete!",
@@ -314,7 +274,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       mediaRecorderRef.current.start()
       setIsRecording(true)
       setRecordingTime(0)
-      console.log('Recording started, isRecording set to true')
 
       // Recording timer with auto-stop at max duration
       recordingIntervalRef.current = setInterval(() => {
@@ -341,16 +300,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const stopRecording = useCallback(() => {
     // Prevent double-clicks
     if (isStoppingRecording || !isRecording) {
-      console.log('Stop recording ignored - already stopping or not recording', { isStoppingRecording, isRecording })
       return
     }
 
-    console.log('Stop recording called, isRecording:', isRecording, 'mediaRecorder:', mediaRecorderRef.current?.state)
 
     try {
       // Set stopping state to prevent double-clicks
       setIsStoppingRecording(true)
-      console.log('Set isStoppingRecording to true')
 
       // Clear the timer interval
       if (recordingIntervalRef.current) {
@@ -363,14 +319,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         const recorder = mediaRecorderRef.current
 
         if (recorder.state === 'recording') {
-          console.log('Stopping MediaRecorder...')
           recorder.stop()
           // Don't set isRecording to false here - let the onstop handler do it
         } else if (recorder.state === 'paused') {
-          console.log('MediaRecorder was paused, stopping...')
           recorder.stop()
         } else {
-          console.log('MediaRecorder state:', recorder.state, '- triggering onstop manually')
           // If recorder is in an unexpected state, trigger the onstop handler manually
           setIsRecording(false)
           setIsStoppingRecording(false)
@@ -379,7 +332,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           }
         }
       } else {
-        console.log('No MediaRecorder found')
         setIsRecording(false)
         setIsStoppingRecording(false)
         toast({
@@ -481,13 +433,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       return
     }
 
-    console.log('=== CREATING POST ===')
-    console.log('Selected file details:', {
-      name: selectedFile.name,
-      size: selectedFile.size,
-      type: selectedFile.type,
-      lastModified: selectedFile.lastModified
-    })
 
     setIsUploading(true)
 
@@ -497,22 +442,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
 
-      console.log('FormData created, sending request...')
 
       const response = await fetch('/api/posts', {
         method: 'POST',
         body: formData,
       })
 
-      console.log('Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      })
 
       if (response.ok) {
         const result = await response.json()
-        console.log('Post creation successful:', result)
 
         toast({
           title: "Success!",
@@ -645,13 +583,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (!document.hidden && isOpen && mode === 'camera') {
-        console.log('App became visible, re-checking camera permissions...')
 
         // Re-check permissions when app becomes visible
         const hasPermissionNow = await checkPermission()
 
         if (hasPermissionNow && !cameraReady && !cameraLoading) {
-          console.log('Permissions granted, reinitializing camera...')
           setTimeout(() => {
             initCamera()
           }, 500) // Small delay to ensure app is fully active
@@ -661,13 +597,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
     const handleFocus = async () => {
       if (isOpen && mode === 'camera') {
-        console.log('Window focused, re-checking camera permissions...')
 
         // Re-check permissions when window gets focus
         const hasPermissionNow = await checkPermission()
 
         if (hasPermissionNow && !cameraReady && !cameraLoading) {
-          console.log('Permissions granted, reinitializing camera...')
           setTimeout(() => {
             initCamera()
           }, 500)
@@ -679,13 +613,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     let permissionCheckInterval: NodeJS.Timeout | null = null
 
     if (isOpen && mode === 'camera' && !cameraReady && !cameraLoading && hasPermission === false) {
-      console.log('Starting periodic permission check for iOS...')
       permissionCheckInterval = setInterval(async () => {
-        console.log('Periodic permission check...')
         const hasPermissionNow = await checkPermission()
 
         if (hasPermissionNow && !cameraReady && !cameraLoading) {
-          console.log('Permissions granted via periodic check, reinitializing camera...')
           setTimeout(() => {
             initCamera()
           }, 500)
