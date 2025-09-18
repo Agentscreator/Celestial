@@ -440,11 +440,44 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setIsUploading(true)
 
     try {
+      console.log('🚀 Starting post creation...')
+      console.log('Caption:', caption.trim())
+      console.log('Selected file:', selectedFile ? {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type
+      } : 'No file')
+
       const formData = new FormData()
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
+      
+      console.log('FormData entries:')
+      for (const [key, value] of formData.entries()) {
+        console.log(`- ${key}:`, value instanceof File ? `File(${value.name}, ${value.size} bytes)` : value)
+      }
 
+
+      // Temporarily use debug endpoint to test
+      console.log('🔍 Testing with debug endpoint first...')
+      
+      // Test with debug endpoint first (text only)
+      const debugFormData = new FormData()
+      debugFormData.append('content', caption.trim())
+      
+      const debugResponse = await fetch('/api/debug-posts', {
+        method: 'POST',
+        body: debugFormData,
+      })
+      
+      console.log('Debug response status:', debugResponse.status)
+      
+      if (debugResponse.ok) {
+        console.log('✅ Debug endpoint works, trying main endpoint...')
+      } else {
+        console.error('❌ Debug endpoint failed:', await debugResponse.text())
+      }
 
       const response = await fetch('/api/posts', {
         method: 'POST',
@@ -452,8 +485,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       })
 
 
+      console.log('Main API response status:', response.status)
+      console.log('Main API response headers:', Object.fromEntries(response.headers.entries()))
+
       if (response.ok) {
         const result = await response.json()
+        console.log('✅ Post creation successful:', result)
 
         // Play success sound
         playMessageSound()
@@ -479,10 +516,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         window.dispatchEvent(new CustomEvent('postCreated'))
       } else {
         const errorText = await response.text()
-        console.error('Post creation failed:', {
+        console.error('❌ Post creation failed:', {
           status: response.status,
           statusText: response.statusText,
-          errorText
+          errorText,
+          url: response.url
         })
 
         let errorData
@@ -492,7 +530,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           errorData = { error: errorText || 'Failed to create post' }
         }
 
-        throw new Error(errorData.error || 'Failed to create post')
+        // Show more specific error message
+        const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        
+        toast({
+          title: "Post Creation Failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+
+        throw new Error(errorMessage)
       }
     } catch (error) {
       console.error('Error creating post:', error)
