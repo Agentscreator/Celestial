@@ -872,10 +872,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
             )}
 
-            {/* Test visibility indicator - Always visible */}
-            <div className="absolute top-2 left-2 z-[9999] bg-red-500 text-white px-2 py-1 text-xs rounded shadow-lg">
-              ✅ NewPost UI Loaded - iOS Test
-            </div>
+
 
             {/* Top Bar */}
             <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
@@ -886,17 +883,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               >
                 <X className="h-6 w-6" />
               </Button>
-
-              <Button
-                variant="ghost"
-                className="bg-black/30 text-white hover:bg-black/50 rounded-full px-4 py-2 min-h-[40px] text-sm"
-              >
-                <Music className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Add sound</span>
-                <span className="sm:hidden">Sound</span>
-              </Button>
-
-              <div className="w-12" /> {/* Spacer for balance */}
             </div>
 
             {/* Recording Timer */}
@@ -905,11 +891,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <div className="bg-red-500 text-white px-4 py-2 rounded-full text-base font-bold flex items-center gap-2 shadow-lg">
                   <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
                   {formatTime(recordingTime)}
-                </div>
-                <div className="text-center mt-2">
-                  <div className="text-white/80 text-sm bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">
-                    Tap ⏹️ to stop recording
-                  </div>
                 </div>
               </div>
             )}
@@ -931,6 +912,22 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
             {/* Right Side Controls */}
             <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
+              {/* Add Sound */}
+              <button
+                onClick={() => {
+                  toast({
+                    title: "Add Sound",
+                    description: "Sound selection coming soon!",
+                  })
+                }}
+                className="flex flex-col items-center text-white touch-manipulation"
+              >
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors active:scale-95">
+                  <Music className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <span className="text-xs font-medium">Sound</span>
+              </button>
+
               {/* Flip Camera */}
               <button
                 onClick={flipCamera}
@@ -1265,15 +1262,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
               >
                 <X className="h-6 w-6" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                className="bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 rounded-full px-4 py-2 min-h-[40px] text-sm border border-white/10"
-              >
-                <Music className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Add sound</span>
-                <span className="sm:hidden">Sound</span>
               </Button>
 
               <Button
