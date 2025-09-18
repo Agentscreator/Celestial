@@ -8,6 +8,7 @@ import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Spark
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
+import { playMessageSound } from "@/utils/sound"
 
 interface NewPostCreatorProps {
   isOpen: boolean
@@ -453,6 +454,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       if (response.ok) {
         const result = await response.json()
+
+        // Play success sound
+        playMessageSound()
 
         toast({
           title: "Success!",
