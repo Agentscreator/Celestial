@@ -314,6 +314,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         recordingIntervalRef.current = null
       }
 
+      // #TO DO 317-520
+
       // Stop the media recorder if it exists and is recording
       if (mediaRecorderRef.current) {
         const recorder = mediaRecorderRef.current
