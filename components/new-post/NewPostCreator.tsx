@@ -1146,7 +1146,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             )}
 
             {/* Post Debug Panel - Remove after testing */}
-            {process.env.NODE_ENV === 'development' && mode === 'preview' && (
+            {(process.env.NODE_ENV === 'development' && mode === 'preview') && (
               <div className="absolute bottom-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
                 <div>Caption: {caption.length} chars</div>
                 <div>Caption Valid: {caption.trim() ? 'YES' : 'NO'}</div>
