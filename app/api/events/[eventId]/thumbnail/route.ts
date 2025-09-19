@@ -60,7 +60,7 @@ export async function PUT(
         return NextResponse.json({ error: "Video not found" }, { status: 404 })
       }
 
-      thumbnailVideoUrl = video.videoUrl
+      thumbnailVideoUrl = video.mediaUrl
       thumbnailImageUrl = video.thumbnailUrl
     }
 

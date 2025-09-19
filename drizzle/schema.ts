@@ -746,6 +746,16 @@ export const events = pgTable("events", {
 	themeId: integer("theme_id"),
 	customFlyerUrl: varchar("custom_flyer_url", { length: 500 }),
 	flyerData: text("flyer_data"),
+	thumbnailVideoUrl: varchar("thumbnail_video_url", { length: 500 }),
+	thumbnailImageUrl: varchar("thumbnail_image_url", { length: 500 }),
+	customBackgroundUrl: varchar("custom_background_url", { length: 500 }),
+	customBackgroundType: varchar("custom_background_type", { length: 20 }),
+	isRepeating: integer("is_repeating").default(0).notNull(),
+	repeatPattern: varchar("repeat_pattern", { length: 20 }),
+	repeatInterval: integer("repeat_interval").default(1),
+	repeatEndDate: date("repeat_end_date"),
+	repeatDaysOfWeek: varchar("repeat_days_of_week", { length: 20 }),
+	parentEventId: integer("parent_event_id"),
 }, (table) => [
 	foreignKey({
 			columns: [table.createdBy],
@@ -757,5 +767,39 @@ export const events = pgTable("events", {
 			foreignColumns: [eventThemes.id],
 			name: "events_theme_id_event_themes_id_fk"
 		}),
+	foreignKey({
+			columns: [table.parentEventId],
+			foreignColumns: [table.id],
+			name: "events_parent_event_id_events_id_fk"
+		}),
 	unique("events_share_token_unique").on(table.shareToken),
+]);
+
+export const eventMedia = pgTable("event_media", {
+	id: integer().primaryKey().generatedAlwaysAsIdentity({ name: "event_media_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 2147483647, cache: 1 }),
+	eventId: integer("event_id").notNull(),
+	uploadedBy: uuid("uploaded_by").notNull(),
+	mediaUrl: varchar("media_url", { length: 500 }).notNull(),
+	thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
+	title: varchar({ length: 200 }),
+	description: text(),
+	mediaType: varchar("media_type", { length: 20 }).notNull(),
+	duration: integer(),
+	width: integer(),
+	height: integer(),
+	fileSize: integer("file_size"),
+	mimeType: varchar("mime_type", { length: 100 }).notNull(),
+	isPublic: integer("is_public").default(1).notNull(),
+	uploadedAt: timestamp("uploaded_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.eventId],
+			foreignColumns: [events.id],
+			name: "event_media_event_id_events_id_fk"
+		}),
+	foreignKey({
+			columns: [table.uploadedBy],
+			foreignColumns: [users.id],
+			name: "event_media_uploaded_by_users_id_fk"
+		}),
 ]);

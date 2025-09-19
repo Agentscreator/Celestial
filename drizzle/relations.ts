@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { albumImages, albumImageLikes, users, albums, albumJoinRequests, albumShares, communities, communityMembers, albumImageComments, followers, groups, groupMembers, groupStories, groupStoryViews, posts, inviteRequests, postInvites, messages, notifications, postComments, postInviteParticipants, locationRequests, postLikes, postLocations, stories, storyViews, postShares, profileVisitors, thoughts, albumContributors, groupMessages, userSettings, userTags, tags, events, eventParticipants, eventThemes } from "./schema";
+import { albumImages, albumImageLikes, users, albums, albumJoinRequests, albumShares, communities, communityMembers, albumImageComments, followers, groups, groupMembers, groupStories, groupStoryViews, posts, inviteRequests, postInvites, messages, notifications, postComments, postInviteParticipants, locationRequests, postLikes, postLocations, stories, storyViews, postShares, profileVisitors, thoughts, albumContributors, groupMessages, userSettings, userTags, tags, events, eventParticipants, eventThemes, eventMedia } from "./schema";
 
 export const albumImageLikesRelations = relations(albumImageLikes, ({one}) => ({
 	albumImage: one(albumImages, {
@@ -93,6 +93,7 @@ export const usersRelations = relations(users, ({many}) => ({
 	userTags: many(userTags),
 	eventParticipants: many(eventParticipants),
 	events: many(events),
+	eventMedias: many(eventMedia),
 }));
 
 export const albumJoinRequestsRelations = relations(albumJoinRequests, ({one}) => ({
@@ -473,8 +474,28 @@ export const eventsRelations = relations(events, ({one, many}) => ({
 		fields: [events.themeId],
 		references: [eventThemes.id]
 	}),
+	event: one(events, {
+		fields: [events.parentEventId],
+		references: [events.id],
+		relationName: "events_parentEventId_events_id"
+	}),
+	events: many(events, {
+		relationName: "events_parentEventId_events_id"
+	}),
+	eventMedias: many(eventMedia),
 }));
 
 export const eventThemesRelations = relations(eventThemes, ({many}) => ({
 	events: many(events),
+}));
+
+export const eventMediaRelations = relations(eventMedia, ({one}) => ({
+	event: one(events, {
+		fields: [eventMedia.eventId],
+		references: [events.id]
+	}),
+	user: one(users, {
+		fields: [eventMedia.uploadedBy],
+		references: [users.id]
+	}),
 }));

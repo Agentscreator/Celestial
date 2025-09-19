@@ -536,7 +536,7 @@ export const eventsTable = pgTable("events", {
   repeatInterval: integer("repeat_interval").default(1), // Every X days/weeks/months/years
   repeatEndDate: date("repeat_end_date"), // When to stop repeating (null = indefinite)
   repeatDaysOfWeek: varchar("repeat_days_of_week", { length: 20 }), // For weekly: '1,3,5' (Mon,Wed,Fri)
-  parentEventId: integer("parent_event_id").references(() => eventsTable.id), // Links to original event if this is a repeat instance
+  parentEventId: integer("parent_event_id"), // Links to original event if this is a repeat instance
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })

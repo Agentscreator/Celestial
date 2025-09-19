@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, eventVideosTable, eventParticipantsTable, usersTable } from "@/src/db/schema"
+import { eventsTable, eventMediaTable, eventParticipantsTable, usersTable } from "@/src/db/schema"
 import { eq, and, desc } from "drizzle-orm"
 
 // GET - Fetch videos for an event
@@ -55,41 +55,41 @@ export async function GET(
     // Fetch videos with uploader information
     const videos = await db
       .select({
-        id: eventVideosTable.id,
-        eventId: eventVideosTable.eventId,
-        videoUrl: eventVideosTable.videoUrl,
-        thumbnailUrl: eventVideosTable.thumbnailUrl,
-        title: eventVideosTable.title,
-        description: eventVideosTable.description,
-        duration: eventVideosTable.duration,
-        fileSize: eventVideosTable.fileSize,
-        mimeType: eventVideosTable.mimeType,
-        isPublic: eventVideosTable.isPublic,
-        uploadedAt: eventVideosTable.uploadedAt,
-        uploadedBy: eventVideosTable.uploadedBy,
+        id: eventMediaTable.id,
+        eventId: eventMediaTable.eventId,
+        videoUrl: eventMediaTable.mediaUrl,
+        thumbnailUrl: eventMediaTable.thumbnailUrl,
+        title: eventMediaTable.title,
+        description: eventMediaTable.description,
+        duration: eventMediaTable.duration,
+        fileSize: eventMediaTable.fileSize,
+        mimeType: eventMediaTable.mimeType,
+        isPublic: eventMediaTable.isPublic,
+        uploadedAt: eventMediaTable.uploadedAt,
+        uploadedBy: eventMediaTable.uploadedBy,
         uploader: {
           username: usersTable.username,
           nickname: usersTable.nickname,
           profileImage: usersTable.profileImage,
         },
       })
-      .from(eventVideosTable)
-      .leftJoin(usersTable, eq(eventVideosTable.uploadedBy, usersTable.id))
+      .from(eventMediaTable)
+      .leftJoin(usersTable, eq(eventMediaTable.uploadedBy, usersTable.id))
       .where(
         and(
-          eq(eventVideosTable.eventId, eventId),
+          eq(eventMediaTable.eventId, eventId),
           // Only show public videos or videos uploaded by current user
           // (unless they're the event creator, who can see all)
           isCreator
             ? undefined
             : and(
-                eq(eventVideosTable.isPublic, 1),
+                eq(eventMediaTable.isPublic, 1),
                 // Or videos uploaded by the current user
-                eq(eventVideosTable.uploadedBy, session.user.id)
+                eq(eventMediaTable.uploadedBy, session.user.id)
               )
         )
       )
-      .orderBy(desc(eventVideosTable.uploadedAt))
+      .orderBy(desc(eventMediaTable.uploadedAt))
 
     return NextResponse.json({
       videos: videos.map(video => ({
@@ -196,14 +196,15 @@ export async function POST(
 
     // Insert the video record
     const [newVideo] = await db
-      .insert(eventVideosTable)
+      .insert(eventMediaTable)
       .values({
         eventId,
         uploadedBy: session.user.id,
-        videoUrl: videoUrl.trim(),
+        mediaUrl: videoUrl.trim(),
         thumbnailUrl: thumbnailUrl?.trim() || null,
         title: title?.trim() || null,
         description: description?.trim() || null,
+        mediaType: 'video',
         duration: duration || null,
         fileSize: fileSize || null,
         mimeType: mimeType || "video/mp4",
