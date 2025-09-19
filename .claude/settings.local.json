@@ -31,7 +31,8 @@
       "Bash(grep:*)",
       "Bash(node:*)",
       "Bash(powershell:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(del tsconfig.tsbuildinfo)"
     ],
     "deny": []
   }
