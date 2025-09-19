@@ -495,6 +495,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     console.log('Caption:', caption)
     console.log('Selected file:', selectedFile)
 
+    // Double-check validation
     if (!caption.trim()) {
       console.log('❌ No caption provided')
       toast({
@@ -595,6 +596,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         fetch('/api/posts', {
           method: 'POST',
           body: formData,
+          // Don't set Content-Type header - let browser set it for FormData
         }),
         timeoutPromise
       ]) as Response
@@ -664,8 +666,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           errorData = { error: errorText || 'Failed to create post' }
         }
 
-        // Show more specific error message
-        const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        // Show more specific error message based on status code
+        let errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        
+        if (response.status === 401) {
+          errorMessage = "Please log in to create a post"
+        } else if (response.status === 413) {
+          errorMessage = "File is too large. Please choose a smaller video."
+        } else if (response.status === 400) {
+          errorMessage = errorData.error || "Invalid request. Please check your inputs."
+        } else if (response.status >= 500) {
+          errorMessage = "Server error. Please try again in a moment."
+        }
 
         toast({
           title: "Post Creation Failed",
@@ -676,13 +688,33 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         throw new Error(errorMessage)
       }
     } catch (error) {
-      console.error('Error creating post:', error)
+      console.error('❌ Error creating post:', error)
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : 'No stack'
+      })
+      
+      // Show user-friendly error message
+      let userMessage = "Failed to create post. Please try again."
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          userMessage = "Upload is taking too long. Please check your connection and try again."
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          userMessage = "Network error. Please check your connection and try again."
+        } else if (error.message.includes('size') || error.message.includes('large')) {
+          userMessage = "File is too large. Please choose a smaller video."
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create post",
+        description: userMessage,
         variant: "destructive",
       })
     } finally {
+      console.log('🏁 Post creation attempt finished, setting isUploading to false')
       setIsUploading(false)
     }
   }
@@ -926,7 +958,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         {mode === 'upload' && (
           // Upload Mode
           <div className="relative w-full h-full bg-black ios-fullscreen flex flex-col items-center justify-center p-8">
-            <div className="absolute top-4 left-4 z-10">
+            <div className="absolute top-8 left-4 z-10">
               <Button
                 variant="ghost"
                 onClick={handleClose}
@@ -1078,7 +1110,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
 
             {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
+            <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between p-4">
               <Button
                 variant="ghost"
                 onClick={handleClose}
@@ -1110,6 +1142,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <div>Has Permission: {hasPermission === null ? 'UNKNOWN' : hasPermission ? 'YES' : 'NO'}</div>
                 <div>Mode: {mode}</div>
                 <div>Platform: {typeof window !== 'undefined' ? window.navigator.userAgent.includes('iPhone') ? 'iOS' : 'Other' : 'SSR'}</div>
+              </div>
+            )}
+
+            {/* Post Debug Panel - Remove after testing */}
+            {process.env.NODE_ENV === 'development' && mode === 'preview' && (
+              <div className="absolute bottom-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
+                <div>Caption: {caption.length} chars</div>
+                <div>Caption Valid: {caption.trim() ? 'YES' : 'NO'}</div>
+                <div>Has File: {selectedFile ? 'YES' : 'NO'}</div>
+                <div>File Size: {selectedFile ? `${Math.round(selectedFile.size / 1024)}KB` : 'N/A'}</div>
+                <div>Uploading: {isUploading ? 'YES' : 'NO'}</div>
+                <div>Show Caption: {showCaption ? 'YES' : 'NO'}</div>
+                <div>Button Enabled: {(!isUploading && caption.trim() && selectedFile) ? 'YES' : 'NO'}</div>
               </div>
             )}
 
@@ -1370,7 +1415,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             />
 
             {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
+            <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between p-4">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -1432,6 +1477,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
                 <div className="flex items-center justify-between mt-4 gap-4">
                   <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
+                  {caption.trim() && selectedFile && (
+                    <span className="text-green-400 text-sm font-medium">Ready to post!</span>
+                  )}
                 </div>
               </div>
             )}
@@ -1440,14 +1488,60 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {showCaption && (
               <div className="absolute bottom-32 right-4 z-20">
                 <Button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     console.log('📝 Post button clicked')
-                    handleCreatePost()
+                    console.log('📝 Button state:', {
+                      isUploading,
+                      captionLength: caption.length,
+                      captionTrimmed: caption.trim().length,
+                      hasSelectedFile: !!selectedFile,
+                      selectedFileDetails: selectedFile ? {
+                        name: selectedFile.name,
+                        size: selectedFile.size,
+                        type: selectedFile.type
+                      } : null
+                    })
+                    
+                    // Validate inputs before proceeding
+                    if (!caption.trim()) {
+                      console.log('❌ Caption validation failed')
+                      toast({
+                        title: "Description required",
+                        description: "Please add a description for your post",
+                        variant: "destructive",
+                      })
+                      return
+                    }
+
+                    if (!selectedFile) {
+                      console.log('❌ File validation failed')
+                      toast({
+                        title: "Media required",
+                        description: "Please record a video or upload a file",
+                        variant: "destructive",
+                      })
+                      return
+                    }
+
+                    console.log('✅ All validations passed, calling handleCreatePost')
+                    try {
+                      await handleCreatePost()
+                      console.log('✅ handleCreatePost completed successfully')
+                    } catch (error) {
+                      console.error('❌ handleCreatePost failed:', error)
+                    }
                   }}
-                  disabled={isUploading || !caption.trim()}
-                  className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50"
+                  disabled={isUploading || !caption.trim() || !selectedFile}
+                  className={cn(
+                    "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
+                    isUploading 
+                      ? "bg-gray-500 cursor-not-allowed" 
+                      : (!caption.trim() || !selectedFile)
+                        ? "bg-red-500/50 cursor-not-allowed"
+                        : "bg-red-500 hover:bg-red-600 active:bg-red-700"
+                  )}
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {isUploading ? (
