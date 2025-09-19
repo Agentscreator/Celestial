@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { FullscreenDialog } from "./FullscreenDialog"
-import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Sparkles, Timer, Flashlight as Flash } from "lucide-react"
+import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Sparkles, Flashlight as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
@@ -33,11 +33,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showCaption, setShowCaption] = useState(false)
   const [speedMode, setSpeedMode] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x')
   const [filterMode, setFilterMode] = useState<'none' | 'vintage' | 'dramatic' | 'bright' | 'warm'>('none')
-  const [timerEnabled, setTimerEnabled] = useState(false)
-  const [timerDuration, setTimerDuration] = useState<3 | 10>(3)
   const [showSpeedSelector, setShowSpeedSelector] = useState(false)
   const [showFilterSelector, setShowFilterSelector] = useState(false)
-  const [showTimerSelector, setShowTimerSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
   const [isStoppingRecording, setIsStoppingRecording] = useState(false)
 
@@ -385,15 +382,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   }
 
 
-  // Handle timer toggle
-  const handleTimerToggle = () => {
-    setTimerEnabled(!timerEnabled)
-    setShowTimerSelector(false)
-    toast({
-      title: timerEnabled ? "Timer disabled" : "Timer enabled",
-      description: timerEnabled ? "Timer turned off" : `${timerDuration}s countdown enabled`,
-    })
-  }
 
   // Get filter CSS class
   const getFilterClass = () => {
@@ -561,7 +549,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setShowCaption(false)
     setShowSpeedSelector(false)
     setShowFilterSelector(false)
-    setShowTimerSelector(false)
     setCameraLoading(false)
     setCameraReady(false)
     stopCamera()
@@ -581,7 +568,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const closeAllSelectors = () => {
     setShowSpeedSelector(false)
     setShowFilterSelector(false)
-    setShowTimerSelector(false)
   }
 
   // Remove selected file
@@ -1067,56 +1053,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
 
 
-              {/* Timer */}
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowTimerSelector(!showTimerSelector)
-                  }}
-                  className="flex flex-col items-center text-white touch-manipulation"
-                >
-                  <div className={cn(
-                    "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
-                    timerEnabled ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
-                  )}>
-                    <Timer className="w-5 h-5 sm:w-6 sm:h-6" />
-                  </div>
-                  <span className="text-xs font-medium">Timer</span>
-                </button>
-
-                {showTimerSelector && (
-                  <div
-                    className="absolute right-16 sm:right-18 top-0 bg-black/90 backdrop-blur-sm rounded-lg p-2 min-w-[80px] border border-white/10"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => setTimerDuration(3)}
-                      className={cn(
-                        "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
-                        timerDuration === 3 ? "text-green-400 bg-green-500/20" : "text-white"
-                      )}
-                    >
-                      3s
-                    </button>
-                    <button
-                      onClick={() => setTimerDuration(10)}
-                      className={cn(
-                        "block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors touch-manipulation",
-                        timerDuration === 10 ? "text-green-400 bg-green-500/20" : "text-white"
-                      )}
-                    >
-                      10s
-                    </button>
-                    <button
-                      onClick={handleTimerToggle}
-                      className="block w-full text-left px-3 py-3 text-sm rounded hover:bg-white/10 transition-colors text-green-400 border-t border-white/20 mt-1 pt-3 touch-manipulation"
-                    >
-                      {timerEnabled ? 'Disable' : 'Enable'}
-                    </button>
-                  </div>
-                )}
-              </div>
 
               {/* Flash */}
               <button
