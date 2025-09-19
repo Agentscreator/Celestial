@@ -27,16 +27,40 @@ async function uploadToStorage(options: {
   console.log("Uploading to path:", pathname)
   console.log("File size:", buffer.length)
   console.log("MIME type:", mimetype)
+  console.log("Buffer is valid:", buffer instanceof Buffer)
+  console.log("Buffer has content:", buffer.length > 0)
 
-  const blob = await put(pathname, buffer, {
-    access: "public",
-    contentType: mimetype,
-  })
+  try {
+    const blob = await put(pathname, buffer, {
+      access: "public",
+      contentType: mimetype,
+    })
 
-  console.log("Blob upload successful:", blob.url)
-  console.log("=== BLOB UPLOAD COMPLETE ===")
+    console.log("Blob upload successful:", blob.url)
+    console.log("Blob details:", {
+      url: blob.url,
+      pathname: blob.pathname,
+      contentType: blob.contentType,
+      contentDisposition: blob.contentDisposition,
+    })
+    console.log("=== BLOB UPLOAD COMPLETE ===")
 
-  return blob.url
+    return blob.url
+  } catch (blobError) {
+    console.error("=== BLOB UPLOAD ERROR ===")
+    console.error("Error details:", {
+      name: blobError instanceof Error ? blobError.name : 'Unknown',
+      message: blobError instanceof Error ? blobError.message : String(blobError),
+      stack: blobError instanceof Error ? blobError.stack : 'No stack'
+    })
+    console.error("Upload parameters:", {
+      pathname,
+      bufferSize: buffer.length,
+      mimetype,
+      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+    })
+    throw blobError
+  }
 }
 
 // GET - Fetch posts
@@ -388,6 +412,8 @@ export async function POST(request: NextRequest) {
             name: media.name,
             size: media.size,
             type: media.type,
+            lastModified: media.lastModified,
+            isValidFile: media instanceof File,
           }
         : null,
       isInvite,
@@ -398,6 +424,17 @@ export async function POST(request: NextRequest) {
       soundId: soundId?.substring(0, 50),
       soundName: soundName?.substring(0, 50),
     })
+
+    // Additional debugging for media
+    if (media) {
+      console.log("📁 DETAILED MEDIA DEBUG:")
+      console.log("- Media name:", media.name)
+      console.log("- Media size:", media.size)
+      console.log("- Media type:", media.type)
+      console.log("- Media instanceof File:", media instanceof File)
+      console.log("- Media stream available:", typeof media.stream === 'function')
+      console.log("- Media arrayBuffer available:", typeof media.arrayBuffer === 'function')
+    }
 
     if (!content?.trim() && !media) {
       console.error("❌ VALIDATION ERROR: No content or media provided")
@@ -490,6 +527,10 @@ export async function POST(request: NextRequest) {
       image: postData.image,
       video: postData.video,
       communityName: postData.communityName,
+      mediaUrl: mediaUrl,
+      mediaType: mediaType,
+      hasMediaUrl: !!mediaUrl,
+      hasMediaType: !!mediaType,
     })
 
     console.log("About to insert post into database...")
@@ -509,6 +550,8 @@ export async function POST(request: NextRequest) {
       content: post[0].content?.substring(0, 50) + "...",
       hasImage: !!post[0].image,
       hasVideo: !!post[0].video,
+      imageUrl: post[0].image,
+      videoUrl: post[0].video,
       createdAt: post[0].createdAt,
     })
 

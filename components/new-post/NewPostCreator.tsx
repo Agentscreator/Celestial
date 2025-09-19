@@ -546,6 +546,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
+      
+      // Additional debugging for media upload
+      console.log('📁 Media file details before upload:', {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+        lastModified: selectedFile.lastModified,
+        isValidFile: selectedFile instanceof File,
+        hasContent: selectedFile.size > 0
+      })
 
       // Add sound information if selected
       if (selectedSound) {
@@ -1155,6 +1165,48 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <div>Uploading: {isUploading ? 'YES' : 'NO'}</div>
                 <div>Show Caption: {showCaption ? 'YES' : 'NO'}</div>
                 <div>Button Enabled: {(!isUploading && caption.trim() && selectedFile) ? 'YES' : 'NO'}</div>
+                {selectedFile && (
+                  <button
+                    onClick={async () => {
+                      console.log('🧪 Testing media upload...')
+                      const testFormData = new FormData()
+                      testFormData.append('media', selectedFile)
+                      
+                      try {
+                        const response = await fetch('/api/test-media-upload', {
+                          method: 'POST',
+                          body: testFormData
+                        })
+                        
+                        const result = await response.json()
+                        console.log('🧪 Test upload result:', result)
+                        
+                        if (response.ok) {
+                          toast({
+                            title: "Test Upload Success",
+                            description: `Media uploaded to: ${result.url}`,
+                          })
+                        } else {
+                          toast({
+                            title: "Test Upload Failed",
+                            description: result.error || 'Unknown error',
+                            variant: "destructive",
+                          })
+                        }
+                      } catch (error) {
+                        console.error('🧪 Test upload error:', error)
+                        toast({
+                          title: "Test Upload Error",
+                          description: error instanceof Error ? error.message : 'Unknown error',
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                    className="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                  >
+                    Test Upload
+                  </button>
+                )}
               </div>
             )}
 
