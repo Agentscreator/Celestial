@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
-import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable, eventThemesTable, eventVideosTable } from "@/src/db/schema"
+import { eventsTable, usersTable, eventParticipantsTable, groupsTable, groupMembersTable, eventThemesTable, eventMediaTable } from "@/src/db/schema"
 import { desc, eq, count, and, gte } from "drizzle-orm"
 import { randomBytes } from "crypto"
 
@@ -37,6 +37,14 @@ export async function GET(request: NextRequest) {
         flyerData: eventsTable.flyerData,
         thumbnailVideoUrl: eventsTable.thumbnailVideoUrl,
         thumbnailImageUrl: eventsTable.thumbnailImageUrl,
+        customBackgroundUrl: eventsTable.customBackgroundUrl,
+        customBackgroundType: eventsTable.customBackgroundType,
+        isRepeating: eventsTable.isRepeating,
+        repeatPattern: eventsTable.repeatPattern,
+        repeatInterval: eventsTable.repeatInterval,
+        repeatEndDate: eventsTable.repeatEndDate,
+        repeatDaysOfWeek: eventsTable.repeatDaysOfWeek,
+        parentEventId: eventsTable.parentEventId,
         createdAt: eventsTable.createdAt,
         updatedAt: eventsTable.updatedAt,
         creator: {
@@ -83,17 +91,17 @@ export async function GET(request: NextRequest) {
 
         const hasJoined = userParticipation !== undefined
 
-        // Get video count for participants
-        let videoCount = 0
-        let hasVideos = false
+        // Get media count for participants
+        let mediaCount = 0
+        let hasMedia = false
         if (hasJoined) {
-          const [videoCountResult] = await db
+          const [mediaCountResult] = await db
             .select({ count: count() })
-            .from(eventVideosTable)
-            .where(eq(eventVideosTable.eventId, event.id))
+            .from(eventMediaTable)
+            .where(eq(eventMediaTable.eventId, event.id))
 
-          videoCount = videoCountResult?.count || 0
-          hasVideos = videoCount > 0
+          mediaCount = mediaCountResult?.count || 0
+          hasMedia = mediaCount > 0
         }
 
         return {
@@ -117,11 +125,19 @@ export async function GET(request: NextRequest) {
           flyerData: event.flyerData,
           thumbnailVideoUrl: event.thumbnailVideoUrl,
           thumbnailImageUrl: event.thumbnailImageUrl,
+          customBackgroundUrl: event.customBackgroundUrl,
+          customBackgroundType: event.customBackgroundType,
+          isRepeating: event.isRepeating === 1,
+          repeatPattern: event.repeatPattern,
+          repeatInterval: event.repeatInterval,
+          repeatEndDate: event.repeatEndDate,
+          repeatDaysOfWeek: event.repeatDaysOfWeek,
+          parentEventId: event.parentEventId,
           theme: event.theme && event.theme.id ? event.theme : null,
           createdAt: event.createdAt,
           updatedAt: event.updatedAt,
-          videoCount,
-          hasVideos,
+          mediaCount,
+          hasMedia,
         }
       })
     )
@@ -156,7 +172,12 @@ export async function POST(request: NextRequest) {
     body = await request.json()
     console.log('📋 Request body:', body)
     
-    const { title, description, location, date, time, maxParticipants, isInvite, inviteDescription, groupName, themeId } = body
+    const { 
+      title, description, location, date, time, maxParticipants, 
+      isInvite, inviteDescription, groupName, themeId,
+      customBackgroundUrl, customBackgroundType,
+      isRepeating, repeatPattern, repeatInterval, repeatEndDate, repeatDaysOfWeek
+    } = body
 
     // Validation
     console.log('✅ Validating required fields...')
@@ -216,6 +237,13 @@ export async function POST(request: NextRequest) {
         inviteDescription: isInvite ? inviteDescription?.trim() : null,
         groupName: isInvite ? groupName?.trim() : null,
         themeId: themeId || null,
+        customBackgroundUrl: customBackgroundUrl || null,
+        customBackgroundType: customBackgroundType || null,
+        isRepeating: isRepeating ? 1 : 0,
+        repeatPattern: isRepeating ? repeatPattern : null,
+        repeatInterval: isRepeating ? repeatInterval || 1 : null,
+        repeatEndDate: isRepeating ? repeatEndDate : null,
+        repeatDaysOfWeek: isRepeating ? repeatDaysOfWeek : null,
       })
       .returning()
 
@@ -296,6 +324,14 @@ export async function POST(request: NextRequest) {
       flyerData: newEvent.flyerData,
       thumbnailVideoUrl: newEvent.thumbnailVideoUrl,
       thumbnailImageUrl: newEvent.thumbnailImageUrl,
+      customBackgroundUrl: newEvent.customBackgroundUrl,
+      customBackgroundType: newEvent.customBackgroundType,
+      isRepeating: newEvent.isRepeating === 1,
+      repeatPattern: newEvent.repeatPattern,
+      repeatInterval: newEvent.repeatInterval,
+      repeatEndDate: newEvent.repeatEndDate,
+      repeatDaysOfWeek: newEvent.repeatDaysOfWeek,
+      parentEventId: newEvent.parentEventId,
       theme: eventTheme,
       groupId: groupId,
       createdAt: newEvent.createdAt,

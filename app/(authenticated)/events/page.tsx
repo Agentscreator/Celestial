@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, MapPin, Users, Plus, Share2, Clock, Video } from "lucide-react"
+import { Calendar, MapPin, Users, Plus, Share2, Clock, Video, Image } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,9 +18,11 @@ import { EventsCalendar } from "@/components/events-calendar"
 import { ThemeSelector, type EventTheme } from "@/components/events/ThemeSelector"
 import { ThemedEventCard } from "@/components/events/ThemedEventCard"
 import { FlyerGenerator } from "@/components/events/FlyerGenerator"
-import { EventVideoUpload } from "@/components/events/EventVideoUpload"
+import { EventMediaUpload } from "@/components/events/EventMediaUpload"
 import { EventVideoManager } from "@/components/events/EventVideoManager"
 import { VideoThumbnailSelector } from "@/components/events/VideoThumbnailSelector"
+import { CustomBackgroundUpload } from "@/components/events/CustomBackgroundUpload"
+import { RepeatingEventConfig } from "@/components/events/RepeatingEventConfig"
 
 interface Event {
   id: string
@@ -43,11 +45,19 @@ interface Event {
   flyerData?: string
   thumbnailVideoUrl?: string
   thumbnailImageUrl?: string
+  customBackgroundUrl?: string
+  customBackgroundType?: 'image' | 'gif'
+  isRepeating?: boolean
+  repeatPattern?: string
+  repeatInterval?: number
+  repeatEndDate?: string
+  repeatDaysOfWeek?: string
+  parentEventId?: number
   theme?: EventTheme | null
   createdAt: string
   updatedAt: string
-  videoCount?: number
-  hasVideos?: boolean
+  mediaCount?: number
+  hasMedia?: boolean
 }
 
 export default function EventsPage() {
@@ -75,11 +85,22 @@ export default function EventsPage() {
   const [themesLoading, setThemesLoading] = useState(false)
   const [showFlyerPreview, setShowFlyerPreview] = useState(false)
 
-  // Video upload state
-  const [enableVideoUpload, setEnableVideoUpload] = useState(false)
-  const [eventVideos, setEventVideos] = useState<any[]>([])
+  // Media upload state
+  const [enableMediaUpload, setEnableMediaUpload] = useState(false)
+  const [eventMedia, setEventMedia] = useState<any[]>([])
   const [tempEventId, setTempEventId] = useState<string | null>(null)
   const [currentThumbnailVideoUrl, setCurrentThumbnailVideoUrl] = useState<string | undefined>(undefined)
+
+  // Custom background state
+  const [customBackgroundUrl, setCustomBackgroundUrl] = useState<string>('')
+  const [customBackgroundType, setCustomBackgroundType] = useState<'image' | 'gif'>('image')
+
+  // Repeating event state
+  const [isRepeating, setIsRepeating] = useState(false)
+  const [repeatPattern, setRepeatPattern] = useState('weekly')
+  const [repeatInterval, setRepeatInterval] = useState(1)
+  const [repeatEndDate, setRepeatEndDate] = useState<string | undefined>(undefined)
+  const [repeatDaysOfWeek, setRepeatDaysOfWeek] = useState<string | undefined>(undefined)
 
   const generateCommunityName = () => {
     if (formData.title.trim()) {
@@ -199,6 +220,13 @@ export default function EventsPage() {
           inviteDescription: enableInvites ? inviteDescription.trim() : null,
           groupName: enableInvites && communityName.trim() ? communityName.trim() : null,
           themeId: selectedThemeId,
+          customBackgroundUrl: customBackgroundUrl || null,
+          customBackgroundType: customBackgroundUrl ? customBackgroundType : null,
+          isRepeating,
+          repeatPattern: isRepeating ? repeatPattern : null,
+          repeatInterval: isRepeating ? repeatInterval : null,
+          repeatEndDate: isRepeating ? repeatEndDate : null,
+          repeatDaysOfWeek: isRepeating ? repeatDaysOfWeek : null,
         }),
       })
 
@@ -206,13 +234,13 @@ export default function EventsPage() {
         const data = await response.json()
         setEvents([data.event, ...events])
 
-        // If video upload is enabled, set the temp event ID for video uploads
-        if (enableVideoUpload) {
+        // If media upload is enabled, set the temp event ID for media uploads
+        if (enableMediaUpload) {
           setTempEventId(data.event.id)
           toast({
             title: "Event Created",
-            description: enableVideoUpload && eventVideos.length === 0
-              ? "Event created! You can now upload videos before finishing."
+            description: enableMediaUpload && eventMedia.length === 0
+              ? "Event created! You can now upload media before finishing."
               : "Event created successfully!",
           })
         } else {
@@ -230,10 +258,17 @@ export default function EventsPage() {
           setInviteDescription('')
           setCommunityName('')
           setSelectedThemeId(null)
-          setEnableVideoUpload(false)
-          setEventVideos([])
+          setEnableMediaUpload(false)
+          setEventMedia([])
           setTempEventId(null)
           setCurrentThumbnailVideoUrl(undefined)
+          setCustomBackgroundUrl('')
+          setCustomBackgroundType('image')
+          setIsRepeating(false)
+          setRepeatPattern('weekly')
+          setRepeatInterval(1)
+          setRepeatEndDate(undefined)
+          setRepeatDaysOfWeek(undefined)
 
           toast({
             title: "Success",
@@ -381,8 +416,8 @@ export default function EventsPage() {
     router.push(`/events/${eventId}`)
   }
 
-  const handleVideoUploaded = (video: any) => {
-    setEventVideos(prev => [...prev, video])
+  const handleMediaUploaded = (media: any) => {
+    setEventMedia(prev => [...prev, media])
   }
 
   const handleFinishEventCreation = () => {
@@ -399,15 +434,22 @@ export default function EventsPage() {
     setInviteDescription('')
     setCommunityName('')
     setSelectedThemeId(null)
-    setEnableVideoUpload(false)
-    setEventVideos([])
+    setEnableMediaUpload(false)
+    setEventMedia([])
     setTempEventId(null)
     setCurrentThumbnailVideoUrl(undefined)
+    setCustomBackgroundUrl('')
+    setCustomBackgroundType('image')
+    setIsRepeating(false)
+    setRepeatPattern('weekly')
+    setRepeatInterval(1)
+    setRepeatEndDate(undefined)
+    setRepeatDaysOfWeek(undefined)
 
     toast({
       title: "Success",
-      description: eventVideos.length > 0
-        ? `Event created with ${eventVideos.length} video${eventVideos.length > 1 ? 's' : ''}!`
+      description: eventMedia.length > 0
+        ? `Event created with ${eventMedia.length} media file${eventMedia.length > 1 ? 's' : ''}!`
         : "Event created successfully!",
     })
   }
@@ -435,10 +477,17 @@ export default function EventsPage() {
     setInviteDescription('')
     setCommunityName('')
     setSelectedThemeId(null)
-    setEnableVideoUpload(false)
-    setEventVideos([])
+    setEnableMediaUpload(false)
+    setEventMedia([])
     setTempEventId(null)
     setCurrentThumbnailVideoUrl(undefined)
+    setCustomBackgroundUrl('')
+    setCustomBackgroundType('image')
+    setIsRepeating(false)
+    setRepeatPattern('weekly')
+    setRepeatInterval(1)
+    setRepeatEndDate(undefined)
+    setRepeatDaysOfWeek(undefined)
   }
 
   const formatDate = (dateStr: string) => {
@@ -506,6 +555,69 @@ export default function EventsPage() {
                   />
                 </div>
 
+                {/* Theme Selection - Moved to top */}
+                <div className="space-y-4 pt-4 border-t border-gray-700">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Theme Selector */}
+                    <div>
+                      <Label className="text-base font-medium mb-4 block">Choose Event Theme</Label>
+                      <div className="max-h-96 overflow-y-auto">
+                        {themesLoading ? (
+                          <div className="flex justify-center py-8">
+                            <TypingAnimation />
+                          </div>
+                        ) : (
+                          <ThemeSelector
+                            themes={themes}
+                            selectedThemeId={selectedThemeId}
+                            onThemeSelect={setSelectedThemeId}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Custom Background Upload */}
+                    <div>
+                      <CustomBackgroundUpload
+                        onBackgroundSelected={(url, type) => {
+                          setCustomBackgroundUrl(url)
+                          setCustomBackgroundType(type)
+                        }}
+                        onBackgroundRemoved={() => {
+                          setCustomBackgroundUrl('')
+                          setCustomBackgroundType('image')
+                        }}
+                        currentBackground={customBackgroundUrl}
+                        currentBackgroundType={customBackgroundType}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Flyer Preview */}
+                  {formData.title && formData.location && formData.date && formData.time && (
+                    <div className="pt-4">
+                      <Label className="text-base font-medium mb-4 block">Event Preview</Label>
+                      <FlyerGenerator
+                        event={{
+                          title: formData.title,
+                          description: formData.description,
+                          location: formData.location,
+                          date: formData.date,
+                          time: formData.time,
+                          createdByUsername: "Preview"
+                        }}
+                        theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
+                        customBackground={customBackgroundUrl}
+                        onPreview={() => setShowFlyerPreview(true)}
+                        onDownload={() => toast({
+                          title: "Download",
+                          description: "Flyer download will be available after event creation!",
+                        })}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
@@ -570,6 +682,23 @@ export default function EventsPage() {
                   />
                 </div>
 
+                {/* Repeating Event Configuration */}
+                <div className="pt-4 border-t border-gray-700">
+                  <RepeatingEventConfig
+                    isRepeating={isRepeating}
+                    onRepeatingChange={setIsRepeating}
+                    repeatPattern={repeatPattern}
+                    onRepeatPatternChange={setRepeatPattern}
+                    repeatInterval={repeatInterval}
+                    onRepeatIntervalChange={setRepeatInterval}
+                    repeatEndDate={repeatEndDate}
+                    onRepeatEndDateChange={setRepeatEndDate}
+                    repeatDaysOfWeek={repeatDaysOfWeek}
+                    onRepeatDaysOfWeekChange={setRepeatDaysOfWeek}
+                    eventDate={formData.date}
+                  />
+                </div>
+
                 {/* Community Invitation Settings */}
                 <div className="space-y-4 pt-4 border-t border-gray-700">
                   <div className="flex items-center justify-between">
@@ -628,78 +757,35 @@ export default function EventsPage() {
                   )}
                 </div>
 
-                {/* Theme Selection */}
-                <div className="space-y-4 pt-4 border-t border-gray-700">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Theme Selector */}
-                    <div>
-                      <div className="max-h-96 overflow-y-auto">
-                        {themesLoading ? (
-                          <div className="flex justify-center py-8">
-                            <TypingAnimation />
-                          </div>
-                        ) : (
-                          <ThemeSelector
-                            themes={themes}
-                            selectedThemeId={selectedThemeId}
-                            onThemeSelect={setSelectedThemeId}
-                          />
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Flyer Preview */}
-                    {formData.title && formData.location && formData.date && formData.time && (
-                      <div>
-                        <Label className="text-base font-medium mb-4 block">Event Flyer Preview</Label>
-                        <FlyerGenerator
-                          event={{
-                            title: formData.title,
-                            description: formData.description,
-                            location: formData.location,
-                            date: formData.date,
-                            time: formData.time,
-                            createdByUsername: "Preview"
-                          }}
-                          theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
-                          onPreview={() => setShowFlyerPreview(true)}
-                          onDownload={() => toast({
-                            title: "Download",
-                            description: "Flyer download will be available after event creation!",
-                          })}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Video Upload Section */}
+                {/* Media Upload Section */}
                 <div className="space-y-4 pt-4 border-t border-gray-700">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label className="text-base font-medium">Add Videos</Label>
-                      <p className="text-sm text-gray-400">Upload videos to share with event participants</p>
+                      <Label className="text-base font-medium">Add Media</Label>
+                      <p className="text-sm text-gray-400">Upload images, videos, or GIFs to share with event participants</p>
                     </div>
                     <Switch
-                      checked={enableVideoUpload}
-                      onCheckedChange={setEnableVideoUpload}
+                      checked={enableMediaUpload}
+                      onCheckedChange={setEnableMediaUpload}
                     />
                   </div>
 
-                  {enableVideoUpload && tempEventId && (
+                  {enableMediaUpload && tempEventId && (
                     <div className="space-y-4 pt-4 border-t border-gray-700">
                       <div className="bg-gray-800/50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-sm font-medium text-white">Event Videos & Thumbnail</h4>
+                          <h4 className="text-sm font-medium text-white">Event Media & Thumbnail</h4>
                           <div className="text-xs text-gray-400">
-                            {eventVideos.length} video{eventVideos.length !== 1 ? 's' : ''} uploaded
+                            {eventMedia.length} media file{eventMedia.length !== 1 ? 's' : ''} uploaded
                           </div>
                         </div>
 
                         <div className="space-y-4">
-                          <EventVideoUpload
+                          <EventMediaUpload
                             eventId={tempEventId}
-                            onVideoUploaded={handleVideoUploaded}
+                            onMediaUploaded={handleMediaUploaded}
                           >
                             <Button
                               type="button"
@@ -707,21 +793,25 @@ export default function EventsPage() {
                               className="w-full border-gray-600 text-white hover:bg-gray-800"
                             >
                               <Video className="h-4 w-4 mr-2" />
-                              Add Video
+                              Add Media
                             </Button>
-                          </EventVideoUpload>
+                          </EventMediaUpload>
 
-                          {eventVideos.length > 0 && (
+                          {eventMedia.length > 0 && (
                             <>
                               <div className="space-y-2">
-                                {eventVideos.map((video, index) => (
+                                {eventMedia.map((media, index) => (
                                   <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
-                                    <Video className="h-4 w-4 text-blue-400" />
+                                    {media.mediaType === 'video' ? (
+                                      <Video className="h-4 w-4 text-blue-400" />
+                                    ) : (
+                                      <Image className="h-4 w-4 text-green-400" />
+                                    )}
                                     <span className="text-sm text-white flex-1">
-                                      {video.title || `Video ${index + 1}`}
+                                      {media.title || `${media.mediaType} ${index + 1}`}
                                     </span>
                                     <span className="text-xs text-gray-400">
-                                      {video.isPublic ? 'Public' : 'Private'}
+                                      {media.isPublic ? 'Public' : 'Private'}
                                     </span>
                                   </div>
                                 ))}
@@ -751,9 +841,9 @@ export default function EventsPage() {
                     </div>
                   )}
 
-                  {enableVideoUpload && !tempEventId && (
+                  {enableMediaUpload && !tempEventId && (
                     <div className="text-sm text-gray-400 text-center py-4">
-                      Create the event first to upload videos
+                      Create the event first to upload media
                     </div>
                   )}
                 </div>
@@ -782,7 +872,7 @@ export default function EventsPage() {
                       type="submit"
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                      {enableVideoUpload ? 'Create Event & Add Videos' : 'Create Event'}
+                      {enableMediaUpload ? 'Create Event & Add Media' : 'Create Event'}
                     </Button>
                   )}
                 </div>

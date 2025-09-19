@@ -24,10 +24,14 @@ interface ThemedEventCardProps {
     inviteDescription?: string
     groupName?: string
     customFlyerUrl?: string
+    customBackgroundUrl?: string
+    customBackgroundType?: 'image' | 'gif'
     thumbnailVideoUrl?: string
     thumbnailImageUrl?: string
-    videoCount?: number
-    hasVideos?: boolean
+    isRepeating?: boolean
+    repeatPattern?: string
+    mediaCount?: number
+    hasMedia?: boolean
   }
   theme?: EventTheme | null
   onJoin?: (eventId: string) => void
@@ -96,11 +100,16 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
         className="h-24 relative overflow-hidden"
         style={{ background: cardTheme.backgroundGradient }}
       >
-        {/* Video thumbnail background if available (takes priority over flyer) */}
+        {/* Background priority: Video thumbnail > Custom background > Flyer */}
         {event.thumbnailImageUrl ? (
           <div 
             className="absolute inset-0 opacity-40 bg-cover bg-center"
             style={{ backgroundImage: `url(${event.thumbnailImageUrl})` }}
+          />
+        ) : event.customBackgroundUrl ? (
+          <div 
+            className="absolute inset-0 opacity-50 bg-cover bg-center"
+            style={{ backgroundImage: `url(${event.customBackgroundUrl})` }}
           />
         ) : event.customFlyerUrl ? (
           <div 
@@ -133,7 +142,7 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {event.thumbnailVideoUrl && (
                 <Badge 
                   className="text-xs px-2 py-1 flex items-center gap-1"
@@ -145,6 +154,32 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
                 >
                   <Video className="h-3 w-3" />
                   Video
+                </Badge>
+              )}
+              {event.customBackgroundUrl && (
+                <Badge 
+                  className="text-xs px-2 py-1 flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: `${cardTheme.accentColor}25`,
+                    color: cardTheme.textColor,
+                    border: `1px solid ${cardTheme.accentColor}50`
+                  }}
+                >
+                  <Image className="h-3 w-3" />
+                  {event.customBackgroundType === 'gif' ? 'GIF' : 'Custom'}
+                </Badge>
+              )}
+              {event.isRepeating && (
+                <Badge 
+                  className="text-xs px-2 py-1 flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: `${cardTheme.secondaryColor}30`,
+                    color: cardTheme.textColor,
+                    border: `1px solid ${cardTheme.secondaryColor}60`
+                  }}
+                >
+                  <Clock className="h-3 w-3" />
+                  Repeating
                 </Badge>
               )}
               {event.isInvite && (
@@ -230,11 +265,11 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
             </span>
           </div>
 
-          {event.hasJoined && event.hasVideos && (
+          {event.hasJoined && event.hasMedia && (
             <div className="flex items-center gap-2 text-gray-400">
-              <Video className="h-4 w-4" style={{ color: cardTheme.accentColor }} />
+              <Image className="h-4 w-4" style={{ color: cardTheme.accentColor }} />
               <span>
-                {event.videoCount || 0} video{(event.videoCount || 0) !== 1 ? 's' : ''}
+                {event.mediaCount || 0} media file{(event.mediaCount || 0) !== 1 ? 's' : ''}
               </span>
             </div>
           )}
@@ -242,16 +277,16 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
       </CardContent>
       
       <CardFooter className="pt-4 gap-2 px-4 pb-4">
-        {/* Video Access Button - only for joined users with videos */}
-        {!showFullDetails && event.hasJoined && event.hasVideos && onViewDetails && (
+        {/* Media Access Button - only for joined users with media */}
+        {!showFullDetails && event.hasJoined && event.hasMedia && onViewDetails && (
           <Button
             onClick={() => onViewDetails(event.id)}
             variant="outline"
             className="border-gray-600 text-gray-300 hover:bg-gray-800"
             style={{ borderRadius: `${cardTheme.borderRadius}px` }}
-            title={`View ${event.videoCount} video${(event.videoCount || 0) !== 1 ? 's' : ''}`}
+            title={`View ${event.mediaCount} media file${(event.mediaCount || 0) !== 1 ? 's' : ''}`}
           >
-            <Video className="h-4 w-4" />
+            <Image className="h-4 w-4" />
           </Button>
         )}
 

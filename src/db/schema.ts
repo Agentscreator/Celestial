@@ -527,6 +527,16 @@ export const eventsTable = pgTable("events", {
   // Video thumbnail for sharing
   thumbnailVideoUrl: varchar("thumbnail_video_url", { length: 500 }), // URL of the video to use as thumbnail
   thumbnailImageUrl: varchar("thumbnail_image_url", { length: 500 }), // Generated thumbnail image from video
+  // Custom background media
+  customBackgroundUrl: varchar("custom_background_url", { length: 500 }), // Custom uploaded background (image/gif)
+  customBackgroundType: varchar("custom_background_type", { length: 20 }), // 'image' or 'gif'
+  // Repeating event fields
+  isRepeating: integer("is_repeating").notNull().default(0), // 0 = one-time, 1 = repeating
+  repeatPattern: varchar("repeat_pattern", { length: 20 }), // 'daily', 'weekly', 'monthly', 'yearly'
+  repeatInterval: integer("repeat_interval").default(1), // Every X days/weeks/months/years
+  repeatEndDate: date("repeat_end_date"), // When to stop repeating (null = indefinite)
+  repeatDaysOfWeek: varchar("repeat_days_of_week", { length: 20 }), // For weekly: '1,3,5' (Mon,Wed,Fri)
+  parentEventId: integer("parent_event_id").references(() => eventsTable.id), // Links to original event if this is a repeat instance
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
@@ -543,8 +553,8 @@ export const eventParticipantsTable = pgTable("event_participants", {
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
 })
 
-// Event Videos (NEW TABLE)
-export const eventVideosTable = pgTable("event_videos", {
+// Event Media (Images and Videos)
+export const eventMediaTable = pgTable("event_media", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   eventId: integer("event_id")
     .notNull()
@@ -552,16 +562,22 @@ export const eventVideosTable = pgTable("event_videos", {
   uploadedBy: uuid("uploaded_by")
     .notNull()
     .references(() => usersTable.id),
-  videoUrl: varchar("video_url", { length: 500 }).notNull(),
+  mediaUrl: varchar("media_url", { length: 500 }).notNull(),
   thumbnailUrl: varchar("thumbnail_url", { length: 500 }),
   title: varchar("title", { length: 200 }),
   description: text("description"),
-  duration: integer("duration"), // Video duration in seconds
+  mediaType: varchar("media_type", { length: 20 }).notNull(), // 'image', 'video', 'gif'
+  duration: integer("duration"), // Video duration in seconds (null for images)
+  width: integer("width"), // Media width in pixels
+  height: integer("height"), // Media height in pixels
   fileSize: integer("file_size"), // File size in bytes
-  mimeType: varchar("mime_type", { length: 100 }).notNull().default("video/mp4"),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
   isPublic: integer("is_public").notNull().default(1), // 0 = private to event participants, 1 = public
   uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
 })
+
+// Keep the old table name as an alias for backward compatibility
+export const eventVideosTable = eventMediaTable
 
 // Notifications (ENHANCED TABLE)
 export const notificationsTable = pgTable("notifications", {

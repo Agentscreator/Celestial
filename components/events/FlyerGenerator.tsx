@@ -16,11 +16,12 @@ interface FlyerGeneratorProps {
     createdByUsername: string
   }
   theme?: EventTheme | null
+  customBackground?: string
   onDownload?: () => void
   onPreview?: () => void
 }
 
-export function FlyerGenerator({ event, theme, onDownload, onPreview }: FlyerGeneratorProps) {
+export function FlyerGenerator({ event, theme, customBackground, onDownload, onPreview }: FlyerGeneratorProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return {
@@ -70,21 +71,38 @@ export function FlyerGenerator({ event, theme, onDownload, onPreview }: FlyerGen
         {/* Background */}
         <div 
           className="absolute inset-0"
-          style={{ background: flyerTheme.backgroundGradient }}
+          style={{ 
+            background: customBackground 
+              ? `url(${customBackground})` 
+              : flyerTheme.backgroundGradient,
+            backgroundSize: customBackground ? 'cover' : 'auto',
+            backgroundPosition: customBackground ? 'center' : 'auto'
+          }}
         >
-          {/* Decorative elements */}
-          <div 
-            className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20"
-            style={{ backgroundColor: flyerTheme.accentColor }}
-          />
-          <div 
-            className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10"
-            style={{ backgroundColor: flyerTheme.secondaryColor }}
-          />
-          <div 
-            className="absolute top-1/3 -right-6 w-16 h-16 rounded-full opacity-15"
-            style={{ backgroundColor: flyerTheme.textColor }}
-          />
+          {/* Overlay for custom backgrounds to ensure text readability */}
+          {customBackground && (
+            <div 
+              className="absolute inset-0 bg-black opacity-40"
+            />
+          )}
+          
+          {/* Decorative elements - only show if no custom background */}
+          {!customBackground && (
+            <>
+              <div 
+                className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20"
+                style={{ backgroundColor: flyerTheme.accentColor }}
+              />
+              <div 
+                className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10"
+                style={{ backgroundColor: flyerTheme.secondaryColor }}
+              />
+              <div 
+                className="absolute top-1/3 -right-6 w-16 h-16 rounded-full opacity-15"
+                style={{ backgroundColor: flyerTheme.textColor }}
+              />
+            </>
+          )}
         </div>
 
         {/* Content */}
