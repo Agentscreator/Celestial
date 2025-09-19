@@ -103,6 +103,38 @@ const VideoFeedItem = ({
     handleAutoplay();
   }, [isActive, post.id]);
 
+  // Global video pause/resume for when post creator opens
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideo()) return;
+
+    const handlePauseAllVideos = () => {
+      if (!video.paused) {
+        video.pause();
+        setIsPlaying(false);
+        console.log('⏸️ Video paused for post creator (post:', post.id, ')');
+      }
+    };
+
+    const handleResumeVideos = () => {
+      // Only resume if this video should be active and is currently paused
+      if (isActive && video.paused) {
+        video.play().then(() => {
+          setIsPlaying(true);
+          console.log('▶️ Video resumed after post creator (post:', post.id, ')');
+        }).catch(console.error);
+      }
+    };
+
+    window.addEventListener('pauseAllFeedVideos', handlePauseAllVideos);
+    window.addEventListener('resumeFeedVideos', handleResumeVideos);
+
+    return () => {
+      window.removeEventListener('pauseAllFeedVideos', handlePauseAllVideos);
+      window.removeEventListener('resumeFeedVideos', handleResumeVideos);
+    };
+  }, [isActive, post.id]);
+
   // Intersection Observer for better autoplay control and performance
   useEffect(() => {
     const video = videoRef.current;
@@ -113,7 +145,7 @@ const VideoFeedItem = ({
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const ratio = entry.intersectionRatio;
-            
+
             if (ratio > 0.7) {
               // Video is mostly visible - play if active
               if (isActive && video.paused) {
@@ -146,14 +178,14 @@ const VideoFeedItem = ({
           }
         });
       },
-      { 
+      {
         threshold: [0, 0.3, 0.7, 1.0],
-        rootMargin: '20px' 
+        rootMargin: '20px'
       }
     );
 
     observer.observe(video);
-    
+
     return () => observer.disconnect();
   }, [isActive, post.id]);
 

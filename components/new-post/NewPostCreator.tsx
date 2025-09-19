@@ -610,6 +610,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
   }, [isOpen, mode]) // Removed function dependencies to prevent infinite loop
 
+  // Pause all feed videos when post creator opens
+  useEffect(() => {
+    if (isOpen) {
+      // Dispatch event to pause all feed videos
+      window.dispatchEvent(new CustomEvent('pauseAllFeedVideos'))
+    } else {
+      // Dispatch event to resume feed videos when closing
+      window.dispatchEvent(new CustomEvent('resumeFeedVideos'))
+    }
+  }, [isOpen])
+
   // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
     if (cameraReady && mode === 'camera') {
