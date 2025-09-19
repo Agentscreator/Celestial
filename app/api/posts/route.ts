@@ -84,6 +84,11 @@ export async function GET(request: NextRequest) {
           image: postsTable.image,
           video: postsTable.video,
           hasPrivateLocation: postsTable.hasPrivateLocation,
+          soundId: postsTable.soundId,
+          soundName: postsTable.soundName,
+          soundArtist: postsTable.soundArtist,
+          soundPreviewUrl: postsTable.soundPreviewUrl,
+          soundSpotifyUrl: postsTable.soundSpotifyUrl,
           createdAt: postsTable.createdAt,
           updatedAt: postsTable.updatedAt,
           user: {
@@ -164,6 +169,11 @@ export async function GET(request: NextRequest) {
           image: postsTable.image,
           video: postsTable.video,
           hasPrivateLocation: postsTable.hasPrivateLocation,
+          soundId: postsTable.soundId,
+          soundName: postsTable.soundName,
+          soundArtist: postsTable.soundArtist,
+          soundPreviewUrl: postsTable.soundPreviewUrl,
+          soundSpotifyUrl: postsTable.soundSpotifyUrl,
           createdAt: postsTable.createdAt,
           updatedAt: postsTable.updatedAt,
           user: {
@@ -240,6 +250,11 @@ export async function GET(request: NextRequest) {
           image: postsTable.image,
           video: postsTable.video,
           hasPrivateLocation: postsTable.hasPrivateLocation,
+          soundId: postsTable.soundId,
+          soundName: postsTable.soundName,
+          soundArtist: postsTable.soundArtist,
+          soundPreviewUrl: postsTable.soundPreviewUrl,
+          soundSpotifyUrl: postsTable.soundSpotifyUrl,
           createdAt: postsTable.createdAt,
           updatedAt: postsTable.updatedAt,
           user: {
@@ -348,6 +363,13 @@ export async function POST(request: NextRequest) {
     const inviteDescription = formData.get("inviteDescription") as string
     const inviteLimit = formData.get("inviteLimit") ? parseInt(formData.get("inviteLimit") as string) : 10
     
+    // Sound data
+    const soundId = formData.get("soundId") as string
+    const soundName = formData.get("soundName") as string
+    const soundArtist = formData.get("soundArtist") as string
+    const soundPreviewUrl = formData.get("soundPreviewUrl") as string
+    const soundSpotifyUrl = formData.get("soundSpotifyUrl") as string
+    
     // Location data
     const hasPrivateLocation = formData.get("hasPrivateLocation") === "true"
     const locationName = formData.get("locationName") as string
@@ -373,6 +395,8 @@ export async function POST(request: NextRequest) {
       hasPrivateLocation,
       locationName: locationName?.substring(0, 50),
       communityName: communityName?.substring(0, 50),
+      soundId: soundId?.substring(0, 50),
+      soundName: soundName?.substring(0, 50),
     })
 
     if (!content?.trim() && !media) {
@@ -449,6 +473,15 @@ export async function POST(request: NextRequest) {
       postData.image = mediaUrl
     } else if (mediaType === "video") {
       postData.video = mediaUrl
+    }
+
+    // Add sound data if provided
+    if (soundId && soundName) {
+      postData.soundId = soundId
+      postData.soundName = soundName
+      postData.soundArtist = soundArtist || null
+      postData.soundPreviewUrl = soundPreviewUrl || null
+      postData.soundSpotifyUrl = soundSpotifyUrl || null
     }
 
     console.log("Post data to insert:", {

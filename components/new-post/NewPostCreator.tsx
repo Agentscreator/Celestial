@@ -9,6 +9,8 @@ import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
 import { playMessageSound } from "@/utils/sound"
+import { SoundSelector } from "./SoundSelector"
+import { SpotifyTrack } from "@/utils/spotify"
 
 interface NewPostCreatorProps {
   isOpen: boolean
@@ -37,6 +39,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showFilterSelector, setShowFilterSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
   const [isStoppingRecording, setIsStoppingRecording] = useState(false)
+  const [showSoundSelector, setShowSoundSelector] = useState(false)
+  const [selectedSound, setSelectedSound] = useState<SpotifyTrack | null>(null)
   const stopRecordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Use camera permissions hook
@@ -541,6 +545,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
+      
+      // Add sound information if selected
+      if (selectedSound) {
+        formData.append('soundId', selectedSound.id)
+        formData.append('soundName', selectedSound.name)
+        formData.append('soundArtist', selectedSound.artists.map(a => a.name).join(', '))
+        formData.append('soundPreviewUrl', selectedSound.preview_url || '')
+        formData.append('soundSpotifyUrl', selectedSound.external_urls.spotify)
+      }
 
       console.log('📦 FormData created with media file')
 
@@ -692,6 +705,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setShowCaption(false)
     setShowSpeedSelector(false)
     setShowFilterSelector(false)
+    setShowSoundSelector(false)
+    setSelectedSound(null)
     setCameraLoading(false)
     setCameraReady(false)
     stopCamera()
@@ -717,6 +732,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const closeAllSelectors = () => {
     setShowSpeedSelector(false)
     setShowFilterSelector(false)
+    setShowSoundSelector(false)
   }
 
   // Remove selected file
@@ -1102,18 +1118,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
               {/* Add Sound */}
               <button
-                onClick={() => {
-                  toast({
-                    title: "Add Sound",
-                    description: "Sound selection coming soon!",
-                  })
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowSoundSelector(true)
                 }}
                 className="flex flex-col items-center text-white touch-manipulation"
               >
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-black/30 rounded-full flex items-center justify-center mb-1 hover:bg-black/50 transition-colors active:scale-95">
+                <div className={cn(
+                  "w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-1 transition-colors active:scale-95",
+                  selectedSound ? "bg-green-500" : "bg-black/30 hover:bg-black/50"
+                )}>
                   <Music className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <span className="text-xs font-medium">Sound</span>
+                <span className="text-xs font-medium">
+                  {selectedSound ? "Added" : "Sound"}
+                </span>
               </button>
 
               {/* Flip Camera */}
@@ -1371,6 +1390,31 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </Button>
             </div>
 
+            {/* Selected Sound Indicator */}
+            {selectedSound && (
+              <div className="absolute top-20 left-4 right-4 z-10">
+                <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <Music className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">
+                      {selectedSound.name}
+                    </p>
+                    <p className="text-white/70 text-xs truncate">
+                      {selectedSound.artists.map(a => a.name).join(', ')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedSound(null)}
+                    className="text-white/70 hover:text-white p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Caption Overlay */}
             {showCaption && (
               <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4 sm:p-6 safe-area-bottom">
@@ -1424,6 +1468,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             )}
           </div>
         )}
+
+        {/* Sound Selector */}
+        <SoundSelector
+          isOpen={showSoundSelector}
+          onClose={() => setShowSoundSelector(false)}
+          onSelectSound={setSelectedSound}
+          selectedSound={selectedSound}
+        />
       </FullscreenDialog>
     </>
   )

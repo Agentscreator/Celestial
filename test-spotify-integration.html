@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Spotify Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #121212;
+            color: white;
+        }
+        .container {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #1db954;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1ed760;
+        }
+        input {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 5px;
+            width: 300px;
+            margin: 5px;
+        }
+        .track {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .track img {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+        }
+        .track-info {
+            flex: 1;
+        }
+        .track-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .track-artist {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .play-btn {
+            background: #1db954;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: #ff6b6b;
+            background: #2d1b1b;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Spotify Integration Test</h1>
+    
+    <div class="container">
+        <h2>Search Tracks</h2>
+        <input type="text" id="searchInput" placeholder="Search for songs..." />
+        <button onclick="searchTracks()">Search</button>
+        <button onclick="loadPopular()">Load Popular</button>
+    </div>
+
+    <div class="container">
+        <h2>Results</h2>
+        <div id="results">
+            <p>Click "Load Popular" to see trending tracks or search for specific songs.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentAudio = null;
+
+        async function searchTracks() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayTracks(data.tracks);
+                } else {
+                    showError(data.error || 'Search failed');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        async function loadPopular() {
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/spotify/search?popular=true');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayTracks(data.tracks);
+                } else {
+                    showError(data.error || 'Failed to load popular tracks');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('results').innerHTML = '<div class="loading">🎵 Loading tracks...</div>';
+        }
+
+        function showError(message) {
+            document.getElementById('results').innerHTML = `<div class="error">❌ ${message}</div>`;
+        }
+
+        function displayTracks(tracks) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!tracks || tracks.length === 0) {
+                resultsDiv.innerHTML = '<p>No tracks found.</p>';
+                return;
+            }
+
+            const tracksHtml = tracks.map(track => `
+                <div class="track">
+                    <img src="${track.album.images[2]?.url || track.album.images[0]?.url || '/placeholder.jpg'}" 
+                         alt="${track.album.name}" />
+                    <div class="track-info">
+                        <div class="track-name">${track.name}</div>
+                        <div class="track-artist">${track.artists.map(a => a.name).join(', ')}</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                            ${formatDuration(track.duration_ms)}
+                        </div>
+                    </div>
+                    ${track.preview_url ? `
+                        <button class="play-btn" onclick="playPreview('${track.preview_url}', this)">
+                            ▶️ Preview
+                        </button>
+                    ` : '<span style="color: #666;">No preview</span>'}
+                    <button class="play-btn" onclick="selectTrack('${track.id}', '${escapeHtml(track.name)}', '${escapeHtml(track.artists.map(a => a.name).join(', '))}', '${track.preview_url || ''}', '${track.external_urls.spotify}')">
+                        ✅ Select
+                    </button>
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = tracksHtml;
+        }
+
+        function formatDuration(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function playPreview(url, button) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+                // Reset all buttons
+                document.querySelectorAll('.play-btn').forEach(btn => {
+                    if (btn.textContent.includes('⏸️')) {
+                        btn.textContent = '▶️ Preview';
+                    }
+                });
+            }
+
+            if (button.textContent.includes('⏸️')) {
+                return; // Already stopped
+            }
+
+            currentAudio = new Audio(url);
+            button.textContent = '⏸️ Stop';
+            
+            currentAudio.play().catch(error => {
+                console.error('Error playing audio:', error);
+                alert('Could not play preview');
+                button.textContent = '▶️ Preview';
+            });
+
+            currentAudio.onended = () => {
+                button.textContent = '▶️ Preview';
+                currentAudio = null;
+            };
+        }
+
+        function selectTrack(id, name, artist, previewUrl, spotifyUrl) {
+            const trackData = {
+                id,
+                name,
+                artist,
+                previewUrl,
+                spotifyUrl
+            };
+            
+            console.log('Selected track:', trackData);
+            alert(`Selected: ${name} by ${artist}\n\nThis would be attached to your post!`);
+        }
+
+        // Allow Enter key to search
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchTracks();
+            }
+        });
+    </script>
+</body>
+</html>

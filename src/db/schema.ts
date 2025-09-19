@@ -125,6 +125,12 @@ export const postsTable = pgTable("posts", {
   editedVideoData: text("edited_video_data"), // JSON data for video editor projects
   hasPrivateLocation: integer("has_private_location").notNull().default(0), // 0 = no, 1 = yes
   communityName: varchar("community_name", { length: 100 }), // Name for auto-created community
+  // Sound/Music fields
+  soundId: varchar("sound_id", { length: 100 }), // Spotify track ID
+  soundName: varchar("sound_name", { length: 200 }), // Track name
+  soundArtist: varchar("sound_artist", { length: 200 }), // Artist name(s)
+  soundPreviewUrl: varchar("sound_preview_url", { length: 500 }), // Spotify preview URL
+  soundSpotifyUrl: varchar("sound_spotify_url", { length: 500 }), // Full Spotify track URL
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
