@@ -237,26 +237,57 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorderRef.current.ondataavailable = (event) => {
+        console.log('📊 Data available:', { size: event.data.size, type: event.data.type })
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data)
+          console.log('✅ Chunk added, total chunks:', recordedChunksRef.current.length)
+        } else {
+          console.log('⚠️ Empty data chunk received')
         }
       }
 
       mediaRecorderRef.current.onstop = () => {
         console.log('📹 MediaRecorder stopped')
+        console.log('📊 Recorded chunks count:', recordedChunksRef.current.length)
+        console.log('📊 Chunks sizes:', recordedChunksRef.current.map(chunk => chunk.size))
+
         setIsRecording(false)
         setIsStoppingRecording(false)
 
         const mimeType = recordingMimeTypeRef.current
         const blob = new Blob(recordedChunksRef.current, { type: mimeType })
 
-        console.log('Created blob:', { size: blob.size, type: blob.type })
+        console.log('📦 Created blob:', {
+          size: blob.size,
+          type: blob.type,
+          isEmpty: blob.size === 0,
+          chunksUsed: recordedChunksRef.current.length
+        })
+
+        if (blob.size === 0) {
+          console.error('❌ Empty blob created - no video data recorded')
+          toast({
+            title: "Recording Error",
+            description: "No video data was recorded. Please try again.",
+            variant: "destructive",
+          })
+          return
+        }
 
         // Generate proper filename with extension based on MIME type
         const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
         const filename = `recorded-video-${Date.now()}.${extension}`
 
+        console.log('📁 Creating file:', { filename, mimeType, size: blob.size })
         const file = new File([blob], filename, { type: mimeType })
+
+        console.log('✅ File created:', {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        })
+
         setSelectedFile(file)
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
@@ -268,9 +299,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         })
       }
 
-      mediaRecorderRef.current.start()
+      // Start recording with timeslice to ensure data is collected regularly
+      mediaRecorderRef.current.start(1000) // Request data every 1 second
       setIsRecording(true)
       setRecordingTime(0)
+
+      console.log('🎬 Recording started with codec:', recordingMimeTypeRef.current)
 
       // Recording timer with auto-stop at max duration
       recordingIntervalRef.current = setInterval(() => {
@@ -353,7 +387,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         if (recorder.state === 'recording') {
           console.log('Stopping active recording...')
-          recorder.stop()
+          console.log('📊 Current chunks before stop:', recordedChunksRef.current.length)
+
+          // Request any remaining data before stopping
+          recorder.requestData()
+
+          // Small delay to ensure data is collected, then stop
+          setTimeout(() => {
+            if (recorder.state === 'recording') {
+              recorder.stop()
+            }
+          }, 100)
           // Don't set isRecording to false here - let the onstop handler do it
         } else if (recorder.state === 'paused') {
           console.log('Stopping paused recording...')
@@ -443,7 +487,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Create post
   const handleCreatePost = async () => {
+    console.log('🚀 handleCreatePost called')
+    console.log('Caption:', caption)
+    console.log('Selected file:', selectedFile)
+
     if (!caption.trim()) {
+      console.log('❌ No caption provided')
       toast({
         title: "Description required",
         description: "Please add a description for your post",
@@ -453,6 +502,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
 
     if (!selectedFile) {
+      console.log('❌ No file selected')
       toast({
         title: "Media required",
         description: "Please record a video or upload a file",
@@ -461,7 +511,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       return
     }
 
-
+    console.log('✅ Validation passed, starting upload...')
     setIsUploading(true)
 
     try {
@@ -470,13 +520,29 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       console.log('Selected file:', selectedFile ? {
         name: selectedFile.name,
         size: selectedFile.size,
-        type: selectedFile.type
+        type: selectedFile.type,
+        lastModified: selectedFile.lastModified
       } : 'No file')
+
+      // Validate the file before creating FormData
+      if (!selectedFile || selectedFile.size === 0) {
+        console.error('❌ Invalid file: file is null or empty')
+        toast({
+          title: "Invalid file",
+          description: "The selected file appears to be empty or corrupted. Please try recording again.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      console.log('✅ File validation passed')
 
       const formData = new FormData()
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
+
+      console.log('📦 FormData created with media file')
 
       console.log('FormData entries:')
       for (const [key, value] of formData.entries()) {
@@ -504,18 +570,39 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         console.error('❌ Debug endpoint failed:', await debugResponse.text())
       }
 
-      const response = await fetch('/api/posts', {
-        method: 'POST',
-        body: formData,
+      console.log('🌐 Making request to /api/posts...')
+
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
       })
 
+      // Race the fetch against the timeout
+      const response = await Promise.race([
+        fetch('/api/posts', {
+          method: 'POST',
+          body: formData,
+        }),
+        timeoutPromise
+      ]) as Response
 
+      console.log('📡 Response received')
       console.log('Main API response status:', response.status)
       console.log('Main API response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('Response URL:', response.url)
+      console.log('Response type:', response.type)
 
       if (response.ok) {
         const result = await response.json()
         console.log('✅ Post creation successful:', result)
+        console.log('📄 Post details:', {
+          id: result.post?.id,
+          userId: result.post?.userId,
+          content: result.post?.content,
+          image: result.post?.image,
+          video: result.post?.video,
+          hasMedia: !!(result.post?.image || result.post?.video)
+        })
 
         // Play success sound
         playMessageSound()
@@ -525,20 +612,29 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           description: "Your post has been created",
         })
 
+        console.log('🧹 Cleaning up form data...')
         // Clear form and clean up blob URL
         if (previewUrl) {
           URL.revokeObjectURL(previewUrl)
+          console.log('🗑️ Blob URL revoked')
         }
         setCaption("")
         setSelectedFile(null)
         setPreviewUrl(null)
 
+        console.log('📢 Notifying parent component...')
         // Notify parent and close
         onPostCreated?.(result.post)
-        onClose()
 
+        console.log('� Rlefreshing feed...')
         // Refresh feed
         window.dispatchEvent(new CustomEvent('postCreated'))
+
+        // Add a small delay to let the user see the success message, then close
+        console.log('🚪 Closing post creator in 1 second...')
+        setTimeout(() => {
+          onClose()
+        }, 1000)
       } else {
         const errorText = await response.text()
         console.error('❌ Post creation failed:', {
@@ -862,7 +958,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           // TikTok-style Camera Interface
           <div
             className="relative w-full h-full bg-black overflow-hidden ios-fullscreen"
-            onClick={closeAllSelectors}
+            onClick={(e) => {
+              // Only close selectors if clicking on the background, not on buttons
+              if (e.target === e.currentTarget) {
+                closeAllSelectors()
+              }
+            }}
           >
             {/* Camera Preview */}
             <video
@@ -885,7 +986,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {isRecording && (
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-0 border-4 border-red-500 animate-pulse" />
-                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2">
+                <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2 z-20">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                   REC
                 </div>
@@ -1123,7 +1224,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             </div>
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-0 left-0 right-0 z-10 pb-6 sm:pb-8 safe-area-bottom">
+            <div className="absolute bottom-0 left-0 right-0 z-30 pb-6 sm:pb-8 safe-area-bottom">
               {/* Duration Selector */}
               <div className="flex justify-center mb-4 sm:mb-6 px-4">
                 <div className="flex bg-black/40 backdrop-blur-sm rounded-full p-1 border border-white/10">
@@ -1145,7 +1246,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
 
               {/* Main Controls */}
-              <div className="flex items-center justify-center gap-6 sm:gap-8 px-4">
+              <div className="flex items-center justify-center gap-6 sm:gap-8 px-4" onClick={(e) => e.stopPropagation()}>
 
                 {/* Record Button */}
                 <div className="relative">
@@ -1158,20 +1259,30 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     </button>
                   ) : (
                     <button
+                      onTouchStart={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
                       onClick={(e) => {
                         e.preventDefault()
                         e.stopPropagation()
                         console.log('🔴 Stop recording button clicked')
-                        stopRecording()
+                        if (!isStoppingRecording && isRecording) {
+                          stopRecording()
+                        }
                       }}
                       disabled={isStoppingRecording}
                       className={cn(
-                        "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500",
+                        "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500 relative z-50",
                         isStoppingRecording
                           ? "bg-red-400 cursor-not-allowed"
                           : "bg-red-600 hover:bg-red-700 active:scale-90"
                       )}
-                      style={{ minWidth: '80px', minHeight: '80px' }}
+                      style={{
+                        minWidth: '80px',
+                        minHeight: '80px',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
                     >
                       {isStoppingRecording ? (
                         <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -1276,9 +1387,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
 
                   <Button
-                    onClick={handleCreatePost}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      console.log('📝 Post button clicked')
+                      handleCreatePost()
+                    }}
                     disabled={isUploading || !caption.trim()}
-                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all"
+                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     {isUploading ? (
                       <div className="flex items-center gap-2">
