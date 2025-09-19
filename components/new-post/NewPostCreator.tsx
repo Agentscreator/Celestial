@@ -18,7 +18,7 @@ interface NewPostCreatorProps {
 
 export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreatorProps) {
 
-  const [mode, setMode] = useState<'camera' | 'upload' | 'preview'>('camera')
+  const [mode, setMode] = useState<'camera' | 'upload' | 'preview' | 'templates'>('camera')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [caption, setCaption] = useState("")
@@ -42,6 +42,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showTimerSelector, setShowTimerSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
   const [isStoppingRecording, setIsStoppingRecording] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [templateOverlay, setTemplateOverlay] = useState<string | null>(null)
 
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
@@ -452,7 +454,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
-      
+
       console.log('FormData entries:')
       for (const [key, value] of formData.entries()) {
         console.log(`- ${key}:`, value instanceof File ? `File(${value.name}, ${value.size} bytes)` : value)
@@ -461,18 +463,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       // Temporarily use debug endpoint to test
       console.log('🔍 Testing with debug endpoint first...')
-      
+
       // Test with debug endpoint first (text only)
       const debugFormData = new FormData()
       debugFormData.append('content', caption.trim())
-      
+
       const debugResponse = await fetch('/api/debug-posts', {
         method: 'POST',
         body: debugFormData,
       })
-      
+
       console.log('Debug response status:', debugResponse.status)
-      
+
       if (debugResponse.ok) {
         console.log('✅ Debug endpoint works, trying main endpoint...')
       } else {
@@ -532,7 +534,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Show more specific error message
         const errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
-        
+
         toast({
           title: "Post Creation Failed",
           description: errorMessage,
@@ -575,6 +577,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setShowTimerSelector(false)
     setCameraLoading(false)
     setCameraReady(false)
+    setSelectedTemplate(null)
+    setTemplateOverlay(null)
     stopCamera()
 
     // Clear recorded chunks to ensure fresh recording
@@ -842,6 +846,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               autoPlay
             />
 
+            {/* Template Overlay */}
+            {selectedTemplate && templateOverlay && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium border border-white/20">
+                  📋 {templateOverlay}
+                </div>
+              </div>
+            )}
+
             {/* Recording Overlay */}
             {isRecording && (
               <div className="absolute inset-0 pointer-events-none">
@@ -959,6 +972,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
             {/* Right Side Controls */}
             <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
+              {/* Template Indicator */}
+              {selectedTemplate && (
+                <button
+                  onClick={() => setMode('templates')}
+                  className="flex flex-col items-center text-white touch-manipulation"
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-purple-500 rounded-full flex items-center justify-center mb-1 hover:bg-purple-600 transition-colors active:scale-95">
+                    <span className="text-lg">📋</span>
+                  </div>
+                  <span className="text-xs font-medium">Template</span>
+                </button>
+              )}
+
               {/* Add Sound */}
               <button
                 onClick={() => {
@@ -1268,8 +1294,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               {/* Bottom Tab Bar */}
               <div className="flex justify-center mt-4 sm:mt-6 px-4">
                 <div className="flex bg-black/40 backdrop-blur-sm rounded-full px-6 py-2 border border-white/10">
-                  <button className="text-white font-medium mr-6 sm:mr-8 px-2 py-1 touch-manipulation">Camera</button>
-                  <button className="text-white/60 px-2 py-1 touch-manipulation hover:text-white/80 transition-colors">Templates</button>
+                  <button
+                    onClick={() => setMode('camera')}
+                    className="px-2 py-1 touch-manipulation transition-colors mr-6 sm:mr-8 text-white font-medium"
+                  >
+                    Camera
+                  </button>
+                  <button
+                    onClick={() => setMode('templates')}
+                    className="px-2 py-1 touch-manipulation transition-colors text-white/60 hover:text-white/80"
+                  >
+                    Templates
+                  </button>
                 </div>
               </div>
             </div>
@@ -1281,6 +1317,104 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               onChange={handleFileUpload}
               className="hidden"
             />
+          </div>
+        )}
+
+        {mode === 'templates' && (
+          // Templates Mode
+          <div className="relative w-full h-full bg-black ios-fullscreen">
+            {/* Top Bar */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 safe-area-top">
+              <Button
+                variant="ghost"
+                onClick={() => setMode('camera')}
+                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+              <h2 className="text-white text-lg font-semibold">Choose Template</h2>
+              <div className="w-12" />
+            </div>
+
+            {/* Templates Grid */}
+            <div className="pt-20 pb-20 px-4 h-full overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                {/* Template Categories */}
+                <div className="col-span-2 mb-4">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {['Trending', 'Dance', 'Comedy', 'Beauty', 'Food', 'Travel'].map((category) => (
+                      <button
+                        key={category}
+                        className="px-4 py-2 bg-white/10 text-white rounded-full text-sm whitespace-nowrap hover:bg-white/20 transition-colors"
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Template Items */}
+                {[
+                  { id: 'dance1', name: 'Dance Challenge', preview: '💃', description: 'Popular dance moves' },
+                  { id: 'transition1', name: 'Outfit Change', preview: '👗', description: 'Quick transition' },
+                  { id: 'comedy1', name: 'Funny Face', preview: '😂', description: 'Comedy template' },
+                  { id: 'beauty1', name: 'Glow Up', preview: '✨', description: 'Beauty transformation' },
+                  { id: 'food1', name: 'Recipe Share', preview: '🍳', description: 'Cooking tutorial' },
+                  { id: 'travel1', name: 'Travel Vlog', preview: '✈️', description: 'Travel moments' },
+                  { id: 'fitness1', name: 'Workout', preview: '💪', description: 'Fitness routine' },
+                  { id: 'pet1', name: 'Pet Tricks', preview: '🐕', description: 'Show your pet' },
+                ].map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => {
+                      setSelectedTemplate(template.id)
+                      setTemplateOverlay(template.name)
+                      setMode('camera')
+                      toast({
+                        title: "Template Selected",
+                        description: `Using ${template.name} template`,
+                      })
+                    }}
+                    className={cn(
+                      "aspect-[3/4] bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl border border-white/10 flex flex-col items-center justify-center p-4 hover:scale-105 transition-all touch-manipulation",
+                      selectedTemplate === template.id && "ring-2 ring-white"
+                    )}
+                  >
+                    <div className="text-4xl mb-2">{template.preview}</div>
+                    <div className="text-white text-sm font-medium text-center mb-1">{template.name}</div>
+                    <div className="text-white/60 text-xs text-center">{template.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 safe-area-bottom">
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setMode('camera')}
+                  variant="outline"
+                  className="flex-1 border-white/30 text-white hover:bg-white/10 rounded-full py-3"
+                >
+                  Back to Camera
+                </Button>
+                {selectedTemplate && (
+                  <Button
+                    onClick={() => {
+                      setSelectedTemplate(null)
+                      setTemplateOverlay(null)
+                      toast({
+                        title: "Template Cleared",
+                        description: "No template selected",
+                      })
+                    }}
+                    className="bg-red-500 hover:bg-red-600 text-white rounded-full px-6 py-3"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
