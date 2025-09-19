@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { FullscreenDialog } from "./FullscreenDialog"
-import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Sparkles, Flashlight as Flash } from "lucide-react"
+import { Upload, X, Loader2, Camera, Square, RotateCw, Music, Zap, Filter, Flashlight as Flash } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
@@ -37,6 +37,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [showFilterSelector, setShowFilterSelector] = useState(false)
   const [cameraLoading, setCameraLoading] = useState(false)
   const [isStoppingRecording, setIsStoppingRecording] = useState(false)
+  const stopRecordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
@@ -242,24 +243,24 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
 
       mediaRecorderRef.current.onstop = () => {
+        console.log('📹 MediaRecorder stopped')
         setIsRecording(false)
         setIsStoppingRecording(false)
 
         const mimeType = recordingMimeTypeRef.current
         const blob = new Blob(recordedChunksRef.current, { type: mimeType })
 
+        console.log('Created blob:', { size: blob.size, type: blob.type })
 
         // Generate proper filename with extension based on MIME type
         const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
         const filename = `recorded-video-${Date.now()}.${extension}`
-
 
         const file = new File([blob], filename, { type: mimeType })
         setSelectedFile(file)
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
         setMode('preview')
-
 
         toast({
           title: "Recording complete!",
@@ -294,11 +295,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    // Prevent double-clicks
+    // Prevent double-clicks and ensure we're actually recording
     if (isStoppingRecording || !isRecording) {
+      console.log('Stop recording blocked:', { isStoppingRecording, isRecording })
       return
     }
 
+    console.log('🛑 Stopping recording...')
 
     try {
       // Set stopping state to prevent double-clicks
@@ -310,26 +313,66 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         recordingIntervalRef.current = null
       }
 
-      // #TO DO 317-520
+      // Clear any existing stop timeout
+      if (stopRecordingTimeoutRef.current) {
+        clearTimeout(stopRecordingTimeoutRef.current)
+        stopRecordingTimeoutRef.current = null
+      }
 
       // Stop the media recorder if it exists and is recording
       if (mediaRecorderRef.current) {
         const recorder = mediaRecorderRef.current
+        console.log('MediaRecorder state:', recorder.state)
+
+        // Set a timeout fallback in case the onstop handler doesn't fire
+        stopRecordingTimeoutRef.current = setTimeout(() => {
+          console.log('⚠️ Stop recording timeout - forcing completion')
+          setIsRecording(false)
+          setIsStoppingRecording(false)
+          stopRecordingTimeoutRef.current = null
+          toast({
+            title: "Recording stopped",
+            description: "Recording has been stopped",
+          })
+        }, 3000) // 3 second timeout
+
+        // Store original onstop handler
+        const originalOnStop = recorder.onstop
+
+        // Override the onstop handler to clear the timeout
+        recorder.onstop = (event) => {
+          console.log('📹 MediaRecorder onstop fired')
+          if (stopRecordingTimeoutRef.current) {
+            clearTimeout(stopRecordingTimeoutRef.current)
+            stopRecordingTimeoutRef.current = null
+          }
+          if (originalOnStop) {
+            originalOnStop.call(recorder, event)
+          }
+        }
 
         if (recorder.state === 'recording') {
+          console.log('Stopping active recording...')
           recorder.stop()
           // Don't set isRecording to false here - let the onstop handler do it
         } else if (recorder.state === 'paused') {
+          console.log('Stopping paused recording...')
           recorder.stop()
         } else {
+          console.log('MediaRecorder in unexpected state, forcing stop...')
+          if (stopRecordingTimeoutRef.current) {
+            clearTimeout(stopRecordingTimeoutRef.current)
+            stopRecordingTimeoutRef.current = null
+          }
           // If recorder is in an unexpected state, trigger the onstop handler manually
           setIsRecording(false)
           setIsStoppingRecording(false)
-          if (recorder.onstop) {
-            recorder.onstop(new Event('stop'))
+          if (originalOnStop) {
+            originalOnStop.call(recorder, new Event('stop'))
           }
         }
       } else {
+        console.log('No MediaRecorder found, setting states manually...')
         setIsRecording(false)
         setIsStoppingRecording(false)
         toast({
@@ -341,6 +384,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       console.error('Error stopping recording:', error)
       setIsRecording(false)
       setIsStoppingRecording(false)
+      if (stopRecordingTimeoutRef.current) {
+        clearTimeout(stopRecordingTimeoutRef.current)
+        stopRecordingTimeoutRef.current = null
+      }
       toast({
         title: "Recording Error",
         description: "There was an issue stopping the recording, but it has been stopped.",
@@ -556,9 +603,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     // Clear recorded chunks to ensure fresh recording
     recordedChunksRef.current = []
 
+    // Clear all timeouts and intervals
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current)
       recordingIntervalRef.current = null
+    }
+
+    if (stopRecordingTimeoutRef.current) {
+      clearTimeout(stopRecordingTimeoutRef.current)
+      stopRecordingTimeoutRef.current = null
     }
 
     onClose()
@@ -1105,7 +1158,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     </button>
                   ) : (
                     <button
-                      onClick={stopRecording}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('🔴 Stop recording button clicked')
+                        stopRecording()
+                      }}
                       disabled={isStoppingRecording}
                       className={cn(
                         "w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center transition-all shadow-lg touch-manipulation border-4 border-red-500",
