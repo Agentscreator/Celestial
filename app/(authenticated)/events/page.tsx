@@ -1,908 +1,273 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Calendar, MapPin, Users, Plus, Share2, Clock, Video, Image } from "lucide-react"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "@/hooks/use-toast"
-import { TypingAnimation } from "@/components/typing-animation"
-import { EventsCalendar } from "@/components/events-calendar"
-import { ThemeSelector, type EventTheme } from "@/components/events/ThemeSelector"
-import { ThemedEventCard } from "@/components/events/ThemedEventCard"
-import { FlyerGenerator } from "@/components/events/FlyerGenerator"
-import { EventMediaUpload } from "@/components/events/EventMediaUpload"
-import { EventVideoManager } from "@/components/events/EventVideoManager"
-import { VideoThumbnailSelector } from "@/components/events/VideoThumbnailSelector"
-import { CustomBackgroundUpload } from "@/components/events/CustomBackgroundUpload"
-import { RepeatingEventConfig } from "@/components/events/RepeatingEventConfig"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Calendar, MapPin, Users, Plus, Search, Clock } from "lucide-react"
 
 interface Event {
   id: string
   title: string
   description: string
-  location: string
   date: string
   time: string
-  maxParticipants?: number
-  currentParticipants: number
+  location: string
+  attendees: number
+  maxAttendees?: number
+  theme: string
+  isPublic: boolean
   createdBy: string
-  createdByUsername: string
-  shareUrl: string
-  hasJoined: boolean
-  isInvite?: boolean
-  inviteDescription?: string
-  groupName?: string
-  themeId?: number | null
-  customFlyerUrl?: string
-  flyerData?: string
-  thumbnailVideoUrl?: string
-  thumbnailImageUrl?: string
-  customBackgroundUrl?: string
-  customBackgroundType?: 'image' | 'gif'
-  isRepeating?: boolean
-  repeatPattern?: string
-  repeatInterval?: number
-  repeatEndDate?: string
-  repeatDaysOfWeek?: string
-  parentEventId?: number
-  theme?: EventTheme | null
-  createdAt: string
-  updatedAt: string
-  mediaCount?: number
-  hasMedia?: boolean
+  status: 'upcoming' | 'ongoing' | 'completed'
 }
 
 export default function EventsPage() {
   const router = useRouter()
   const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    location: "",
-    date: "",
-    time: "",
-    maxParticipants: "",
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'ongoing' | 'completed'>('all')
 
-  // Community invitation state
-  const [enableInvites, setEnableInvites] = useState(true)
-  const [inviteDescription, setInviteDescription] = useState('')
-  const [communityName, setCommunityName] = useState('')
-
-  // Theme system state
-  const [themes, setThemes] = useState<EventTheme[]>([])
-  const [selectedThemeId, setSelectedThemeId] = useState<number | null>(null)
-  const [themesLoading, setThemesLoading] = useState(false)
-  const [showFlyerPreview, setShowFlyerPreview] = useState(false)
-
-  // Media upload state
-  const [enableMediaUpload, setEnableMediaUpload] = useState(false)
-  const [eventMedia, setEventMedia] = useState<any[]>([])
-  const [tempEventId, setTempEventId] = useState<string | null>(null)
-  const [currentThumbnailVideoUrl, setCurrentThumbnailVideoUrl] = useState<string | undefined>(undefined)
-
-  // Custom background state
-  const [customBackgroundUrl, setCustomBackgroundUrl] = useState<string>('')
-  const [customBackgroundType, setCustomBackgroundType] = useState<'image' | 'gif'>('image')
-
-  // Repeating event state
-  const [isRepeating, setIsRepeating] = useState(false)
-  const [repeatPattern, setRepeatPattern] = useState('weekly')
-  const [repeatInterval, setRepeatInterval] = useState(1)
-  const [repeatEndDate, setRepeatEndDate] = useState<string | undefined>(undefined)
-  const [repeatDaysOfWeek, setRepeatDaysOfWeek] = useState<string | undefined>(undefined)
-
-  const generateCommunityName = () => {
-    if (formData.title.trim()) {
-      // Extract first few words from title
-      const words = formData.title.trim().split(' ').slice(0, 3)
-      const generatedName = words.join(' ') + ' Community'
-      setCommunityName(generatedName)
-    } else {
-      setCommunityName('My Event Community')
+  // Mock events data
+  const mockEvents: Event[] = [
+    {
+      id: "1",
+      title: "Tech Conference 2024",
+      description: "Annual technology conference featuring the latest innovations",
+      date: "2024-03-15",
+      time: "09:00",
+      location: "Convention Center, Downtown",
+      attendees: 245,
+      maxAttendees: 500,
+      theme: "minimal-tech",
+      isPublic: true,
+      createdBy: "John Doe",
+      status: "upcoming"
+    },
+    {
+      id: "2",
+      title: "Community BBQ",
+      description: "Neighborhood gathering with food and fun activities",
+      date: "2024-03-20",
+      time: "12:00",
+      location: "Central Park",
+      attendees: 67,
+      maxAttendees: 100,
+      theme: "friendly-gather",
+      isPublic: true,
+      createdBy: "Jane Smith",
+      status: "upcoming"
+    },
+    {
+      id: "3",
+      title: "Birthday Celebration",
+      description: "Sarah's 25th birthday party with music and dancing",
+      date: "2024-03-10",
+      time: "19:00",
+      location: "Private Venue",
+      attendees: 32,
+      maxAttendees: 50,
+      theme: "vibrant-party",
+      isPublic: false,
+      createdBy: "Sarah Johnson",
+      status: "completed"
     }
-  }
-
-  // Load events from API
-  const loadEvents = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/events', {
-        method: 'GET',
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(data.events || [])
-      } else {
-        console.error('Failed to load events:', response.status)
-        toast({
-          title: "Error",
-          description: "Failed to load events",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Error loading events:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load events",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load themes from API
-  const loadThemes = async () => {
-    try {
-      setThemesLoading(true)
-      const response = await fetch('/api/events/themes', {
-        method: 'GET',
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setThemes(data.themes || [])
-      } else {
-        console.error('Failed to load themes:', response.status)
-      }
-    } catch (error) {
-      console.error('Error loading themes:', error)
-    } finally {
-      setThemesLoading(false)
-    }
-  }
+  ]
 
   useEffect(() => {
-    loadEvents()
-    loadThemes()
-  }, [])
+    // Simulate API call
+    setTimeout(() => {
+      setEvents(mockEvents)
+      setIsLoading(false)
+    }, 1000)
+  }, [mockEvents])
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase())
 
-    if (!formData.title || !formData.description || !formData.location || !formData.date || !formData.time) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      })
-      return
-    }
+    const matchesFilter = filterStatus === 'all' || event.status === filterStatus
 
-    if (enableInvites && !inviteDescription.trim()) {
-      toast({
-        title: "Invite description required",
-        description: "Please describe what you're inviting people to do",
-        variant: "destructive",
-      })
-      return
-    }
+    return matchesSearch && matchesFilter
+  })
 
-    if (enableInvites && !communityName.trim()) {
-      toast({
-        title: "Community name required",
-        description: "Please provide a name for your community",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      const response = await fetch('/api/events', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          location: formData.location,
-          date: formData.date,
-          time: formData.time,
-          maxParticipants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null,
-          isInvite: enableInvites,
-          inviteDescription: enableInvites ? inviteDescription.trim() : null,
-          groupName: enableInvites && communityName.trim() ? communityName.trim() : null,
-          themeId: selectedThemeId,
-          customBackgroundUrl: customBackgroundUrl || null,
-          customBackgroundType: customBackgroundUrl ? customBackgroundType : null,
-          isRepeating,
-          repeatPattern: isRepeating ? repeatPattern : null,
-          repeatInterval: isRepeating ? repeatInterval : null,
-          repeatEndDate: isRepeating ? repeatEndDate : null,
-          repeatDaysOfWeek: isRepeating ? repeatDaysOfWeek : null,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setEvents([data.event, ...events])
-
-        // If media upload is enabled, set the temp event ID for media uploads
-        if (enableMediaUpload) {
-          setTempEventId(data.event.id)
-          toast({
-            title: "Event Created",
-            description: enableMediaUpload && eventMedia.length === 0
-              ? "Event created! You can now upload media before finishing."
-              : "Event created successfully!",
-          })
-        } else {
-          // Close modal immediately if no video upload needed
-          setIsCreateModalOpen(false)
-          setFormData({
-            title: "",
-            description: "",
-            location: "",
-            date: "",
-            time: "",
-            maxParticipants: "",
-          })
-          setEnableInvites(true)
-          setInviteDescription('')
-          setCommunityName('')
-          setSelectedThemeId(null)
-          setEnableMediaUpload(false)
-          setEventMedia([])
-          setTempEventId(null)
-          setCurrentThumbnailVideoUrl(undefined)
-          setCustomBackgroundUrl('')
-          setCustomBackgroundType('image')
-          setIsRepeating(false)
-          setRepeatPattern('weekly')
-          setRepeatInterval(1)
-          setRepeatEndDate(undefined)
-          setRepeatDaysOfWeek(undefined)
-
-          toast({
-            title: "Success",
-            description: enableInvites
-              ? "Your event and community have been created!"
-              : "Your event has been created!",
-          })
-        }
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.error || "Failed to create event",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Error creating event:', error)
-      toast({
-        title: "Error",
-        description: "Failed to create event",
-        variant: "destructive",
-      })
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'upcoming': return 'bg-blue-100 text-blue-800'
+      case 'ongoing': return 'bg-green-100 text-green-800'
+      case 'completed': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
-  const handleJoinEvent = async (eventId: string) => {
-    try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(events.map(event =>
-          event.id === eventId
-            ? { ...event, currentParticipants: data.currentParticipants, hasJoined: true }
-            : event
-        ))
-
-        toast({
-          title: "Joined!",
-          description: "You've successfully joined this event.",
-        })
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.error || "Failed to join event",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Error joining event:', error)
-      toast({
-        title: "Error",
-        description: "Failed to join event",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleLeaveEvent = async (eventId: string) => {
-    try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(events.map(event =>
-          event.id === eventId
-            ? { ...event, currentParticipants: data.currentParticipants, hasJoined: false }
-            : event
-        ))
-
-        toast({
-          title: "Left event",
-          description: "You've left this event.",
-        })
-      } else {
-        const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.error || "Failed to leave event",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error('Error leaving event:', error)
-      toast({
-        title: "Error",
-        description: "Failed to leave event",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleShareEvent = async (event: Event) => {
-    // Check if shareUrl exists
-    if (!event.shareUrl) {
-      toast({
-        title: "Error",
-        description: "Share link is not available for this event.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Try native sharing on mobile devices first
-    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      try {
-        await navigator.share({
-          title: event.title,
-          text: event.description,
-          url: event.shareUrl,
-        })
-        return
-      } catch (shareError) {
-        // Fall through to clipboard copy if native sharing fails
-        console.log('Native sharing failed, falling back to clipboard')
-      }
-    }
-
-    // Try clipboard copy
-    try {
-      await navigator.clipboard.writeText(event.shareUrl)
-      toast({
-        title: "Link copied!",
-        description: "The event link has been copied to your clipboard.",
-      })
-    } catch (clipboardError) {
-      // Final fallback: show the URL in a toast
-      console.error('Clipboard access failed:', clipboardError)
-      toast({
-        title: "Share Event",
-        description: `Copy this link: ${event.shareUrl}`,
-      })
-    }
-  }
-
-  const handleViewDetails = (eventId: string) => {
-    router.push(`/events/${eventId}`)
-  }
-
-  const handleMediaUploaded = (media: any) => {
-    setEventMedia(prev => [...prev, media])
-  }
-
-  const handleFinishEventCreation = () => {
-    setIsCreateModalOpen(false)
-    setFormData({
-      title: "",
-      description: "",
-      location: "",
-      date: "",
-      time: "",
-      maxParticipants: "",
-    })
-    setEnableInvites(true)
-    setInviteDescription('')
-    setCommunityName('')
-    setSelectedThemeId(null)
-    setEnableMediaUpload(false)
-    setEventMedia([])
-    setTempEventId(null)
-    setCurrentThumbnailVideoUrl(undefined)
-    setCustomBackgroundUrl('')
-    setCustomBackgroundType('image')
-    setIsRepeating(false)
-    setRepeatPattern('weekly')
-    setRepeatInterval(1)
-    setRepeatEndDate(undefined)
-    setRepeatDaysOfWeek(undefined)
-
-    toast({
-      title: "Success",
-      description: eventMedia.length > 0
-        ? `Event created with ${eventMedia.length} media file${eventMedia.length > 1 ? 's' : ''}!`
-        : "Event created successfully!",
-    })
-  }
-
-  const handleCancelEventCreation = () => {
-    if (tempEventId) {
-      // If we have a temp event ID, the event was already created
-      // We could optionally delete it here, but for now we'll just close
-      toast({
-        title: "Event Saved",
-        description: "Your event has been created. You can add videos later from the event details page.",
-      })
-    }
-
-    setIsCreateModalOpen(false)
-    setFormData({
-      title: "",
-      description: "",
-      location: "",
-      date: "",
-      time: "",
-      maxParticipants: "",
-    })
-    setEnableInvites(true)
-    setInviteDescription('')
-    setCommunityName('')
-    setSelectedThemeId(null)
-    setEnableMediaUpload(false)
-    setEventMedia([])
-    setTempEventId(null)
-    setCurrentThumbnailVideoUrl(undefined)
-    setCustomBackgroundUrl('')
-    setCustomBackgroundType('image')
-    setIsRepeating(false)
-    setRepeatPattern('weekly')
-    setRepeatInterval(1)
-    setRepeatEndDate(undefined)
-    setRepeatDaysOfWeek(undefined)
-  }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     })
   }
 
-  const formatTime = (timeStr: string) => {
-    const [hours, minutes] = timeStr.split(':')
-    const date = new Date()
-    date.setHours(parseInt(hours), parseInt(minutes))
-    return date.toLocaleTimeString('en-US', {
+  const formatTime = (time: string) => {
+    return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     })
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <TypingAnimation />
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-light text-white">Events</h1>
-          <p className="text-gray-400 mt-1">Create and discover amazing experiences</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Events</h1>
+            <p className="text-gray-600">Discover and manage your events</p>
+          </div>
+          <Button
+            onClick={() => router.push('/events/new')}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white mt-4 sm:mt-0"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Event
+          </Button>
         </div>
 
-        <div className="flex items-center gap-3">
-          <EventsCalendar events={events} />
-
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Event
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Event</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateEvent} className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Event Title *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="What's the event?"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    required
-                  />
-                </div>
-
-                {/* Theme Selection - Moved to top */}
-                <div className="space-y-4 pt-4 border-t border-gray-700">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Theme Selector */}
-                    <div>
-                      <Label className="text-base font-medium mb-4 block">Choose Event Theme</Label>
-                      <div className="max-h-96 overflow-y-auto">
-                        {themesLoading ? (
-                          <div className="flex justify-center py-8">
-                            <TypingAnimation />
-                          </div>
-                        ) : (
-                          <ThemeSelector
-                            themes={themes}
-                            selectedThemeId={selectedThemeId}
-                            onThemeSelect={setSelectedThemeId}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Custom Background Upload */}
-                    <div>
-                      <CustomBackgroundUpload
-                        onBackgroundSelected={(url, type) => {
-                          setCustomBackgroundUrl(url)
-                          setCustomBackgroundType(type)
-                        }}
-                        onBackgroundRemoved={() => {
-                          setCustomBackgroundUrl('')
-                          setCustomBackgroundType('image')
-                        }}
-                        currentBackground={customBackgroundUrl}
-                        currentBackgroundType={customBackgroundType}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Flyer Preview */}
-                  {formData.title && formData.location && formData.date && formData.time && (
-                    <div className="pt-4">
-                      <Label className="text-base font-medium mb-4 block">Event Preview</Label>
-                      <FlyerGenerator
-                        event={{
-                          title: formData.title,
-                          description: formData.description,
-                          location: formData.location,
-                          date: formData.date,
-                          time: formData.time,
-                          createdByUsername: "Preview"
-                        }}
-                        theme={selectedThemeId ? themes.find(t => t.id === selectedThemeId) : null}
-                        customBackground={customBackgroundUrl}
-                        onPreview={() => setShowFlyerPreview(true)}
-                        onDownload={() => toast({
-                          title: "Download",
-                          description: "Flyer download will be available after event creation!",
-                        })}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Tell people what to expect..."
-                    className="bg-gray-800 border-gray-600 text-white"
-                    rows={3}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="location">Location *</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Where will it happen?"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="date">Date *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="bg-gray-800 border-gray-600 text-white"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="time">Time *</Label>
-                    <Input
-                      id="time"
-                      type="time"
-                      value={formData.time}
-                      onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                      className="bg-gray-800 border-gray-600 text-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="maxParticipants">Max Participants (optional)</Label>
-                  <Input
-                    id="maxParticipants"
-                    type="number"
-                    value={formData.maxParticipants}
-                    onChange={(e) => setFormData({ ...formData, maxParticipants: e.target.value })}
-                    placeholder="Leave empty for unlimited"
-                    className="bg-gray-800 border-gray-600 text-white"
-                    min="2"
-                  />
-                </div>
-
-                {/* Repeating Event Configuration */}
-                <div className="pt-4 border-t border-gray-700">
-                  <RepeatingEventConfig
-                    isRepeating={isRepeating}
-                    onRepeatingChange={setIsRepeating}
-                    repeatPattern={repeatPattern}
-                    onRepeatPatternChange={setRepeatPattern}
-                    repeatInterval={repeatInterval}
-                    onRepeatIntervalChange={setRepeatInterval}
-                    repeatEndDate={repeatEndDate}
-                    onRepeatEndDateChange={setRepeatEndDate}
-                    repeatDaysOfWeek={repeatDaysOfWeek}
-                    onRepeatDaysOfWeekChange={setRepeatDaysOfWeek}
-                    eventDate={formData.date}
-                  />
-                </div>
-
-                {/* Community Invitation Settings */}
-                <div className="space-y-4 pt-4 border-t border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-base font-medium">Enable Community</Label>
-                      <p className="text-sm text-gray-400">Create a community chat for event participants</p>
-                    </div>
-                    <Switch
-                      checked={enableInvites}
-                      onCheckedChange={setEnableInvites}
-                    />
-                  </div>
-
-                  {enableInvites && (
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                      <div>
-                        <Label className="text-sm font-medium">What are you inviting people to do?</Label>
-                        <Textarea
-                          placeholder="e.g., Join me for a coffee meetup, Come hiking with me, Let's play basketball..."
-                          value={inviteDescription}
-                          onChange={(e) => setInviteDescription(e.target.value)}
-                          className="bg-gray-800 border-gray-600 text-white mt-2"
-                          maxLength={200}
-                          rows={2}
-                        />
-                        <div className="text-right text-sm text-gray-400 mt-1">
-                          {inviteDescription.length}/200
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-sm font-medium">Community Name</Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={generateCommunityName}
-                            className="text-xs text-blue-400 hover:text-blue-300"
-                          >
-                            Generate
-                          </Button>
-                        </div>
-                        <Input
-                          placeholder="Name your community..."
-                          value={communityName}
-                          onChange={(e) => setCommunityName(e.target.value)}
-                          className="bg-gray-800 border-gray-600 text-white"
-                          maxLength={50}
-                        />
-                        <p className="text-xs text-gray-400 mt-1">
-                          People who join will be added to this community chat
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-
-
-                {/* Media Upload Section */}
-                <div className="space-y-4 pt-4 border-t border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-base font-medium">Add Media</Label>
-                      <p className="text-sm text-gray-400">Upload images, videos, or GIFs to share with event participants</p>
-                    </div>
-                    <Switch
-                      checked={enableMediaUpload}
-                      onCheckedChange={setEnableMediaUpload}
-                    />
-                  </div>
-
-                  {enableMediaUpload && tempEventId && (
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                      <div className="bg-gray-800/50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-sm font-medium text-white">Event Media & Thumbnail</h4>
-                          <div className="text-xs text-gray-400">
-                            {eventMedia.length} media file{eventMedia.length !== 1 ? 's' : ''} uploaded
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <EventMediaUpload
-                            eventId={tempEventId}
-                            onMediaUploaded={handleMediaUploaded}
-                          >
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="w-full border-gray-600 text-white hover:bg-gray-800"
-                            >
-                              <Video className="h-4 w-4 mr-2" />
-                              Add Media
-                            </Button>
-                          </EventMediaUpload>
-
-                          {eventMedia.length > 0 && (
-                            <>
-                              <div className="space-y-2">
-                                {eventMedia.map((media, index) => (
-                                  <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
-                                    {media.mediaType === 'video' ? (
-                                      <Video className="h-4 w-4 text-blue-400" />
-                                    ) : (
-                                      <Image className="h-4 w-4 text-green-400" />
-                                    )}
-                                    <span className="text-sm text-white flex-1">
-                                      {media.title || `${media.mediaType} ${index + 1}`}
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                      {media.isPublic ? 'Public' : 'Private'}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div className="pt-2 border-t border-gray-600">
-                                {tempEventId && (
-                                  <VideoThumbnailSelector
-                                    eventId={tempEventId}
-                                    currentThumbnailVideoUrl={currentThumbnailVideoUrl}
-                                    onThumbnailChanged={(videoUrl, imageUrl) => {
-                                      setCurrentThumbnailVideoUrl(videoUrl || undefined)
-                                      // Update the event in the events list if needed
-                                      setEvents(prev => prev.map(event =>
-                                        event.id === tempEventId
-                                          ? { ...event, thumbnailVideoUrl: videoUrl || undefined, thumbnailImageUrl: imageUrl || undefined }
-                                          : event
-                                      ))
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {enableMediaUpload && !tempEventId && (
-                    <div className="text-sm text-gray-400 text-center py-4">
-                      Create the event first to upload media
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancelEventCreation}
-                    className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
-                  >
-                    Cancel
-                  </Button>
-
-                  {/* Show different buttons based on state */}
-                  {tempEventId ? (
-                    <Button
-                      type="button"
-                      onClick={handleFinishEventCreation}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      Finish Event Creation
-                    </Button>
-                  ) : (
-                    <Button
-                      type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      {enableMediaUpload ? 'Create Event & Add Media' : 'Create Event'}
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={filterStatus === 'all' ? 'default' : 'outline'}
+              onClick={() => setFilterStatus('all')}
+              size="sm"
+            >
+              All
+            </Button>
+            <Button
+              variant={filterStatus === 'upcoming' ? 'default' : 'outline'}
+              onClick={() => setFilterStatus('upcoming')}
+              size="sm"
+            >
+              Upcoming
+            </Button>
+            <Button
+              variant={filterStatus === 'ongoing' ? 'default' : 'outline'}
+              onClick={() => setFilterStatus('ongoing')}
+              size="sm"
+            >
+              Ongoing
+            </Button>
+            <Button
+              variant={filterStatus === 'completed' ? 'default' : 'outline'}
+              onClick={() => setFilterStatus('completed')}
+              size="sm"
+            >
+              Completed
+            </Button>
+          </div>
         </div>
+
+        {/* Events Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-gray-200 rounded"></div>
+                    <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="text-center py-12">
+            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No events found</h3>
+            <p className="text-gray-600 mb-6">
+              {searchTerm || filterStatus !== 'all'
+                ? "Try adjusting your search or filters"
+                : "Get started by creating your first event"
+              }
+            </p>
+            <Button
+              onClick={() => router.push('/events/new')}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Event
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredEvents.map((event) => (
+              <Card
+                key={event.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => router.push(`/events/${event.id}`)}
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
+                      {event.title}
+                    </CardTitle>
+                    <Badge className={getStatusColor(event.status)}>
+                      {event.status}
+                    </Badge>
+                  </div>
+                  <p className="text-gray-600 text-sm line-clamp-2">
+                    {event.description}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {formatDate(event.date)}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock className="w-4 h-4 mr-2" />
+                      {formatTime(event.time)}
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Users className="w-4 h-4 mr-2" />
+                        {event.attendees} {event.maxAttendees && `/ ${event.maxAttendees}`}
+                      </div>
+                      <Badge variant={event.isPublic ? "default" : "secondary"}>
+                        {event.isPublic ? "Public" : "Private"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Events Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {events.map((event) => (
-          <ThemedEventCard
-            key={event.id}
-            event={event}
-            theme={event.theme}
-            onJoin={handleJoinEvent}
-            onLeave={handleLeaveEvent}
-            onShare={handleShareEvent}
-            onViewDetails={handleViewDetails}
-          />
-        ))}
-      </div>
-
-      {events.length === 0 && !loading && (
-        <div className="text-center py-16">
-          <div className="text-gray-400 mb-2">No events yet</div>
-          <p className="text-sm text-gray-500">Create your first event to get started!</p>
-        </div>
-      )}
     </div>
   )
 }
