@@ -546,7 +546,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
-      
+
       // Additional debugging for media upload
       console.log('📁 Media file details before upload:', {
         name: selectedFile.name,
@@ -1156,7 +1156,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             )}
 
             {/* Post Debug Panel - Remove after testing */}
-            {(process.env.NODE_ENV === 'development' && mode === 'preview') && (
+            {process.env.NODE_ENV === 'development' && mode === 'preview' ? (
               <div className="absolute bottom-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
                 <div>Caption: {caption.length} chars</div>
                 <div>Caption Valid: {caption.trim() ? 'YES' : 'NO'}</div>
@@ -1171,16 +1171,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       console.log('🧪 Testing media upload...')
                       const testFormData = new FormData()
                       testFormData.append('media', selectedFile)
-                      
+
                       try {
                         const response = await fetch('/api/test-media-upload', {
                           method: 'POST',
                           body: testFormData
                         })
-                        
+
                         const result = await response.json()
                         console.log('🧪 Test upload result:', result)
-                        
+
                         if (response.ok) {
                           toast({
                             title: "Test Upload Success",
@@ -1208,7 +1208,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   </button>
                 )}
               </div>
-            )}
+            ) : null}
 
             {/* Right Side Controls */}
             <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
