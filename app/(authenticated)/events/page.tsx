@@ -30,59 +30,23 @@ export default function EventsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'ongoing' | 'completed'>('all')
 
-  // Mock events data
-  const mockEvents: Event[] = [
-    {
-      id: "1",
-      title: "Tech Conference 2024",
-      description: "Annual technology conference featuring the latest innovations",
-      date: "2024-03-15",
-      time: "09:00",
-      location: "Convention Center, Downtown",
-      attendees: 245,
-      maxAttendees: 500,
-      theme: "minimal-tech",
-      isPublic: true,
-      createdBy: "John Doe",
-      status: "upcoming"
-    },
-    {
-      id: "2",
-      title: "Community BBQ",
-      description: "Neighborhood gathering with food and fun activities",
-      date: "2024-03-20",
-      time: "12:00",
-      location: "Central Park",
-      attendees: 67,
-      maxAttendees: 100,
-      theme: "friendly-gather",
-      isPublic: true,
-      createdBy: "Jane Smith",
-      status: "upcoming"
-    },
-    {
-      id: "3",
-      title: "Birthday Celebration",
-      description: "Sarah's 25th birthday party with music and dancing",
-      date: "2024-03-10",
-      time: "19:00",
-      location: "Private Venue",
-      attendees: 32,
-      maxAttendees: 50,
-      theme: "vibrant-party",
-      isPublic: false,
-      createdBy: "Sarah Johnson",
-      status: "completed"
-    }
-  ]
-
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setEvents(mockEvents)
+    fetchEvents()
+  }, [])
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('/api/events')
+      if (response.ok) {
+        const data = await response.json()
+        setEvents(data.events || [])
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error)
+    } finally {
       setIsLoading(false)
-    }, 1000)
-  }, [mockEvents])
+    }
+  }
 
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
