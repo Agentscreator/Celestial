@@ -1381,7 +1381,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               >
                 <X className="h-6 w-6" />
               </Button>
+            </div>
 
+            {/* Next Button - Positioned Lower */}
+            <div className="absolute top-20 right-4 z-10">
               <Button
                 onClick={() => setShowCaption(!showCaption)}
                 className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
@@ -1429,29 +1432,34 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
                 <div className="flex items-center justify-between mt-4 gap-4">
                   <span className="text-white/60 text-sm font-medium">{caption.length}/2000</span>
-
-                  <Button
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      console.log('📝 Post button clicked')
-                      handleCreatePost()
-                    }}
-                    disabled={isUploading || !caption.trim()}
-                    className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50"
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
-                  >
-                    {isUploading ? (
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="hidden sm:inline">Posting...</span>
-                        <span className="sm:hidden">...</span>
-                      </div>
-                    ) : (
-                      "Post"
-                    )}
-                  </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Post Button - Positioned Higher */}
+            {showCaption && (
+              <div className="absolute bottom-32 right-4 z-20">
+                <Button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('📝 Post button clicked')
+                    handleCreatePost()
+                  }}
+                  disabled={isUploading || !caption.trim()}
+                  className="bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
+                >
+                  {isUploading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Posting...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    "Post"
+                  )}
+                </Button>
               </div>
             )}
 
