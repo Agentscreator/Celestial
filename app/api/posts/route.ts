@@ -445,6 +445,12 @@ export async function POST(request: NextRequest) {
     let mediaType = null
     if (media) {
       console.log("=== PROCESSING MEDIA UPLOAD ===")
+      console.log("Media details:", {
+        name: media.name,
+        size: media.size,
+        type: media.type,
+        lastModified: media.lastModified
+      })
 
       // Validate file type (images and videos)
       if (!media.type.startsWith("image/") && !media.type.startsWith("video/")) {
@@ -464,13 +470,31 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Validate file is not empty
+      if (media.size === 0) {
+        console.error("❌ EMPTY FILE:", media.name)
+        return NextResponse.json({ error: "File is empty" }, { status: 400 })
+      }
+
       try {
         console.log("Converting media to buffer...")
         const bytes = await media.arrayBuffer()
+        
+        if (bytes.byteLength === 0) {
+          console.error("❌ EMPTY ARRAY BUFFER")
+          return NextResponse.json({ error: "File content is empty" }, { status: 400 })
+        }
+        
         const buffer = Buffer.from(bytes)
         console.log("Buffer created, size:", buffer.length)
 
+        if (buffer.length === 0) {
+          console.error("❌ EMPTY BUFFER")
+          return NextResponse.json({ error: "Failed to read file content" }, { status: 400 })
+        }
+
         try {
+          console.log("Uploading to blob storage...")
           mediaUrl = await uploadToStorage({
             buffer,
             filename: media.name,
@@ -478,8 +502,25 @@ export async function POST(request: NextRequest) {
             folder: "post-media",
           })
 
+          if (!mediaUrl) {
+            throw new Error("Upload returned empty URL")
+          }
+
           mediaType = media.type.startsWith("video/") ? "video" : "image"
           console.log("✅ MEDIA UPLOADED SUCCESSFULLY:", mediaUrl, "Type:", mediaType)
+          
+          // Verify the uploaded URL is accessible
+          try {
+            const verifyResponse = await fetch(mediaUrl, { method: 'HEAD' })
+            if (!verifyResponse.ok) {
+              console.warn("⚠️ Uploaded file may not be accessible:", verifyResponse.status)
+            } else {
+              console.log("✅ Uploaded file is accessible")
+            }
+          } catch (verifyError) {
+            console.warn("⚠️ Could not verify uploaded file:", verifyError)
+          }
+          
         } catch (blobError) {
           console.error("❌ BLOB UPLOAD FAILED:", blobError)
           console.error("Blob error details:", {
@@ -488,13 +529,22 @@ export async function POST(request: NextRequest) {
             stack: blobError instanceof Error ? blobError.stack : "No stack",
           })
           
-          // Don't use fallback - throw the error so user knows upload failed
-          throw new Error(`Media upload failed: ${blobError instanceof Error ? blobError.message : 'Unknown error'}`)
+          // Return specific error message
+          const errorMessage = blobError instanceof Error ? blobError.message : 'Unknown blob storage error'
+          return NextResponse.json({ 
+            error: "Media upload failed", 
+            details: errorMessage 
+          }, { status: 500 })
         }
       } catch (uploadError) {
-        console.error("❌ MEDIA UPLOAD FAILED:", uploadError)
+        console.error("❌ MEDIA PROCESSING FAILED:", uploadError)
         console.error("Upload error stack:", uploadError instanceof Error ? uploadError.stack : "No stack trace")
-        return NextResponse.json({ error: "Failed to upload media" }, { status: 500 })
+        
+        const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown processing error'
+        return NextResponse.json({ 
+          error: "Failed to process media file", 
+          details: errorMessage 
+        }, { status: 500 })
       }
     }
 

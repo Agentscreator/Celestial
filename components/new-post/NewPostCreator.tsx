@@ -250,7 +250,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         }
       }
 
-      mediaRecorderRef.current.onstop = () => {
+      mediaRecorderRef.current.onstop = async () => {
         console.log('📹 MediaRecorder stopped')
         console.log('📊 Recorded chunks count:', recordedChunksRef.current.length)
         console.log('📊 Chunks sizes:', recordedChunksRef.current.map(chunk => chunk.size))
@@ -278,6 +278,23 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           return
         }
 
+        // Validate blob content
+        try {
+          const testBuffer = await blob.arrayBuffer()
+          if (testBuffer.byteLength === 0) {
+            throw new Error('Blob is empty')
+          }
+          console.log('✅ Blob validation passed, actual size:', testBuffer.byteLength)
+        } catch (blobError) {
+          console.error('❌ Blob validation failed:', blobError)
+          toast({
+            title: "Recording Error",
+            description: "The recorded video is corrupted. Please try again.",
+            variant: "destructive",
+          })
+          return
+        }
+
         // Generate proper filename with extension based on MIME type
         const extension = mimeType.includes('mp4') ? 'mp4' : 'webm'
         const filename = `recorded-video-${Date.now()}.${extension}`
@@ -292,6 +309,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           lastModified: file.lastModified
         })
 
+        // Double-check file validity
+        if (file.size === 0) {
+          console.error('❌ Created file is empty')
+          toast({
+            title: "Recording Error",
+            description: "The recorded file is empty. Please try again.",
+            variant: "destructive",
+          })
+          return
+        }
+
         setSelectedFile(file)
         const url = URL.createObjectURL(blob)
         setPreviewUrl(url)
@@ -299,7 +327,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         toast({
           title: "Recording complete!",
-          description: "Your video with audio is ready for preview",
+          description: `Your video (${(file.size / 1024 / 1024).toFixed(1)}MB) is ready for preview`,
         })
       }
 
@@ -529,7 +557,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         lastModified: selectedFile.lastModified
       } : 'No file')
 
-      // Validate the file before creating FormData
+      // Enhanced file validation
       if (!selectedFile || selectedFile.size === 0) {
         console.error('❌ Invalid file: file is null or empty')
         toast({
@@ -540,7 +568,47 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         return
       }
 
+      // Check file size limits (50MB for videos, 10MB for images)
+      const maxSize = selectedFile.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+      if (selectedFile.size > maxSize) {
+        console.error('❌ File too large:', selectedFile.size)
+        toast({
+          title: "File too large",
+          description: `File size is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed is ${maxSize / 1024 / 1024}MB.`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate file type
+      if (!selectedFile.type.startsWith('video/') && !selectedFile.type.startsWith('image/')) {
+        console.error('❌ Invalid file type:', selectedFile.type)
+        toast({
+          title: "Invalid file type",
+          description: "Please select a video or image file.",
+          variant: "destructive",
+        })
+        return
+      }
+
       console.log('✅ File validation passed')
+
+      // Test file readability
+      try {
+        const testBuffer = await selectedFile.arrayBuffer()
+        if (testBuffer.byteLength === 0) {
+          throw new Error('File is empty')
+        }
+        console.log('✅ File is readable, size:', testBuffer.byteLength)
+      } catch (fileError) {
+        console.error('❌ File is not readable:', fileError)
+        toast({
+          title: "File error",
+          description: "The selected file cannot be read. Please try recording again.",
+          variant: "destructive",
+        })
+        return
+      }
 
       const formData = new FormData()
       formData.append('content', caption.trim())
@@ -571,27 +639,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       console.log('FormData entries:')
       for (const [key, value] of formData.entries()) {
         console.log(`- ${key}:`, value instanceof File ? `File(${value.name}, ${value.size} bytes)` : value)
-      }
-
-
-      // Temporarily use debug endpoint to test
-      console.log('🔍 Testing with debug endpoint first...')
-
-      // Test with debug endpoint first (text only)
-      const debugFormData = new FormData()
-      debugFormData.append('content', caption.trim())
-
-      const debugResponse = await fetch('/api/debug-posts', {
-        method: 'POST',
-        body: debugFormData,
-      })
-
-      console.log('Debug response status:', debugResponse.status)
-
-      if (debugResponse.ok) {
-        console.log('✅ Debug endpoint works, trying main endpoint...')
-      } else {
-        console.error('❌ Debug endpoint failed:', await debugResponse.text())
       }
 
       console.log('🌐 Making request to /api/posts...')
