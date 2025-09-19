@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Event</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f0fe',
+                            500: '#5D5CDE',
+                            600: '#4C4BCE',
+                            700: '#3B3BAD'
+                        },
+                        dark: {
+                            900: '#0a0a0b',
+                            800: '#1a1a1d',
+                            700: '#2d2d32',
+                            600: '#404047',
+                            500: '#5a5a63'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'scale-in': 'scaleIn 0.2s ease-out',
+                        'pulse-slow': 'pulse 3s infinite',
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .glass {
+            background: rgba(45, 45, 50, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .theme-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(93, 92, 222, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .theme-card:hover::before {
+            left: 100%;
+        }
+        
+        .theme-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(93, 92, 222, 0.5);
+        }
+        
+        .theme-card.selected {
+            border-color: #5D5CDE;
+            box-shadow: 0 0 0 1px #5D5CDE, 0 16px 32px rgba(93, 92, 222, 0.3);
+            background: rgba(93, 92, 222, 0.05);
+        }
+        
+        .upload-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-zone:hover {
+            border-color: #5D5CDE;
+            background: rgba(93, 92, 222, 0.05);
+            transform: scale(1.01);
+        }
+        
+        .upload-zone.dragover {
+            border-color: #5D5CDE;
+            background: rgba(93, 92, 222, 0.1);
+            box-shadow: 0 0 30px rgba(93, 92, 222, 0.3);
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #5D5CDE, #4C4BCE);
+            box-shadow: 0 4px 15px rgba(93, 92, 222, 0.4);
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(24px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group input:focus + .input-border,
+        .input-group textarea:focus + .input-border {
+            background: linear-gradient(90deg, #5D5CDE, #4C4BCE);
+            height: 2px;
+        }
+        
+        .input-border {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .floating-label {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .input-group input:focus + .input-border + .floating-label,
+        .input-group input:not(:placeholder-shown) + .input-border + .floating-label {
+            top: -8px;
+            left: 12px;
+            font-size: 12px;
+            color: #5D5CDE;
+            background: #1a1a1d;
+            padding: 0 8px;
+        }
+        
+        .category-badge {
+            background: linear-gradient(135deg, rgba(93, 92, 222, 0.2), rgba(76, 75, 206, 0.1));
+            border: 1px solid rgba(93, 92, 222, 0.3);
+        }
+        
+        .progress-step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .progress-step.active {
+            background: linear-gradient(135deg, #5D5CDE, #4C4BCE);
+            border-color: #5D5CDE;
+            box-shadow: 0 0 20px rgba(93, 92, 222, 0.5);
+        }
+        
+        .progress-step.completed {
+            background: #10B981;
+            border-color: #10B981;
+        }
+        
+        .section-card {
+            background: rgba(45, 45, 50, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .section-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0b 0%, #1a1a1d 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="dark font-sans text-white antialiased">
+    <!-- Background Elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full opacity-5 blur-3xl animate-pulse-slow"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500 rounded-full opacity-5 blur-3xl animate-pulse-slow" style="animation-delay: 1s;"></div>
+        <div class="absolute top-3/4 left-1/2 w-80 h-80 bg-blue-500 rounded-full opacity-5 blur-3xl animate-pulse-slow" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div class="relative z-10 max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Header Section -->
+        <div class="text-center mb-12 animate-fade-in">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary-500 to-primary-600 rounded-2xl mb-6 shadow-lg">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
+                Create New Event
+            </h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+                Design unforgettable experiences and bring people together
+            </p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="flex justify-center mb-12">
+            <div class="flex items-center space-x-4">
+                <div class="progress-step active">
+                    <span class="text-sm font-semibold">1</span>
+                </div>
+                <div class="w-12 h-0.5 bg-gray-600"></div>
+                <div class="progress-step">
+                    <span class="text-sm font-semibold">2</span>
+                </div>
+                <div class="w-12 h-0.5 bg-gray-600"></div>
+                <div class="progress-step">
+                    <span class="text-sm font-semibold">3</span>
+                </div>
+            </div>
+        </div>
+
+        <form class="space-y-8">
+            <!-- Basic Information -->
+            <div class="section-card p-8 animate-slide-up">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-2 h-8 bg-gradient-to-b from-primary-500 to-primary-600 rounded-full mr-4"></span>
+                    Event Details
+                </h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Event Title -->
+                    <div class="lg:col-span-2">
+                        <div class="input-group">
+                            <input type="text" 
+                                   placeholder=" "
+                                   class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white placeholder-transparent transition-all duration-300"
+                                   required>
+                            <div class="input-border"></div>
+                            <label class="floating-label">Event Title *</label>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="lg:col-span-2">
+                        <div class="input-group">
+                            <textarea rows="4" 
+                                      placeholder=" "
+                                      class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white placeholder-transparent resize-none transition-all duration-300"
+                                      required></textarea>
+                            <div class="input-border"></div>
+                            <label class="floating-label" style="top: 20px;">Description *</label>
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div>
+                        <div class="input-group">
+                            <input type="text" 
+                                   placeholder=" "
+                                   class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white placeholder-transparent transition-all duration-300"
+                                   required>
+                            <div class="input-border"></div>
+                            <label class="floating-label">Location *</label>
+                        </div>
+                    </div>
+
+                    <!-- Max Participants -->
+                    <div>
+                        <div class="input-group">
+                            <input type="number" 
+                                   placeholder=" "
+                                   class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white placeholder-transparent transition-all duration-300">
+                            <div class="input-border"></div>
+                            <label class="floating-label">Max Participants</label>
+                        </div>
+                    </div>
+
+                    <!-- Date -->
+                    <div>
+                        <div class="input-group">
+                            <input type="date" 
+                                   class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white transition-all duration-300"
+                                   required>
+                            <div class="input-border"></div>
+                            <label class="absolute -top-2 left-3 text-xs text-primary-500 bg-dark-800 px-2">Date *</label>
+                        </div>
+                    </div>
+
+                    <!-- Time -->
+                    <div>
+                        <div class="input-group">
+                            <input type="time" 
+                                   class="w-full px-4 py-4 text-lg bg-transparent border-0 border-b border-gray-600 focus:outline-none focus:border-transparent text-white transition-all duration-300"
+                                   required>
+                            <div class="input-border"></div>
+                            <label class="absolute -top-2 left-3 text-xs text-primary-500 bg-dark-800 px-2">Time *</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theme Selection -->
+            <div class="section-card p-8 animate-slide-up" style="animation-delay: 0.1s;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-2 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full mr-4"></span>
+                    Choose Your Style
+                </h2>
+
+
+
+                <!-- Theme Categories -->
+                <div class="space-y-8">
+                    <!-- Business & Professional -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Business & Professional</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('business')">
+                                Explore All <span id="business-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="business-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'elegant-corporate')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-10 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Q4 Strategy Meeting</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Elegant Corporate</h4>
+                                <p class="text-gray-400 text-sm">Sophisticated design for executive meetings</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'modern-business')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Product Launch</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Modern Business</h4>
+                                <p class="text-gray-400 text-sm">Clean and professional for corporate events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden business-extra" onclick="selectTheme(this, 'minimal-tech')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-slate-600 via-slate-500 to-slate-700 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 via-transparent to-blue-400 opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">AI Conference 2024</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Minimal Tech</h4>
+                                <p class="text-gray-400 text-sm">Sleek design for technology events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Party & Celebration -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Party & Celebration</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">4 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('party')">
+                                Explore All <span id="party-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="party-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'neon-glow')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-700 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 via-transparent to-pink-400 opacity-30 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">New Year's Eve</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Neon Glow</h4>
+                                <p class="text-gray-400 text-sm">Electric atmosphere for night events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'vibrant-party')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-400 via-transparent to-red-400 opacity-30 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Birthday Celebration</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Vibrant Party</h4>
+                                <p class="text-gray-400 text-sm">Colorful and energetic for celebrations</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden party-extra" onclick="selectTheme(this, 'elegant-wedding')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-rose-400 via-pink-300 to-rose-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white via-transparent to-rose-200 opacity-40 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Sarah & John's Wedding</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Elegant Wedding</h4>
+                                <p class="text-gray-400 text-sm">Romantic design for special occasions</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden party-extra" onclick="selectTheme(this, 'festival-fun')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-green-400 via-transparent to-blue-400 opacity-30 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Summer Music Festival</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Festival Fun</h4>
+                                <p class="text-gray-400 text-sm">Vibrant theme for festivals and carnivals</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community & Social -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Community & Social</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('community')">
+                                Explore All <span id="community-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="community-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'friendly-gather')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Neighborhood BBQ</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Friendly Gather</h4>
+                                <p class="text-gray-400 text-sm">Warm and welcoming for social events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'cozy-meetup')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-amber-500 to-orange-400 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-300 via-transparent to-orange-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Book Club Meeting</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Cozy Meetup</h4>
+                                <p class="text-gray-400 text-sm">Intimate setting for small gatherings</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden community-extra" onclick="selectTheme(this, 'charity-event')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-blue-300 via-transparent to-green-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Charity Fundraiser</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Charity Event</h4>
+                                <p class="text-gray-400 text-sm">Professional theme for fundraising events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sports & Fitness -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Sports & Fitness</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('sports')">
+                                Explore All <span id="sports-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="sports-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'athletic-energy')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-red-600 to-orange-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Basketball Tournament</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Athletic Energy</h4>
+                                <p class="text-gray-400 text-sm">Dynamic design for sports events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'outdoor-adventure')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-forest-600 to-green-600 rounded-xl flex items-center justify-center relative overflow-hidden" style="background: linear-gradient(to right, #047857, #059669);">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-300 via-transparent to-green-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Mountain Hiking</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Outdoor Adventure</h4>
+                                <p class="text-gray-400 text-sm">Nature-inspired for outdoor activities</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden sports-extra" onclick="selectTheme(this, 'fitness-zone')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-blue-600 to-teal-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-300 via-transparent to-blue-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Yoga Retreat</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Fitness Zone</h4>
+                                <p class="text-gray-400 text-sm">Energizing theme for fitness events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Entertainment & Arts -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Entertainment & Arts</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('entertainment')">
+                                Explore All <span id="entertainment-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="entertainment-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'creative-showcase')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-pink-300 via-transparent to-purple-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Art Gallery Opening</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Creative Showcase</h4>
+                                <p class="text-gray-400 text-sm">Artistic theme for creative events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'music-vibes')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-300 via-transparent to-pink-300 opacity-40 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Jazz in the Park</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Music Vibes</h4>
+                                <p class="text-gray-400 text-sm">Perfect for concerts and music events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden entertainment-extra" onclick="selectTheme(this, 'gaming-esports')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-green-400 via-cyan-400 to-blue-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-lime-300 via-transparent to-cyan-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Gaming Tournament</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Gaming Esports</h4>
+                                <p class="text-gray-400 text-sm">High-energy theme for gaming events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Food & Dining -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Food & Dining</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('food')">
+                                Explore All <span id="food-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="food-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'culinary-experience')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-300 via-transparent to-orange-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Wine Tasting</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Culinary Experience</h4>
+                                <p class="text-gray-400 text-sm">Elegant theme for food and dining events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'casual-foodie')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-lime-500 to-green-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-300 via-transparent to-green-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Cooking Workshop</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Casual Foodie</h4>
+                                <p class="text-gray-400 text-sm">Fun and approachable for food events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden food-extra" onclick="selectTheme(this, 'street-food')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-orange-600 to-yellow-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-red-300 via-transparent to-yellow-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Food Truck Festival</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Street Food</h4>
+                                <p class="text-gray-400 text-sm">Vibrant theme for food festivals</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pink Panther Collection -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Pink Panther Collection</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">4 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('pink')">
+                                Explore All <span id="pink-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="pink-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'retro-pink')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-pink-500 via-pink-400 to-rose-400 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white via-transparent to-pink-200 opacity-40 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Retro Game Night</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Retro Pink</h4>
+                                <p class="text-gray-400 text-sm">Playful vintage vibes with pink aesthetics</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'bubblegum-pop')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-pink-400 via-purple-400 to-pink-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-300 via-transparent to-pink-300 opacity-50 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Y2K Throwback</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Bubblegum Pop</h4>
+                                <p class="text-gray-400 text-sm">Sweet and energetic for fun events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden pink-extra" onclick="selectTheme(this, 'flamingo-paradise')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-pink-600 via-rose-500 to-orange-400 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-300 via-transparent to-pink-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Pool Party</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Flamingo Paradise</h4>
+                                <p class="text-gray-400 text-sm">Tropical pink vibes for summer events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden pink-extra" onclick="selectTheme(this, 'cotton-candy')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-pink-300 via-purple-300 to-blue-300 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white via-transparent to-pink-200 opacity-60 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Fairy Tale Ball</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Cotton Candy</h4>
+                                <p class="text-gray-400 text-sm">Dreamy pastels for magical events</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Doodle & Sketch -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Doodle & Sketch</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('doodle')">
+                                Explore All <span id="doodle-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="doodle-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'hand-drawn')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-slate-700 via-gray-600 to-slate-800 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-blue-300 via-transparent to-purple-300 opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Sketch Workshop</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Hand Drawn</h4>
+                                <p class="text-gray-400 text-sm">Authentic sketch-style aesthetic</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'comic-book')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-red-500 via-yellow-400 to-blue-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-white via-transparent to-yellow-200 opacity-40 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Comic Con Meetup</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Comic Book</h4>
+                                <p class="text-gray-400 text-sm">Bold and colorful comic style</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden doodle-extra" onclick="selectTheme(this, 'chalk-board')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-gray-800 via-gray-900 to-black rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-green-300 via-transparent to-blue-300 opacity-20 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Teacher Appreciation</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Chalk Board</h4>
+                                <p class="text-gray-400 text-sm">Classic classroom chalk aesthetic</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Space & Cosmic -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Space & Cosmic</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">3 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('space')">
+                                Explore All <span id="space-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="space-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'galaxy-nights')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-purple-900 via-blue-900 to-indigo-900 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-300 via-transparent to-purple-300 opacity-30 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Stargazing Event</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Galaxy Nights</h4>
+                                <p class="text-gray-400 text-sm">Deep space vibes with cosmic energy</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'neon-cosmos')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 via-transparent to-pink-400 opacity-40 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Sci-Fi Convention</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Neon Cosmos</h4>
+                                <p class="text-gray-400 text-sm">Futuristic neon space theme</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden space-extra" onclick="selectTheme(this, 'mars-mission')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-red-700 via-orange-600 to-yellow-600 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-red-300 via-transparent to-orange-300 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Space Exploration</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Mars Mission</h4>
+                                <p class="text-gray-400 text-sm">Red planet exploration theme</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Retro & Vintage -->
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center">
+                                <h3 class="text-lg font-semibold">Retro & Vintage</h3>
+                                <span class="ml-3 category-badge px-3 py-1 text-sm rounded-full">4 themes</span>
+                            </div>
+                            <button type="button" class="text-primary-400 hover:text-primary-300 text-sm font-medium transition-colors" onclick="toggleCategoryExpansion('retro')">
+                                Explore All <span id="retro-arrow" class="ml-1 transition-transform">→</span>
+                            </button>
+                        </div>
+                        <div id="retro-themes" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'synthwave-80s')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 via-transparent to-pink-400 opacity-50 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">80s Dance Party</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Synthwave 80s</h4>
+                                <p class="text-gray-400 text-sm">Neon-soaked retro futurism</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6" onclick="selectTheme(this, 'vintage-sepia')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-amber-700 via-yellow-600 to-orange-700 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-300 via-transparent to-amber-300 opacity-40 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Antique Fair</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Vintage Sepia</h4>
+                                <p class="text-gray-400 text-sm">Classic old-world charm</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden retro-extra" onclick="selectTheme(this, 'disco-fever')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 rounded-xl flex items-center justify-center relative overflow-hidden">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-gold-300 via-transparent to-orange-300 opacity-50 blur-sm"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Disco Night</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Disco Fever</h4>
+                                <p class="text-gray-400 text-sm">Groovy 70s dance floor vibes</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+
+                            <div class="theme-card section-card p-6 hidden retro-extra" onclick="selectTheme(this, 'art-deco')">
+                                <div class="mb-4">
+                                    <div class="h-20 bg-gradient-to-r from-gold-600 via-amber-500 to-yellow-600 rounded-xl flex items-center justify-center relative overflow-hidden" style="background: linear-gradient(to right, #D97706, #F59E0B, #EAB308);">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-200 via-transparent to-amber-200 opacity-30 transform -skew-x-12"></div>
+                                        <span class="text-white font-medium relative z-10 text-sm">Gatsby Gala</span>
+                                    </div>
+                                </div>
+                                <h4 class="font-semibold text-lg mb-2">Art Deco</h4>
+                                <p class="text-gray-400 text-sm">Elegant 1920s luxury style</p>
+                                <div class="mt-4 flex justify-end">
+                                    <div class="w-5 h-5 rounded-full border-2 border-gray-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Background -->
+                <div class="mt-8 pt-8 border-t border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4">Custom Background</h3>
+                    <p class="text-gray-400 mb-6">Upload your own image or video as the event background</p>
+                    
+                    <div class="flex gap-4 mb-6">
+                        <button type="button" class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 transform hover:scale-105 shadow-lg" onclick="toggleUploadMode('upload')">
+                            Upload File
+                        </button>
+                        <button type="button" class="px-6 py-3 glass text-white rounded-xl hover:bg-opacity-80 transition-all duration-300 border border-gray-600" onclick="toggleUploadMode('url')">
+                            Use URL
+                        </button>
+                    </div>
+
+                    <div id="upload-area" class="upload-zone rounded-2xl p-8 text-center">
+                        <div class="mb-6">
+                            <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-8 h-8 text-white" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Drop your image here</h3>
+                        <p class="text-gray-400 mb-4">or click to browse</p>
+                        <p class="text-sm text-gray-500">Supports JPG, PNG, MP4, WebM up to 10MB</p>
+                        <input type="file" class="hidden" accept="image/*,video/*" onchange="handleFileUpload(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Settings -->
+            <div class="section-card p-8 animate-slide-up" style="animation-delay: 0.2s;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <span class="w-2 h-8 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full mr-4"></span>
+                    Advanced Settings
+                </h2>
+
+                <div class="space-y-8">
+                    <!-- Repeating Event -->
+                    <div class="flex items-center justify-between p-6 glass rounded-2xl">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">Repeating Event</h3>
+                                <p class="text-gray-400">Create a recurring event series</p>
+                            </div>
+                        </div>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+
+                    <!-- Community Settings -->
+                    <div class="glass rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-lg">Enable Community</h3>
+                                    <p class="text-gray-400">Create a community chat for participants</p>
+                                </div>
+                            </div>
+                            <div class="toggle-switch" onclick="toggleSwitch(this); toggleCommunityOptions()">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div id="community-options" class="hidden space-y-6 animate-slide-up">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-3">
+                                    Invitation Message
+                                </label>
+                                <div class="relative">
+                                    <textarea rows="3" 
+                                              placeholder="e.g., Join me for a coffee meetup, Come hiking with me..."
+                                              maxlength="200"
+                                              oninput="updateCharCount(this, 'invite-char-count')"
+                                              class="w-full px-4 py-4 glass rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300 resize-none"></textarea>
+                                    <div class="absolute bottom-3 right-3">
+                                        <span id="invite-char-count" class="text-xs text-gray-500">0/200</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-3">
+                                    Community Name
+                                </label>
+                                <div class="flex gap-3">
+                                    <input type="text" 
+                                           placeholder="Name your community..."
+                                           class="flex-1 px-4 py-4 glass rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300">
+                                    <button type="button" class="px-6 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 transform hover:scale-105">
+                                        Generate
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-400 mt-2">People who join will be added to this community chat</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Media Upload -->
+                    <div>
+                        <label class="block text-lg font-semibold mb-4">
+                            Event Media
+                        </label>
+                        <div class="upload-zone rounded-2xl p-8 text-center">
+                            <div class="mb-6">
+                                <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-semibold mb-2">Add Event Media</h3>
+                            <p class="text-gray-400 mb-4">Upload images and videos to showcase your event</p>
+                            <p class="text-sm text-gray-500">Multiple files supported • Max 50MB per file</p>
+                            <input type="file" class="hidden" multiple accept="image/*,video/*">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-8">
+                <button type="button" class="flex-1 px-8 py-4 glass text-white rounded-xl hover:bg-opacity-80 transition-all duration-300 text-lg font-medium border border-gray-600">
+                    Save as Draft
+                </button>
+                <button type="submit" class="flex-1 px-8 py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 transform hover:scale-105 shadow-xl text-lg font-medium">
+                    Create Event
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let selectedTheme = null;
+
+        function selectTheme(element, themeId) {
+            // Remove selected state from all themes
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.classList.remove('selected');
+                const indicator = card.querySelector('.w-5, .w-6');
+                if (indicator) {
+                    indicator.classList.remove('border-primary-500', 'bg-primary-500');
+                    indicator.classList.add('border-gray-500');
+                    indicator.innerHTML = '';
+                }
+            });
+
+            // Add selected state to clicked theme
+            element.classList.add('selected');
+            const indicator = element.querySelector('.w-5, .w-6');
+            if (indicator) {
+                indicator.classList.remove('border-gray-500');
+                indicator.classList.add('border-primary-500', 'bg-primary-500');
+                indicator.innerHTML = '<svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>';
+            }
+
+            selectedTheme = themeId;
+        }
+
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        function toggleCommunityOptions() {
+            const options = document.getElementById('community-options');
+            if (options.classList.contains('hidden')) {
+                options.classList.remove('hidden');
+                setTimeout(() => {
+                    options.style.opacity = '1';
+                    options.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                options.style.opacity = '0';
+                options.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    options.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        function updateCharCount(textarea, counterId) {
+            const counter = document.getElementById(counterId);
+            const current = textarea.value.length;
+            const max = textarea.maxLength;
+            counter.textContent = `${current}/${max}`;
+            
+            if (current > max * 0.9) {
+                counter.classList.add('text-red-400');
+            } else {
+                counter.classList.remove('text-red-400');
+            }
+        }
+
+        function toggleUploadMode(mode) {
+            const uploadArea = document.getElementById('upload-area');
+            if (mode === 'url') {
+                uploadArea.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold">Add Background URL</h3>
+                        <input type="url" 
+                               placeholder="https://example.com/image.jpg"
+                               class="w-full px-4 py-4 glass rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-300">
+                        <button type="button" class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl hover:from-primary-600 hover:to-primary-700 transition-all duration-300 transform hover:scale-105">
+                            Add URL
+                        </button>
+                    </div>
+                `;
+            } else {
+                uploadArea.innerHTML = `
+                    <div class="mb-6">
+                        <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-white" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Drop your image here</h3>
+                    <p class="text-gray-400 mb-4">or click to browse</p>
+                    <p class="text-sm text-gray-500">Supports JPG, PNG, GIF up to 10MB</p>
+                    <input type="file" class="hidden" accept="image/*,.gif" onchange="handleFileUpload(this)">
+                `;
+            }
+        }
+
+        function handleFileUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const uploadArea = input.closest('.upload-zone');
+                uploadArea.innerHTML = `
+                    <div class="flex items-center justify-between p-4 glass rounded-xl">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-semibold">${file.name}</p>
+                                <p class="text-sm text-gray-400">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                        </div>
+                        <button type="button" class="text-gray-400 hover:text-red-400 transition-colors" onclick="clearUpload(this)">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function clearUpload(button) {
+            const uploadArea = button.closest('.upload-zone');
+            uploadArea.innerHTML = `
+                <div class="mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-white" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                </div>
+                <h3 class="text-xl font-semibold mb-2">Drop your image here</h3>
+                <p class="text-gray-400 mb-4">or click to browse</p>
+                <p class="text-sm text-gray-500">Supports JPG, PNG, GIF up to 10MB</p>
+                <input type="file" class="hidden" accept="image/*,.gif" onchange="handleFileUpload(this)">
+            `;
+        }
+
+        // Enhanced drag and drop
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.upload-zone')) {
+                const fileInput = e.target.closest('.upload-zone').querySelector('input[type="file"]');
+                if (fileInput) {
+                    fileInput.click();
+                }
+            }
+        });
+
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            const uploadArea = e.target.closest('.upload-zone');
+            if (uploadArea) {
+                uploadArea.classList.add('dragover');
+            }
+        });
+
+        document.addEventListener('dragleave', function(e) {
+            const uploadArea = e.target.closest('.upload-zone');
+            if (uploadArea && !uploadArea.contains(e.relatedTarget)) {
+                uploadArea.classList.remove('dragover');
+            }
+        });
+
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            const uploadArea = e.target.closest('.upload-zone');
+            if (uploadArea) {
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const fileInput = uploadArea.querySelector('input[type="file"]');
+                    if (fileInput) {
+                        fileInput.files = files;
+                        handleFileUpload(fileInput);
+                    }
+                }
+            }
+        });
+
+        // Floating label animation
+        document.querySelectorAll('input, textarea').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                if (!this.value) {
+                    this.parentElement.classList.remove('focused');
+                }
+            });
+        });
+
+        // Category expansion functionality
+        function toggleCategoryExpansion(category) {
+            const extraThemes = document.querySelectorAll(`.${category}-extra`);
+            const arrow = document.getElementById(`${category}-arrow`);
+            const button = arrow.parentElement;
+            
+            const isExpanded = !extraThemes[0].classList.contains('hidden');
+            
+            if (isExpanded) {
+                // Collapse
+                extraThemes.forEach(theme => {
+                    theme.style.opacity = '0';
+                    theme.style.transform = 'translateY(-10px)';
+                    setTimeout(() => {
+                        theme.classList.add('hidden');
+                    }, 200);
+                });
+                arrow.textContent = '→';
+                button.innerHTML = `Explore All <span id="${category}-arrow" class="ml-1 transition-transform">→</span>`;
+            } else {
+                // Expand
+                extraThemes.forEach((theme, index) => {
+                    theme.classList.remove('hidden');
+                    setTimeout(() => {
+                        theme.style.opacity = '1';
+                        theme.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+                arrow.textContent = '↑';
+                button.innerHTML = `Show Less <span id="${category}-arrow" class="ml-1 transition-transform">↑</span>`;
+            }
+        }
+
+        // Progressive form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Check if a theme is selected
+            if (!selectedTheme) {
+                // Scroll to theme selection
+                document.querySelector('#theme-selection').scrollIntoView({ behavior: 'smooth' });
+                
+                // Show selection hint
+                const themeSection = document.querySelector('.section-card:nth-child(2)');
+                themeSection.style.borderColor = '#EF4444';
+                setTimeout(() => {
+                    themeSection.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }, 2000);
+                return;
+            }
+            
+            // Simulate successful creation with animation
+            const button = e.target.querySelector('button[type="submit"]');
+            const originalText = button.textContent;
+            
+            button.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating Event...
+            `;
+            
+            setTimeout(() => {
+                button.innerHTML = `
+                    <svg class="mr-2 h-5 w-5 text-white inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Event Created!
+                `;
+                button.classList.remove('from-primary-500', 'to-primary-600');
+                button.classList.add('from-green-500', 'to-emerald-500');
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
