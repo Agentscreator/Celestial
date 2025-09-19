@@ -546,7 +546,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       formData.append('content', caption.trim())
       formData.append('media', selectedFile)
       formData.append('isInvite', 'false')
-      
+
       // Add sound information if selected
       if (selectedSound) {
         formData.append('soundId', selectedSound.id)
@@ -668,7 +668,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Show more specific error message based on status code
         let errorMessage = errorData.error || `HTTP ${response.status}: ${response.statusText}`
-        
+
         if (response.status === 401) {
           errorMessage = "Please log in to create a post"
         } else if (response.status === 413) {
@@ -694,10 +694,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : 'No stack'
       })
-      
+
       // Show user-friendly error message
       let userMessage = "Failed to create post. Please try again."
-      
+
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
           userMessage = "Upload is taking too long. Please check your connection and try again."
@@ -707,7 +707,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           userMessage = "File is too large. Please choose a smaller video."
         }
       }
-      
+
       toast({
         title: "Error",
         description: userMessage,
@@ -1503,7 +1503,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                         type: selectedFile.type
                       } : null
                     })
-                    
+
                     // Validate inputs before proceeding
                     if (!caption.trim()) {
                       console.log('❌ Caption validation failed')
@@ -1536,8 +1536,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   disabled={isUploading || !caption.trim() || !selectedFile}
                   className={cn(
                     "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
-                    isUploading 
-                      ? "bg-gray-500 cursor-not-allowed" 
+                    isUploading
+                      ? "bg-gray-500 cursor-not-allowed"
                       : (!caption.trim() || !selectedFile)
                         ? "bg-red-500/50 cursor-not-allowed"
                         : "bg-red-500 hover:bg-red-600 active:bg-red-700"
