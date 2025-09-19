@@ -1155,60 +1155,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
             )}
 
-            {/* Post Debug Panel - Remove after testing */}
-            {process.env.NODE_ENV === 'development' && mode === 'preview' ? (
-              <div className="absolute bottom-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
-                <div>Caption: {caption.length} chars</div>
-                <div>Caption Valid: {caption.trim() ? 'YES' : 'NO'}</div>
-                <div>Has File: {selectedFile ? 'YES' : 'NO'}</div>
-                <div>File Size: {selectedFile ? `${Math.round(selectedFile.size / 1024)}KB` : 'N/A'}</div>
-                <div>Uploading: {isUploading ? 'YES' : 'NO'}</div>
-                <div>Show Caption: {showCaption ? 'YES' : 'NO'}</div>
-                <div>Button Enabled: {(!isUploading && caption.trim() && selectedFile) ? 'YES' : 'NO'}</div>
-                {selectedFile && (
-                  <button
-                    onClick={async () => {
-                      console.log('🧪 Testing media upload...')
-                      const testFormData = new FormData()
-                      testFormData.append('media', selectedFile)
-
-                      try {
-                        const response = await fetch('/api/test-media-upload', {
-                          method: 'POST',
-                          body: testFormData
-                        })
-
-                        const result = await response.json()
-                        console.log('🧪 Test upload result:', result)
-
-                        if (response.ok) {
-                          toast({
-                            title: "Test Upload Success",
-                            description: `Media uploaded to: ${result.url}`,
-                          })
-                        } else {
-                          toast({
-                            title: "Test Upload Failed",
-                            description: result.error || 'Unknown error',
-                            variant: "destructive",
-                          })
-                        }
-                      } catch (error) {
-                        console.error('🧪 Test upload error:', error)
-                        toast({
-                          title: "Test Upload Error",
-                          description: error instanceof Error ? error.message : 'Unknown error',
-                          variant: "destructive",
-                        })
-                      }
-                    }}
-                    className="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
-                  >
-                    Test Upload
-                  </button>
-                )}
-              </div>
-            ) : null}
 
             {/* Right Side Controls */}
             <div className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-4 sm:gap-6">
@@ -1451,6 +1397,60 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           </div>
         )}
 
+        {/* Post Debug Panel - Remove after testing */}
+        {process.env.NODE_ENV === 'development' && mode === 'preview' ? (
+          <div className="absolute bottom-4 left-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
+            <div>Caption: {caption.length} chars</div>
+            <div>Caption Valid: {caption.trim() ? 'YES' : 'NO'}</div>
+            <div>Has File: {selectedFile ? 'YES' : 'NO'}</div>
+            <div>File Size: {selectedFile ? `${Math.round(selectedFile.size / 1024)}KB` : 'N/A'}</div>
+            <div>Uploading: {isUploading ? 'YES' : 'NO'}</div>
+            <div>Show Caption: {showCaption ? 'YES' : 'NO'}</div>
+            <div>Button Enabled: {(!isUploading && caption.trim() && selectedFile) ? 'YES' : 'NO'}</div>
+            {selectedFile && (
+              <button
+                onClick={async () => {
+                  console.log('🧪 Testing media upload...')
+                  const testFormData = new FormData()
+                  testFormData.append('media', selectedFile)
+
+                  try {
+                    const response = await fetch('/api/test-media-upload', {
+                      method: 'POST',
+                      body: testFormData
+                    })
+
+                    const result = await response.json()
+                    console.log('🧪 Test upload result:', result)
+
+                    if (response.ok) {
+                      toast({
+                        title: "Test Upload Success",
+                        description: `Media uploaded to: ${result.url}`,
+                      })
+                    } else {
+                      toast({
+                        title: "Test Upload Failed",
+                        description: result.error || 'Unknown error',
+                        variant: "destructive",
+                      })
+                    }
+                  } catch (error) {
+                    console.error('🧪 Test upload error:', error)
+                    toast({
+                      title: "Test Upload Error",
+                      description: error instanceof Error ? error.message : 'Unknown error',
+                      variant: "destructive",
+                    })
+                  }
+                }}
+                className="mt-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+              >
+                Test Upload
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {mode === 'preview' && (
           // Preview Mode with Caption
