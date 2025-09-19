@@ -403,20 +403,7 @@ export default function NewEventPage() {
                     </div>
                 </div>
 
-                {/* Step Labels */}
-                <div className="flex justify-center mb-8">
-                    <div className="flex items-center space-x-16 text-sm">
-                        <span className={`transition-colors ${currentStep === 1 ? 'text-purple-400 font-semibold' : 'text-gray-500'}`}>
-                            Event Details
-                        </span>
-                        <span className={`transition-colors ${currentStep === 2 ? 'text-purple-400 font-semibold' : 'text-gray-500'}`}>
-                            Style & Theme
-                        </span>
-                        <span className={`transition-colors ${currentStep === 3 ? 'text-purple-400 font-semibold' : 'text-gray-500'}`}>
-                            Settings & Media
-                        </span>
-                    </div>
-                </div>
+
 
                 <form className="space-y-8" onSubmit={handleSubmit}>
                     {/* Step 1: Basic Information */}

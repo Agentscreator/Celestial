@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Plus, Search, Clock } from "lucide-react"
 
@@ -28,7 +28,7 @@ export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState<'all' | 'upcoming' | 'ongoing' | 'completed'>('all')
+
 
   useEffect(() => {
     fetchEvents()
@@ -53,9 +53,7 @@ export default function EventsPage() {
       event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.location.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchesFilter = filterStatus === 'all' || event.status === filterStatus
-
-    return matchesSearch && matchesFilter
+    return matchesSearch
   })
 
   const getStatusColor = (status: string) => {
@@ -114,64 +112,16 @@ export default function EventsPage() {
           </Button>
         </div>
 
-        {/* Search and Filter */}
+        {/* Search */}
         <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 mb-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search events..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-800/60 backdrop-blur-xl border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('all')}
-                size="sm"
-                className={filterStatus === 'all'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0'
-                  : 'border-gray-600 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                }
-              >
-                All
-              </Button>
-              <Button
-                variant={filterStatus === 'upcoming' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('upcoming')}
-                size="sm"
-                className={filterStatus === 'upcoming'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0'
-                  : 'border-gray-600 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                }
-              >
-                Upcoming
-              </Button>
-              <Button
-                variant={filterStatus === 'ongoing' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('ongoing')}
-                size="sm"
-                className={filterStatus === 'ongoing'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0'
-                  : 'border-gray-600 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                }
-              >
-                Ongoing
-              </Button>
-              <Button
-                variant={filterStatus === 'completed' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('completed')}
-                size="sm"
-                className={filterStatus === 'completed'
-                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white border-0'
-                  : 'border-gray-600 text-gray-300 hover:bg-gray-700/60 hover:text-white'
-                }
-              >
-                Completed
-              </Button>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-gray-800/60 backdrop-blur-xl border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
+            />
           </div>
         </div>
 
@@ -198,8 +148,8 @@ export default function EventsPage() {
             </div>
             <h3 className="text-2xl font-bold text-white mb-4">No events found</h3>
             <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              {searchTerm || filterStatus !== 'all'
-                ? "Try adjusting your search or filters to find more events"
+              {searchTerm
+                ? "Try adjusting your search to find more events"
                 : "Get started by creating your first event and bringing people together"
               }
             </p>
