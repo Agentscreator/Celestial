@@ -19,6 +19,8 @@ import { ThemeSelector, type EventTheme } from "@/components/events/ThemeSelecto
 import { ThemedEventCard } from "@/components/events/ThemedEventCard"
 import { FlyerGenerator } from "@/components/events/FlyerGenerator"
 import { EventVideoUpload } from "@/components/events/EventVideoUpload"
+import { EventVideoManager } from "@/components/events/EventVideoManager"
+import { VideoThumbnailSelector } from "@/components/events/VideoThumbnailSelector"
 
 interface Event {
   id: string
@@ -39,6 +41,8 @@ interface Event {
   themeId?: number | null
   customFlyerUrl?: string
   flyerData?: string
+  thumbnailVideoUrl?: string
+  thumbnailImageUrl?: string
   theme?: EventTheme | null
   createdAt: string
   updatedAt: string
@@ -75,6 +79,7 @@ export default function EventsPage() {
   const [enableVideoUpload, setEnableVideoUpload] = useState(false)
   const [eventVideos, setEventVideos] = useState<any[]>([])
   const [tempEventId, setTempEventId] = useState<string | null>(null)
+  const [currentThumbnailVideoUrl, setCurrentThumbnailVideoUrl] = useState<string | undefined>(undefined)
 
   const generateCommunityName = () => {
     if (formData.title.trim()) {
@@ -228,6 +233,7 @@ export default function EventsPage() {
           setEnableVideoUpload(false)
           setEventVideos([])
           setTempEventId(null)
+          setCurrentThumbnailVideoUrl(undefined)
 
           toast({
             title: "Success",
@@ -396,6 +402,7 @@ export default function EventsPage() {
     setEnableVideoUpload(false)
     setEventVideos([])
     setTempEventId(null)
+    setCurrentThumbnailVideoUrl(undefined)
 
     toast({
       title: "Success",
@@ -431,6 +438,7 @@ export default function EventsPage() {
     setEnableVideoUpload(false)
     setEventVideos([])
     setTempEventId(null)
+    setCurrentThumbnailVideoUrl(undefined)
   }
 
   const formatDate = (dateStr: string) => {
@@ -682,41 +690,63 @@ export default function EventsPage() {
                     <div className="space-y-4 pt-4 border-t border-gray-700">
                       <div className="bg-gray-800/50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-sm font-medium text-white">Event Videos</h4>
+                          <h4 className="text-sm font-medium text-white">Event Videos & Thumbnail</h4>
                           <div className="text-xs text-gray-400">
                             {eventVideos.length} video{eventVideos.length !== 1 ? 's' : ''} uploaded
                           </div>
                         </div>
 
-                        <EventVideoUpload
-                          eventId={tempEventId}
-                          onVideoUploaded={handleVideoUploaded}
-                        >
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full border-gray-600 text-white hover:bg-gray-800"
+                        <div className="space-y-4">
+                          <EventVideoUpload
+                            eventId={tempEventId}
+                            onVideoUploaded={handleVideoUploaded}
                           >
-                            <Video className="h-4 w-4 mr-2" />
-                            Add Video
-                          </Button>
-                        </EventVideoUpload>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full border-gray-600 text-white hover:bg-gray-800"
+                            >
+                              <Video className="h-4 w-4 mr-2" />
+                              Add Video
+                            </Button>
+                          </EventVideoUpload>
 
-                        {eventVideos.length > 0 && (
-                          <div className="mt-4 space-y-2">
-                            {eventVideos.map((video, index) => (
-                              <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
-                                <Video className="h-4 w-4 text-blue-400" />
-                                <span className="text-sm text-white flex-1">
-                                  {video.title || `Video ${index + 1}`}
-                                </span>
-                                <span className="text-xs text-gray-400">
-                                  {video.isPublic ? 'Public' : 'Private'}
-                                </span>
+                          {eventVideos.length > 0 && (
+                            <>
+                              <div className="space-y-2">
+                                {eventVideos.map((video, index) => (
+                                  <div key={index} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
+                                    <Video className="h-4 w-4 text-blue-400" />
+                                    <span className="text-sm text-white flex-1">
+                                      {video.title || `Video ${index + 1}`}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {video.isPublic ? 'Public' : 'Private'}
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        )}
+
+                              <div className="pt-2 border-t border-gray-600">
+                                {tempEventId && (
+                                  <VideoThumbnailSelector
+                                    eventId={tempEventId}
+                                    currentThumbnailVideoUrl={currentThumbnailVideoUrl}
+                                    onThumbnailChanged={(videoUrl, imageUrl) => {
+                                      setCurrentThumbnailVideoUrl(videoUrl || undefined)
+                                      // Update the event in the events list if needed
+                                      setEvents(prev => prev.map(event =>
+                                        event.id === tempEventId
+                                          ? { ...event, thumbnailVideoUrl: videoUrl || undefined, thumbnailImageUrl: imageUrl || undefined }
+                                          : event
+                                      ))
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

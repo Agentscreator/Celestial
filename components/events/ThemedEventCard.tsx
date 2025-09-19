@@ -24,6 +24,8 @@ interface ThemedEventCardProps {
     inviteDescription?: string
     groupName?: string
     customFlyerUrl?: string
+    thumbnailVideoUrl?: string
+    thumbnailImageUrl?: string
     videoCount?: number
     hasVideos?: boolean
   }
@@ -94,13 +96,18 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
         className="h-24 relative overflow-hidden"
         style={{ background: cardTheme.backgroundGradient }}
       >
-        {/* Custom flyer background if available */}
-        {event.customFlyerUrl && (
+        {/* Video thumbnail background if available (takes priority over flyer) */}
+        {event.thumbnailImageUrl ? (
+          <div 
+            className="absolute inset-0 opacity-40 bg-cover bg-center"
+            style={{ backgroundImage: `url(${event.thumbnailImageUrl})` }}
+          />
+        ) : event.customFlyerUrl ? (
           <div 
             className="absolute inset-0 opacity-30 bg-cover bg-center"
             style={{ backgroundImage: `url(${event.customFlyerUrl})` }}
           />
-        )}
+        ) : null}
         
         {/* Overlay content */}
         <div className="absolute inset-0 flex items-end p-4">
@@ -126,18 +133,33 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
               </div>
             </div>
             
-            {event.isInvite && (
-              <Badge 
-                className="text-xs px-2 py-1"
-                style={{ 
-                  backgroundColor: `${cardTheme.accentColor}20`,
-                  color: cardTheme.textColor,
-                  border: `1px solid ${cardTheme.accentColor}40`
-                }}
-              >
-                Community
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {event.thumbnailVideoUrl && (
+                <Badge 
+                  className="text-xs px-2 py-1 flex items-center gap-1"
+                  style={{ 
+                    backgroundColor: `${cardTheme.accentColor}30`,
+                    color: cardTheme.textColor,
+                    border: `1px solid ${cardTheme.accentColor}60`
+                  }}
+                >
+                  <Video className="h-3 w-3" />
+                  Video
+                </Badge>
+              )}
+              {event.isInvite && (
+                <Badge 
+                  className="text-xs px-2 py-1"
+                  style={{ 
+                    backgroundColor: `${cardTheme.accentColor}20`,
+                    color: cardTheme.textColor,
+                    border: `1px solid ${cardTheme.accentColor}40`
+                  }}
+                >
+                  Community
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 

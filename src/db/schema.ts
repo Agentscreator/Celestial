@@ -524,6 +524,9 @@ export const eventsTable = pgTable("events", {
   themeId: integer("theme_id").references(() => eventThemesTable.id), // null = default theme
   customFlyerUrl: varchar("custom_flyer_url", { length: 500 }), // Generated or uploaded flyer
   flyerData: text("flyer_data"), // JSON data for flyer customization
+  // Video thumbnail for sharing
+  thumbnailVideoUrl: varchar("thumbnail_video_url", { length: 500 }), // URL of the video to use as thumbnail
+  thumbnailImageUrl: varchar("thumbnail_image_url", { length: 500 }), // Generated thumbnail image from video
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
