@@ -319,6 +319,7 @@ export default function NewEventPage() {
 
             if (response.ok) {
                 const result = await response.json()
+                console.log('Event creation response:', result)
 
                 if (saveAsDraft) {
                     toast({
@@ -331,7 +332,13 @@ export default function NewEventPage() {
                         title: "Event Created",
                         description: "Your event has been created successfully!",
                     })
-                    router.push(`/events/${result.event.id}`)
+                    // Ensure we have a valid event ID before redirecting
+                    if (result.event?.id) {
+                        router.push(`/events/${result.event.id}`)
+                    } else {
+                        console.error('No event ID in response:', result)
+                        router.push('/events')
+                    }
                 }
             } else {
                 const error = await response.json()

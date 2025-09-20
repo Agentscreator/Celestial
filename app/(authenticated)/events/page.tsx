@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Users, Plus, Search, Clock } from "lucide-react"
+import { ThemedEventCard } from "@/components/events/ThemedEventCard"
+import { toast } from "@/hooks/use-toast"
 
 interface Event {
   id: string
@@ -15,12 +16,28 @@ interface Event {
   date: string
   time: string
   location: string
-  attendees: number
-  maxAttendees?: number
-  theme: string
+  currentParticipants: number
+  maxParticipants?: number
+  theme?: any
   isPublic: boolean
   createdBy: string
-  status: 'upcoming' | 'ongoing' | 'completed'
+  createdByUsername: string
+  shareUrl: string
+  hasJoined: boolean
+  isInvite?: boolean
+  inviteDescription?: string
+  groupName?: string
+  themeId?: number | null
+  customFlyerUrl?: string
+  customBackgroundUrl?: string
+  customBackgroundType?: 'image' | 'gif'
+  thumbnailVideoUrl?: string
+  thumbnailImageUrl?: string
+  isRepeating?: boolean
+  repeatPattern?: string
+  mediaCount?: number
+  hasMedia?: boolean
+  status?: 'upcoming' | 'ongoing' | 'completed'
 }
 
 export default function EventsPage() {
@@ -57,6 +74,107 @@ export default function EventsPage() {
 
     return matchesSearch
   })
+
+  const handleJoinEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/join`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Refresh events to get updated participant count
+        fetchEvents()
+        toast({
+          title: "Joined!",
+          description: "You've successfully joined this event.",
+        })
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to join event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error joining event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to join event",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleLeaveEvent = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/join`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        // Refresh events to get updated participant count
+        fetchEvents()
+        toast({
+          title: "Left event",
+          description: "You've left this event.",
+        })
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Error",
+          description: errorData.error || "Failed to leave event",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Error leaving event:', error)
+      toast({
+        title: "Error",
+        description: "Failed to leave event",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleShareEvent = async (event: Event) => {
+    if (!event?.shareUrl) return
+
+    // Try native sharing first
+    if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description,
+          url: event.shareUrl,
+        })
+        return
+      } catch (shareError) {
+        console.log('Native sharing failed, falling back to clipboard')
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(event.shareUrl)
+      toast({
+        title: "Link copied!",
+        description: "The event link has been copied to your clipboard.",
+      })
+    } catch (clipboardError) {
+      toast({
+        title: "Share Event",
+        description: `Copy this link: ${event.shareUrl}`,
+      })
+    }
+  }
+
+  const handleViewDetails = (eventId: string) => {
+    router.push(`/events/${eventId}`)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -164,59 +282,16 @@ export default function EventsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
-              <div
+              <ThemedEventCard
                 key={event.id}
-                className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-lg p-6 cursor-pointer transition-all duration-300 hover:transform hover:scale-105 hover:shadow-xl hover:border-gray-600 group"
-                onClick={() => router.push(`/events/${event.id}`)}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-white line-clamp-2 group-hover:text-blue-300 transition-colors">
-                    {event.title || 'Untitled Event'}
-                  </h3>
-                  <Badge className={`${getStatusColor(event.status || 'upcoming')} text-xs font-medium px-3 py-1 rounded-full`}>
-                    {event.status || 'upcoming'}
-                  </Badge>
-                </div>
-
-                <p className="text-gray-400 text-sm line-clamp-2 mb-6">
-                  {event.description || 'No description available'}
-                </p>
-
-                <div className="space-y-3">
-                  {event.date && (
-                    <div className="flex items-center text-sm text-gray-300">
-                      <Calendar className="w-4 h-4 mr-3 text-blue-400" />
-                      {formatDate(event.date)}
-                    </div>
-                  )}
-                  {event.time && (
-                    <div className="flex items-center text-sm text-gray-300">
-                      <Clock className="w-4 h-4 mr-3 text-blue-400" />
-                      {formatTime(event.time)}
-                    </div>
-                  )}
-                  {event.location && (
-                    <div className="flex items-center text-sm text-gray-300">
-                      <MapPin className="w-4 h-4 mr-3 text-blue-400" />
-                      <span className="truncate">{event.location}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-700">
-                    <div className="flex items-center text-sm text-gray-300">
-                      <Users className="w-4 h-4 mr-3 text-blue-400" />
-                      {event.attendees || 0} {event.maxAttendees && `/ ${event.maxAttendees}`}
-                    </div>
-                    <Badge
-                      className={`text-xs font-medium px-3 py-1 rounded-full ${event.isPublic !== false
-                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                        : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                        }`}
-                    >
-                      {event.isPublic !== false ? "Public" : "Private"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+                event={event}
+                theme={event.theme}
+                onJoin={handleJoinEvent}
+                onLeave={handleLeaveEvent}
+                onShare={handleShareEvent}
+                onViewDetails={handleViewDetails}
+                showFullDetails={false}
+              />
             ))}
           </div>
         )}

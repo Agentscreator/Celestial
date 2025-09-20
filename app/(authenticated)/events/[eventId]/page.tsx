@@ -59,14 +59,17 @@ export default function EventDetailPage() {
 
       if (response.ok) {
         const data = await response.json()
-        const foundEvent = data.events?.find((e: Event) => e.id === eventId)
+        // Convert eventId to string for comparison since API returns string IDs
+        const foundEvent = data.events?.find((e: Event) => e.id.toString() === eventId.toString())
 
         if (foundEvent) {
           setEvent(foundEvent)
         } else {
+          console.error('Event not found:', { eventId, availableEvents: data.events?.map((e: Event) => ({ id: e.id, title: e.title })) })
           setError("Event not found")
         }
       } else {
+        console.error('Failed to load events:', response.status, response.statusText)
         setError("Failed to load event")
       }
     } catch (error) {

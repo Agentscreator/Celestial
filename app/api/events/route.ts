@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
       createdBy: newEvent.createdBy,
       createdByUsername: creator?.username || "Unknown User",
       shareUrl: `${process.env.NEXTAUTH_URL}/events/invite/${newEvent.shareToken}`,
-      hasJoined: true, // Creator has joined by default
+      hasJoined: !isDraft, // Creator has joined by default only for published events
       isInvite: newEvent.isInvite === 1,
       inviteDescription: newEvent.inviteDescription,
       groupName: newEvent.groupName,
@@ -350,7 +350,16 @@ export async function POST(request: NextRequest) {
       groupId: groupId,
       createdAt: newEvent.createdAt,
       updatedAt: newEvent.updatedAt,
+      isDraft: isDraft,
     }
+
+    console.log('✅ Event created successfully:', { 
+      id: responseEvent.id, 
+      title: responseEvent.title, 
+      themeId: responseEvent.themeId,
+      hasTheme: !!eventTheme,
+      isDraft: isDraft
+    })
 
     return NextResponse.json({ event: responseEvent })
   } catch (error) {
