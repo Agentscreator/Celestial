@@ -46,6 +46,58 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
+
+  // Complete reset function
+  const resetAllStates = useCallback(() => {
+    console.log('🔄 Resetting all states...')
+    
+    // Stop camera first
+    stopCamera()
+    
+    // Reset all states
+    setMode('camera')
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setCaption("")
+    setIsUploading(false)
+    setIsRecording(false)
+    setRecordingTime(0)
+    setCameraReady(false)
+    setCameraLoading(false)
+    setIsStoppingRecording(false)
+    setCameraRetryCount(0)
+    setShowCaption(false)
+    setShowSoundSelector(false)
+    setSelectedSound(null)
+    
+    // Clear any timeouts and intervals
+    if (stopRecordingTimeoutRef.current) {
+      clearTimeout(stopRecordingTimeoutRef.current)
+      stopRecordingTimeoutRef.current = null
+    }
+    
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current)
+      recordingIntervalRef.current = null
+    }
+    
+    // Clean up media recorder
+    if (mediaRecorderRef.current) {
+      try {
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop()
+        }
+      } catch (e) {
+        console.log('MediaRecorder cleanup error (expected):', e)
+      }
+      mediaRecorderRef.current = null
+    }
+    
+    // Clear recorded chunks
+    recordedChunksRef.current = []
+    
+    console.log('✅ All states reset')
+  }, [stopCamera])
   
 
 
@@ -611,6 +663,27 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     console.log('Caption:', caption)
     console.log('Selected file:', selectedFile)
 
+    // Prevent posting while camera is loading or recording
+    if (cameraLoading) {
+      console.log('❌ Camera still loading, cannot post yet')
+      toast({
+        title: "Please wait",
+        description: "Camera is still loading. Please wait a moment and try again.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (isRecording) {
+      console.log('❌ Still recording, cannot post yet')
+      toast({
+        title: "Recording in progress",
+        description: "Please stop recording before posting.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Double-check validation - allow text-only posts
     if (!caption.trim() && !selectedFile) {
       console.log('❌ No content or media provided')
@@ -623,6 +696,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
 
     console.log('✅ Validation passed, starting upload...')
+    
+    // IMPORTANT: Stop camera and clean up streams BEFORE starting upload
+    console.log('🧹 Cleaning up camera before post submission...')
+    stopCamera()
+    
+    // Clear recording state if active
+    if (isRecording) {
+      console.log('🛑 Stopping active recording before post...')
+      stopRecording()
+      // Wait a moment for recording to stop
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    
     setIsUploading(true)
 
     try {
@@ -768,15 +854,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           description: "Your post has been created - taking you to the feed",
         })
 
-        console.log('🧹 Cleaning up form data...')
-        // Clear form and clean up blob URL
+        console.log('🧹 Cleaning up after successful post...')
+        // Clean up blob URL
         if (previewUrl) {
           URL.revokeObjectURL(previewUrl)
           console.log('🗑️ Blob URL revoked')
         }
-        setCaption("")
-        setSelectedFile(null)
-        setPreviewUrl(null)
+        
+        // Reset all states using the reset function
+        resetAllStates()
 
         console.log('📢 Notifying parent component...')
         // Notify parent and close
@@ -869,42 +955,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Close and cleanup
   const handleClose = () => {
+    console.log('🚪 handleClose called - cleaning up...')
+    
     // Clean up blob URLs to prevent memory leaks
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
     }
 
-    setCaption("")
-    setSelectedFile(null)
-    setPreviewUrl(null)
-    setIsUploading(false)
-    setIsRecording(false)
-    setIsStoppingRecording(false)
-    setRecordingTime(0)
-    setMode('camera')
-    setShowCaption(false)
-    setShowSpeedSelector(false)
-    setShowFilterSelector(false)
-    setShowSoundSelector(false)
-    setSelectedSound(null)
-    setCameraLoading(false)
-    setCameraReady(false)
-    stopCamera()
+    // Use the comprehensive reset function
+    resetAllStates()
 
-    // Clear recorded chunks to ensure fresh recording
-    recordedChunksRef.current = []
-
-    // Clear all timeouts and intervals
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current)
-      recordingIntervalRef.current = null
-    }
-
-    if (stopRecordingTimeoutRef.current) {
-      clearTimeout(stopRecordingTimeoutRef.current)
-      stopRecordingTimeoutRef.current = null
-    }
-
+    // Call the parent's onClose
     onClose()
   }
 
@@ -931,15 +992,31 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Initialize camera when dialog opens and in camera mode
   useEffect(() => {
     if (isOpen && mode === 'camera') {
-      initCamera()
+      // Small delay to ensure modal is fully open before starting camera
+      setTimeout(() => {
+        initCamera()
+      }, 100)
+    } else if (!isOpen) {
+      // Complete reset when modal closes
+      console.log('🧹 Modal closed - resetting all states...')
+      resetAllStates()
     } else {
+      // Just stop camera when mode changes but modal is still open
+      console.log('🧹 Mode changed - stopping camera...')
       stopCamera()
     }
 
     return () => {
-      stopCamera()
+      console.log('🧹 useEffect cleanup...')
+      if (!isOpen) {
+        // Only do full reset if modal is actually closed
+        resetAllStates()
+      } else {
+        // Just stop camera if modal is still open
+        stopCamera()
+      }
     }
-  }, [isOpen, mode]) // Removed function dependencies to prevent infinite loop
+  }, [isOpen, mode, resetAllStates]) // Added resetAllStates to dependencies
 
   // Pause all feed videos when post creator opens
   useEffect(() => {
@@ -1776,12 +1853,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       console.error('❌ handleCreatePost failed:', error)
                     }
                   }}
-                  disabled={isUploading || (!caption.trim() && !selectedFile)}
+                  disabled={isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile)}
                   className={cn(
                     "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
-                    isUploading
+                    isUploading || cameraLoading || isRecording || isStoppingRecording
                       ? "bg-gray-500 cursor-not-allowed"
-                      : (!caption.trim() || !selectedFile)
+                      : (!caption.trim() && !selectedFile)
                         ? "bg-red-500/50 cursor-not-allowed"
                         : "bg-red-500 hover:bg-red-600 active:bg-red-700"
                   )}
@@ -1791,6 +1868,24 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span className="hidden sm:inline">Posting...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : cameraLoading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Camera Loading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : isRecording ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                      <span className="hidden sm:inline">Recording...</span>
+                      <span className="sm:hidden">REC</span>
+                    </div>
+                  ) : isStoppingRecording ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Stopping...</span>
                       <span className="sm:hidden">...</span>
                     </div>
                   ) : (
