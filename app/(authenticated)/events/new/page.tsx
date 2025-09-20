@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { LocationInput } from "@/components/ui/location-input"
 import { EventMediaUpload } from "@/components/events/EventMediaUpload"
+import { RepeatingEventConfig } from "@/components/events/RepeatingEventConfig"
 import { Calendar, MapPin, Clock, Users, Camera, Palette, Repeat, MessageCircle, Upload, Check, ArrowLeft, ArrowRight, Save } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -25,6 +26,10 @@ interface EventTheme {
 
 interface AdvancedSettings {
     isRepeating: boolean
+    repeatPattern: string
+    repeatInterval: number
+    repeatEndDate?: string
+    repeatDaysOfWeek?: string
     enableCommunity: boolean
     communityName: string
     invitationMessage: string
@@ -51,6 +56,10 @@ export default function NewEventPage() {
 
     const [advancedSettings, setAdvancedSettings] = useState<AdvancedSettings>({
         isRepeating: false,
+        repeatPattern: "weekly",
+        repeatInterval: 1,
+        repeatEndDate: undefined,
+        repeatDaysOfWeek: undefined,
         enableCommunity: false,
         communityName: "",
         invitationMessage: ""
@@ -197,7 +206,7 @@ export default function NewEventPage() {
         }))
     }
 
-    const handleAdvancedSettingChange = (field: keyof AdvancedSettings, value: string | boolean) => {
+    const handleAdvancedSettingChange = (field: keyof AdvancedSettings, value: string | boolean | number | undefined) => {
         setAdvancedSettings(prev => ({
             ...prev,
             [field]: value
@@ -306,6 +315,11 @@ export default function NewEventPage() {
                 customBackgroundUrl: customMedia ? URL.createObjectURL(customMedia) : null,
                 customBackgroundType: customMedia?.type.startsWith('video/') ? 'video' : 'image',
                 ...advancedSettings,
+                // Ensure repeat settings are properly formatted
+                repeatPattern: advancedSettings.isRepeating ? advancedSettings.repeatPattern : null,
+                repeatInterval: advancedSettings.isRepeating ? advancedSettings.repeatInterval : null,
+                repeatEndDate: advancedSettings.isRepeating ? advancedSettings.repeatEndDate : null,
+                repeatDaysOfWeek: advancedSettings.isRepeating ? advancedSettings.repeatDaysOfWeek : null,
                 isDraft: saveAsDraft
             }
 
@@ -592,17 +606,20 @@ export default function NewEventPage() {
                                         </div>
                                     )}
 
-                                    {/* Repeating Event Toggle */}
-                                    <div className="flex items-center justify-between p-4 bg-gray-800/40 rounded-xl">
-                                        <div>
-                                            <Label className="text-base font-medium">Repeating Event</Label>
-                                            <p className="text-sm text-gray-400">Make this a recurring event</p>
-                                        </div>
-                                        <Switch
-                                            checked={advancedSettings.isRepeating}
-                                            onCheckedChange={(checked) => handleAdvancedSettingChange("isRepeating", checked)}
-                                        />
-                                    </div>
+                                    {/* Repeating Event Configuration */}
+                                    <RepeatingEventConfig
+                                        isRepeating={advancedSettings.isRepeating}
+                                        onRepeatingChange={(checked) => handleAdvancedSettingChange("isRepeating", checked)}
+                                        repeatPattern={advancedSettings.repeatPattern}
+                                        onRepeatPatternChange={(pattern) => handleAdvancedSettingChange("repeatPattern", pattern)}
+                                        repeatInterval={advancedSettings.repeatInterval}
+                                        onRepeatIntervalChange={(interval) => handleAdvancedSettingChange("repeatInterval", interval)}
+                                        repeatEndDate={advancedSettings.repeatEndDate}
+                                        onRepeatEndDateChange={(date) => handleAdvancedSettingChange("repeatEndDate", date)}
+                                        repeatDaysOfWeek={advancedSettings.repeatDaysOfWeek}
+                                        onRepeatDaysOfWeekChange={(days) => handleAdvancedSettingChange("repeatDaysOfWeek", days)}
+                                        eventDate={formData.date}
+                                    />
                                 </div>
                             </div>
 
@@ -1074,6 +1091,39 @@ export default function NewEventPage() {
                                                 {advancedSettings.isRepeating ? "Yes" : "No"}
                                             </span>
                                         </div>
+                                        {advancedSettings.isRepeating && (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-400">Repeat Pattern:</span>
+                                                    <span className="text-white capitalize">
+                                                        {advancedSettings.repeatInterval > 1 ? `Every ${advancedSettings.repeatInterval} ` : 'Every '}
+                                                        {advancedSettings.repeatPattern === 'daily' ? (advancedSettings.repeatInterval === 1 ? 'day' : 'days') :
+                                                         advancedSettings.repeatPattern === 'weekly' ? (advancedSettings.repeatInterval === 1 ? 'week' : 'weeks') :
+                                                         advancedSettings.repeatPattern === 'monthly' ? (advancedSettings.repeatInterval === 1 ? 'month' : 'months') :
+                                                         advancedSettings.repeatPattern === 'yearly' ? (advancedSettings.repeatInterval === 1 ? 'year' : 'years') : advancedSettings.repeatPattern}
+                                                    </span>
+                                                </div>
+                                                {advancedSettings.repeatPattern === 'weekly' && advancedSettings.repeatDaysOfWeek && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-400">Days:</span>
+                                                        <span className="text-white">
+                                                            {advancedSettings.repeatDaysOfWeek.split(',').map(day => {
+                                                                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                                                                return dayNames[parseInt(day)];
+                                                            }).join(', ')}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {advancedSettings.repeatEndDate && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-gray-400">Ends:</span>
+                                                        <span className="text-white">
+                                                            {new Date(advancedSettings.repeatEndDate).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
                                         {advancedSettings.enableCommunity && advancedSettings.communityName && (
                                             <div className="flex justify-between">
                                                 <span className="text-gray-400">Community Name:</span>
