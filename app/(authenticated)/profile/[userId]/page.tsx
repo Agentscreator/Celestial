@@ -321,6 +321,33 @@ export default function ProfilePage() {
     }
   }, [userId, session, isOwnProfile, fetchPosts])
 
+  // Listen for post creation events to refresh posts
+  useEffect(() => {
+    const handlePostCreated = () => {
+      console.log('🔄 Post created event received, refreshing posts...')
+      const targetUserId = userId || session?.user?.id
+      if (targetUserId) {
+        fetchPosts(targetUserId, true) // Force refresh
+      }
+    }
+
+    const handleFeedRefresh = () => {
+      console.log('🔄 Feed refresh event received, refreshing posts...')
+      const targetUserId = userId || session?.user?.id
+      if (targetUserId) {
+        fetchPosts(targetUserId, true) // Force refresh
+      }
+    }
+
+    window.addEventListener('postCreated', handlePostCreated)
+    window.addEventListener('feedRefresh', handleFeedRefresh)
+    
+    return () => {
+      window.removeEventListener('postCreated', handlePostCreated)
+      window.removeEventListener('feedRefresh', handleFeedRefresh)
+    }
+  }, [userId, session?.user?.id, fetchPosts])
+
   // Media handling for post creation
 
   const handleMediaSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

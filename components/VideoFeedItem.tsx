@@ -463,7 +463,17 @@ const VideoFeedItem = ({
     <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Media Background - Full Screen */}
       <div className="absolute inset-0">
-        {isVideo() ? (
+        {!hasMedia() ? (
+          // Text-only post background
+          <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center">
+            <div className="text-center text-white px-8 max-w-md">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
+                <MessageCircle className="w-10 h-10 text-white/70" />
+              </div>
+              <p className="text-lg font-medium leading-relaxed">{post.content}</p>
+            </div>
+          </div>
+        ) : isVideo() ? (
           <video
             ref={videoRef}
             className="w-full h-full object-cover"

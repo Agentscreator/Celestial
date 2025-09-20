@@ -568,22 +568,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     console.log('Caption:', caption)
     console.log('Selected file:', selectedFile)
 
-    // Double-check validation
-    if (!caption.trim()) {
-      console.log('❌ No caption provided')
+    // Double-check validation - allow text-only posts
+    if (!caption.trim() && !selectedFile) {
+      console.log('❌ No content or media provided')
       toast({
-        title: "Description required",
-        description: "Please add a description for your post",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!selectedFile) {
-      console.log('❌ No file selected')
-      toast({
-        title: "Media required",
-        description: "Please record a video or upload a file",
+        title: "Content required",
+        description: "Please add a description or upload media for your post",
         variant: "destructive",
       })
       return
@@ -657,18 +647,24 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
       const formData = new FormData()
       formData.append('content', caption.trim())
-      formData.append('media', selectedFile)
+      if (selectedFile) {
+        formData.append('media', selectedFile)
+      }
       formData.append('isInvite', 'false')
 
       // Additional debugging for media upload
-      console.log('📁 Media file details before upload:', {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        lastModified: selectedFile.lastModified,
-        isValidFile: selectedFile instanceof File,
-        hasContent: selectedFile.size > 0
-      })
+      if (selectedFile) {
+        console.log('📁 Media file details before upload:', {
+          name: selectedFile.name,
+          size: selectedFile.size,
+          type: selectedFile.type,
+          lastModified: selectedFile.lastModified,
+          isValidFile: selectedFile instanceof File,
+          hasContent: selectedFile.size > 0
+        })
+      } else {
+        console.log('📝 Creating text-only post')
+      }
 
       // Add sound information if selected
       if (selectedSound) {
@@ -679,7 +675,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         formData.append('soundSpotifyUrl', selectedSound.external_urls.spotify)
       }
 
-      console.log('📦 FormData created with media file')
+      console.log('📦 FormData created', selectedFile ? 'with media file' : 'text-only')
 
       console.log('FormData entries:')
       for (const [key, value] of formData.entries()) {
@@ -1702,7 +1698,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       console.error('❌ handleCreatePost failed:', error)
                     }
                   }}
-                  disabled={isUploading || !caption.trim() || !selectedFile}
+                  disabled={isUploading || (!caption.trim() && !selectedFile)}
                   className={cn(
                     "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
                     isUploading
@@ -1733,7 +1729,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   onClick={() => setShowCaption(true)}
                   className="bg-black/40 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm border border-white/20 hover:bg-black/60 transition-colors touch-manipulation"
                 >
-                  Tap to add caption
+                  Tap to add caption or post text-only
                 </button>
               </div>
             )}

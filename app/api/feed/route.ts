@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
       .leftJoin(usersTable, eq(postsTable.userId, usersTable.id))
       .where(
         and(
-          // Only posts with videos - allow both image and video posts for now during transition
-          sql`(${postsTable.video} IS NOT NULL OR ${postsTable.image} IS NOT NULL)`,
+          // Allow all posts - including text-only posts
+          // sql`(${postsTable.video} IS NOT NULL OR ${postsTable.image} IS NOT NULL)`,
           // Exclude already seen posts
           excludeIds.length > 0 ? notInArray(postsTable.id, excludeIds) : undefined,
           // Cursor-based pagination
