@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -206,12 +206,19 @@ export default function NewEventPage() {
         }))
     }
 
-    const handleAdvancedSettingChange = (field: keyof AdvancedSettings, value: string | boolean | number | undefined) => {
+    const handleAdvancedSettingChange = useCallback((field: keyof AdvancedSettings, value: string | boolean | number | undefined) => {
         setAdvancedSettings(prev => ({
             ...prev,
             [field]: value
         }))
-    }
+    }, [])
+
+    // Memoized callbacks for RepeatingEventConfig
+    const handleRepeatingChange = useCallback((checked: boolean) => handleAdvancedSettingChange("isRepeating", checked), [handleAdvancedSettingChange])
+    const handleRepeatPatternChange = useCallback((pattern: string) => handleAdvancedSettingChange("repeatPattern", pattern), [handleAdvancedSettingChange])
+    const handleRepeatIntervalChange = useCallback((interval: number) => handleAdvancedSettingChange("repeatInterval", interval), [handleAdvancedSettingChange])
+    const handleRepeatEndDateChange = useCallback((date?: string) => handleAdvancedSettingChange("repeatEndDate", date), [handleAdvancedSettingChange])
+    const handleRepeatDaysOfWeekChange = useCallback((days?: string) => handleAdvancedSettingChange("repeatDaysOfWeek", days), [handleAdvancedSettingChange])
 
     const selectTheme = (themeId: string) => {
         setSelectedTheme(themeId)
@@ -609,15 +616,15 @@ export default function NewEventPage() {
                                     {/* Repeating Event Configuration */}
                                     <RepeatingEventConfig
                                         isRepeating={advancedSettings.isRepeating}
-                                        onRepeatingChange={(checked) => handleAdvancedSettingChange("isRepeating", checked)}
+                                        onRepeatingChange={handleRepeatingChange}
                                         repeatPattern={advancedSettings.repeatPattern}
-                                        onRepeatPatternChange={(pattern) => handleAdvancedSettingChange("repeatPattern", pattern)}
+                                        onRepeatPatternChange={handleRepeatPatternChange}
                                         repeatInterval={advancedSettings.repeatInterval}
-                                        onRepeatIntervalChange={(interval) => handleAdvancedSettingChange("repeatInterval", interval)}
+                                        onRepeatIntervalChange={handleRepeatIntervalChange}
                                         repeatEndDate={advancedSettings.repeatEndDate}
-                                        onRepeatEndDateChange={(date) => handleAdvancedSettingChange("repeatEndDate", date)}
+                                        onRepeatEndDateChange={handleRepeatEndDateChange}
                                         repeatDaysOfWeek={advancedSettings.repeatDaysOfWeek}
-                                        onRepeatDaysOfWeekChange={(days) => handleAdvancedSettingChange("repeatDaysOfWeek", days)}
+                                        onRepeatDaysOfWeekChange={handleRepeatDaysOfWeekChange}
                                         eventDate={formData.date}
                                     />
                                 </div>

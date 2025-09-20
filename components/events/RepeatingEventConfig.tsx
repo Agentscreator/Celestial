@@ -49,23 +49,45 @@ export function RepeatingEventConfig({
   eventDate,
   className = ""
 }: RepeatingEventConfigProps) {
-  const [selectedDays, setSelectedDays] = useState<string[]>([])
+  // Initialize selectedDays with the initial repeatDaysOfWeek value
+  const [selectedDays, setSelectedDays] = useState<string[]>(() => {
+    if (repeatDaysOfWeek) {
+      return repeatDaysOfWeek.split(',').filter(Boolean)
+    }
+    return []
+  })
 
-  // Initialize selected days from repeatDaysOfWeek
+  // Sync selectedDays when repeatDaysOfWeek changes externally (but prevent infinite loops)
   useEffect(() => {
     if (repeatDaysOfWeek) {
-      setSelectedDays(repeatDaysOfWeek.split(',').filter(Boolean))
-    } else {
+      const days = repeatDaysOfWeek.split(',').filter(Boolean)
+      const currentDaysString = selectedDays.join(',')
+      const newDaysString = days.join(',')
+      
+      // Only update if the values are actually different
+      if (currentDaysString !== newDaysString) {
+        setSelectedDays(days)
+      }
+    } else if (selectedDays.length > 0) {
       setSelectedDays([])
     }
-  }, [repeatDaysOfWeek])
+  }, [repeatDaysOfWeek]) // Keep this dependency but add comparison to prevent loops
 
-  // Update repeatDaysOfWeek when selectedDays changes
+  // Update repeatDaysOfWeek when selectedDays changes, but only for weekly pattern
   useEffect(() => {
-    if (repeatPattern === 'weekly') {
-      onRepeatDaysOfWeekChange(selectedDays.length > 0 ? selectedDays.join(',') : undefined)
+    if (repeatPattern === 'weekly' && selectedDays.length > 0) {
+      const daysString = selectedDays.join(',')
+      // Only update if the value has actually changed
+      if (daysString !== repeatDaysOfWeek) {
+        onRepeatDaysOfWeekChange(daysString)
+      }
+    } else if (repeatPattern === 'weekly' && selectedDays.length === 0) {
+      // Clear days if none selected
+      if (repeatDaysOfWeek !== undefined) {
+        onRepeatDaysOfWeekChange(undefined)
+      }
     }
-  }, [selectedDays, repeatPattern, onRepeatDaysOfWeekChange])
+  }, [selectedDays, repeatPattern]) // Remove onRepeatDaysOfWeekChange and repeatDaysOfWeek dependencies
 
   // Toggle day selection
   const toggleDay = (dayValue: string) => {
