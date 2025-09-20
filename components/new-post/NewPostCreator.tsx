@@ -41,6 +41,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const [isStoppingRecording, setIsStoppingRecording] = useState(false)
   const [showSoundSelector, setShowSoundSelector] = useState(false)
   const [selectedSound, setSelectedSound] = useState<SpotifyTrack | null>(null)
+  const [cameraRetryCount, setCameraRetryCount] = useState(0)
   const stopRecordingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Use camera permissions hook
@@ -74,17 +75,23 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       streamRef.current = null
     }
 
+    // Shorter timeout for mobile apps - users expect faster response
+    const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const timeoutDuration = isMobile ? 8000 : 15000 // 8 seconds for mobile, 15 for desktop
+    
     // Create a timeout to prevent infinite loading
     const initTimeout = setTimeout(() => {
-      console.log('⏰ Camera initialization timeout')
+      console.log('⏰ Camera initialization timeout after', timeoutDuration / 1000, 'seconds')
       setCameraLoading(false)
       setCameraReady(false)
       toast({
         title: "Camera Timeout",
-        description: "Camera is taking too long to start. Please close other apps using the camera and try again.",
+        description: isMobile 
+          ? "Camera is taking too long. Try closing other apps or use 'Upload Video Instead'."
+          : "Camera is taking too long to start. Please close other apps using the camera and try again.",
         variant: "destructive",
       })
-    }, 15000) // 15 second timeout
+    }, timeoutDuration)
 
     try {
       console.log('📱 Getting camera stream with permissions...')
@@ -108,16 +115,19 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       if (videoRef.current) {
         videoRef.current.srcObject = stream
 
-        // Create a timeout for video loading
+        // Create a timeout for video loading - shorter for mobile
+        const videoTimeoutDuration = isMobile ? 5000 : 10000 // 5 seconds for mobile, 10 for desktop
         const videoTimeout = setTimeout(() => {
-          console.log('⏰ Video loading timeout')
+          console.log('⏰ Video loading timeout after', videoTimeoutDuration / 1000, 'seconds')
           setCameraLoading(false)
           toast({
             title: "Video Loading Timeout",
-            description: "Video preview is taking too long to load. Please try again.",
+            description: isMobile 
+              ? "Video preview is slow to load. Try 'Upload Video Instead' or retry."
+              : "Video preview is taking too long to load. Please try again.",
             variant: "destructive",
           })
-        }, 10000) // 10 second timeout for video loading
+        }, videoTimeoutDuration)
 
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
@@ -128,6 +138,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             console.log('✅ Video playback started successfully')
             setCameraReady(true)
             setCameraLoading(false)
+            setCameraRetryCount(0) // Reset retry counter on success
           }).catch(err => {
             console.error('❌ Error playing video:', err)
             setCameraLoading(false)
@@ -159,13 +170,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       setCameraLoading(false)
       setCameraReady(false)
 
-      // Show user-friendly error message
+      // Show user-friendly error message with mobile-specific suggestions
       let errorMessage = "Failed to access camera. Please try again."
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
-          errorMessage = "Camera initialization timed out. Please close other apps using the camera and try again."
+          errorMessage = isMobile 
+            ? "Camera timed out. Close other apps using the camera, or use 'Upload Video Instead'."
+            : "Camera initialization timed out. Please close other apps using the camera and try again."
+        } else if (error.message.includes('Permission')) {
+          errorMessage = isMobile
+            ? "Camera permission denied. Check your app settings and allow camera access."
+            : "Camera permission denied. Please allow camera access and try again."
         } else {
-          errorMessage = error.message
+          errorMessage = isMobile
+            ? "Camera unavailable. Try restarting the app or use 'Upload Video Instead'."
+            : error.message
         }
       }
 
@@ -174,8 +193,30 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         description: errorMessage,
         variant: "destructive",
       })
+
+      // Auto-retry for mobile devices (up to 2 times)
+      if (isMobile && cameraRetryCount < 2) {
+        console.log(`🔄 Auto-retrying camera init (attempt ${cameraRetryCount + 1}/2)`)
+        setCameraRetryCount(prev => prev + 1)
+        setTimeout(() => {
+          initCamera()
+        }, 2000) // Wait 2 seconds before retry
+      }
     }
-  }, [facingMode, audioEnabled, getCameraStreamWithPermission])
+  }, [facingMode, audioEnabled, getCameraStreamWithPermission, cameraRetryCount])
+
+  // Manual retry function for the "Retry Camera" button
+  const retryCamera = useCallback(() => {
+    console.log('🔄 Manual camera retry requested')
+    setCameraRetryCount(0) // Reset retry counter for manual retry
+    setCameraLoading(false) // Reset loading state
+    setCameraReady(false) // Reset ready state
+    
+    // Small delay to ensure state is reset
+    setTimeout(() => {
+      initCamera()
+    }, 500)
+  }, [initCamera])
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -1161,24 +1202,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                   <>
                     <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
                     <p className="text-white text-lg mb-2 text-center">
-                      {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
+                      {permissionLoading ? 'Requesting permissions...' : 
+                       cameraRetryCount > 0 ? `Retrying camera... (${cameraRetryCount}/2)` : 'Starting camera...'}
                     </p>
                     <p className="text-white/70 text-sm text-center px-4 mb-6">
                       {permissionLoading
                         ? 'Please allow camera and microphone access when prompted'
+                        : cameraRetryCount > 0 
+                        ? 'If this keeps failing, try closing other apps or use "Upload Video Instead"'
                         : 'Setting up your camera for recording'
                       }
                     </p>
                     {/* Show retry button during loading for iOS users */}
                     <div className="flex flex-col gap-3 w-full max-w-xs">
                       <Button
-                        onClick={() => {
-                          // Force stop current loading and retry
-                          setCameraLoading(false)
-                          setTimeout(() => {
-                            initCamera()
-                          }, 500)
-                        }}
+                        onClick={retryCamera}
                         variant="outline"
                         className="border-white/30 text-white hover:bg-white/10 rounded-full px-6 py-3 w-full"
                       >
@@ -1210,7 +1248,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     )}
                     <div className="flex flex-col gap-3 w-full max-w-xs">
                       <Button
-                        onClick={initCamera}
+                        onClick={retryCamera}
                         className="bg-white text-black hover:bg-white/90 rounded-full px-6 py-3 font-medium w-full"
                       >
                         {hasPermission === false ? 'Retry Camera' : 'Retry Camera'}
