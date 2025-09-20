@@ -23,7 +23,7 @@ export default function FeedPage() {
 
   return (
     <div className="h-screen bg-black flex items-center justify-center">
-      <div className="text-white">Feed Page - Temporary Simplified Version</div>
+      <div className="text-white">Feed Page - Simplified Version</div>
     </div>
   );
 }
