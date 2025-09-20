@@ -534,6 +534,10 @@ export const eventsTable = pgTable("events", {
   // Video thumbnail for sharing
   thumbnailVideoUrl: varchar("thumbnail_video_url", { length: 500 }), // URL of the video to use as thumbnail
   thumbnailImageUrl: varchar("thumbnail_image_url", { length: 500 }), // Generated thumbnail image from video
+  // Invite video fields (under 99 seconds)
+  inviteVideoUrl: varchar("invite_video_url", { length: 500 }), // URL of the invite video (max 99 seconds)
+  inviteVideoThumbnail: varchar("invite_video_thumbnail", { length: 500 }), // Thumbnail of the invite video
+  inviteVideoDescription: text("invite_video_description"), // Description for the invite video
   // Custom background media
   customBackgroundUrl: varchar("custom_background_url", { length: 500 }), // Custom uploaded background (image/gif)
   customBackgroundType: varchar("custom_background_type", { length: 20 }), // 'image' or 'gif'

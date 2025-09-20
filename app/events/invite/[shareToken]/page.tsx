@@ -24,6 +24,9 @@ interface PublicEvent {
   inviteDescription?: string
   groupName?: string
   customFlyerUrl?: string
+  inviteVideoUrl?: string
+  inviteVideoThumbnail?: string
+  inviteVideoDescription?: string
   theme?: {
     primaryColor?: string
     secondaryColor?: string
@@ -320,6 +323,29 @@ export default function PublicEventInvitePage() {
 
           <CardContent className="p-6 space-y-4">
             <p className="text-gray-300 leading-relaxed">{event.description}</p>
+            
+            {/* Event Video */}
+            {event.inviteVideoUrl && (
+              <div className="space-y-3">
+                <div className="relative rounded-lg overflow-hidden bg-gray-800">
+                  <video
+                    src={event.inviteVideoUrl}
+                    poster={event.inviteVideoThumbnail}
+                    controls
+                    className="w-full h-auto max-h-96 object-cover"
+                    playsInline
+                    preload="metadata"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                {event.inviteVideoDescription && (
+                  <p className="text-sm text-gray-400 italic">
+                    {event.inviteVideoDescription}
+                  </p>
+                )}
+              </div>
+            )}
             
             {event.isInvite && event.inviteDescription && (
               <div 
