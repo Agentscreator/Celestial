@@ -61,14 +61,15 @@ export async function POST(
       .values({
         postId,
         userId: session.user.id,
+        shareToken,
       })
       .returning()
 
     console.log("✅ Share record created:", shareRecord[0])
 
-    // Create the share URL
+    // Create the share URL using the share token
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-    const shareUrl = `${baseUrl}/posts/shared/${shareRecord[0].id}`
+    const shareUrl = `${baseUrl}/posts/shared/${shareToken}`
 
     // Prepare share data
     const userDisplayName = post[0].user?.nickname || post[0].user?.username || "Someone"

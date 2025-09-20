@@ -250,6 +250,7 @@ export const postSharesTable = pgTable("post_shares", {
   userId: uuid("user_id")
     .notNull()
     .references(() => usersTable.id),
+  shareToken: varchar("share_token", { length: 32 }).notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

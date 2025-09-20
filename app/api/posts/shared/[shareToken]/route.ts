@@ -24,16 +24,16 @@ export async function GET(
 ) {
   try {
     console.log("=== SHARED POST API START ===")
-    const shareId = params.shareToken // This is actually the share ID now
-    
-    if (!shareId) {
-      console.error("Missing share ID:", shareId)
+    const shareToken = params.shareToken
+
+    if (!shareToken) {
+      console.error("Missing share token:", shareToken)
       return NextResponse.json({ error: "Invalid share link" }, { status: 400 })
     }
 
-    console.log("Looking up shared post with ID:", shareId)
+    console.log("Looking up shared post with token:", shareToken)
 
-    // Find the post through the shares table using the share ID
+    // Find the post through the shares table using the share token
     const sharedPost = await db
       .select({
         postId: postSharesTable.postId,
@@ -41,11 +41,11 @@ export async function GET(
         createdAt: postSharesTable.createdAt,
       })
       .from(postSharesTable)
-      .where(eq(postSharesTable.id, parseInt(shareId)))
+      .where(eq(postSharesTable.shareToken, shareToken))
       .limit(1)
 
     if (sharedPost.length === 0) {
-      console.error("Share not found:", shareId)
+      console.error("Share not found:", shareToken)
       return NextResponse.json({ error: "Shared post not found" }, { status: 404 })
     }
 
