@@ -1595,15 +1595,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </Button>
             </div>
 
-            {/* Next Button - Positioned Lower */}
-            <div className="absolute top-20 right-4 z-10">
-              <Button
-                onClick={() => setShowCaption(!showCaption)}
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
-              >
-                Next
-              </Button>
-            </div>
+            {/* Next Button - Positioned Lower - Hide after caption is shown */}
+            {!showCaption && (
+              <div className="absolute top-20 right-4 z-10">
+                <Button
+                  onClick={() => setShowCaption(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
+                >
+                  Add Caption
+                </Button>
+              </div>
+            )}
 
             {/* Selected Sound Indicator */}
             {selectedSound && (
