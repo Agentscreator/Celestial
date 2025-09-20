@@ -1063,32 +1063,29 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera when dialog opens and in camera mode
   useEffect(() => {
+    console.log('🎥 useEffect triggered:', { isOpen, mode })
+
     if (isOpen && mode === 'camera') {
+      // Only initialize if camera is not already loading or ready
       if (!cameraLoading && !cameraReady) {
         console.log('🎥 Camera mode activated - initializing camera...')
         // Small delay to ensure modal is fully open before starting camera
         setTimeout(() => {
           initCamera()
-        }, 200)
-      } else if (cameraReady) {
-        console.log('🎥 Camera already ready in camera mode')
+        }, 300)
+      } else {
+        console.log('🎥 Camera already initializing or ready')
       }
     } else if (!isOpen) {
       // Complete reset when modal closes
       console.log('🧹 Modal closed - resetting all states...')
       resetAllStates()
-    } else if (mode !== 'camera') {
+    } else if (isOpen && mode !== 'camera') {
       // Just stop camera when mode changes but modal is still open
       console.log('🧹 Mode changed from camera - stopping camera...')
       stopCamera()
     }
-
-    return () => {
-      console.log('🧹 useEffect cleanup...')
-      // Always stop camera on cleanup to prevent memory leaks
-      stopCamera()
-    }
-  }, [isOpen, mode, cameraLoading, cameraReady]) // Added camera states to dependencies
+  }, [isOpen, mode]) // Only depend on isOpen and mode to prevent loops
 
   // Pause all feed videos when post creator opens
   useEffect(() => {
@@ -1102,6 +1099,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
     }
   }, [isOpen])
+
+
 
   // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
@@ -1842,41 +1841,24 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             <div className="absolute top-4 left-4 z-50">
               <Button
                 variant="ghost"
-                onClick={async () => {
+                onClick={() => {
                   console.log('🔙 Back to camera clicked')
-                  console.log('🔄 Resetting camera state and switching to camera mode...')
+                  console.log('🔄 Switching back to camera mode...')
 
-                  try {
-                    // Stop any existing camera stream first
-                    stopCamera()
+                  // Stop any existing camera stream first
+                  stopCamera()
 
-                    // Reset all camera-related states
-                    setCameraReady(false)
-                    setCameraLoading(false)
-                    setCameraRetryCount(0)
+                  // Reset camera states
+                  setCameraReady(false)
+                  setCameraLoading(false)
+                  setCameraRetryCount(0)
 
-                    // Remove the file and switch mode
-                    removeFile()
-                    setMode('camera')
+                  // Remove the file and switch mode
+                  removeFile()
+                  setMode('camera')
 
-                    // Wait a bit longer for cleanup, then initialize camera
-                    setTimeout(async () => {
-                      console.log('🎥 Initializing camera after mode switch...')
-                      try {
-                        await initCamera()
-                        console.log('✅ Camera initialization completed')
-                      } catch (error) {
-                        console.error('❌ Camera initialization failed:', error)
-                        toast({
-                          title: "Camera Error",
-                          description: "Failed to initialize camera. Try using 'Retry Camera' button.",
-                          variant: "destructive",
-                        })
-                      }
-                    }, 500)
-                  } catch (error) {
-                    console.error('❌ Error in back to camera:', error)
-                  }
+                  // Let the useEffect handle camera initialization
+                  console.log('✅ Mode switched to camera, useEffect will handle initialization')
                 }}
                 className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
               >
