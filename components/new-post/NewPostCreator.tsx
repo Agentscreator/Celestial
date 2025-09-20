@@ -47,13 +47,23 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
 
+  // Stop camera function (defined early to avoid TDZ issues)
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    setCameraReady(false)
+    setCameraLoading(false)
+  }, [])
+
   // Complete reset function
   const resetAllStates = useCallback(() => {
     console.log('🔄 Resetting all states...')
-    
+
     // Stop camera first
     stopCamera()
-    
+
     // Reset all states
     setMode('camera')
     setSelectedFile(null)
@@ -69,18 +79,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setShowCaption(false)
     setShowSoundSelector(false)
     setSelectedSound(null)
-    
+
     // Clear any timeouts and intervals
     if (stopRecordingTimeoutRef.current) {
       clearTimeout(stopRecordingTimeoutRef.current)
       stopRecordingTimeoutRef.current = null
     }
-    
+
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current)
       recordingIntervalRef.current = null
     }
-    
+
     // Clean up media recorder
     if (mediaRecorderRef.current) {
       try {
@@ -92,13 +102,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       }
       mediaRecorderRef.current = null
     }
-    
+
     // Clear recorded chunks
     recordedChunksRef.current = []
-    
+
     console.log('✅ All states reset')
   }, [stopCamera])
-  
+
 
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -130,7 +140,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     // Shorter timeout for mobile apps - users expect faster response
     const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     const timeoutDuration = isMobile ? 8000 : 15000 // 8 seconds for mobile, 15 for desktop
-    
+
     // Create a timeout to prevent infinite loading
     const initTimeout = setTimeout(() => {
       console.log('⏰ Camera initialization timeout after', timeoutDuration / 1000, 'seconds')
@@ -138,7 +148,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       setCameraReady(false)
       toast({
         title: "Camera Timeout",
-        description: isMobile 
+        description: isMobile
           ? "Camera is taking too long. Try closing other apps or use 'Upload Video Instead'."
           : "Camera is taking too long to start. Please close other apps using the camera and try again.",
         variant: "destructive",
@@ -174,7 +184,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           setCameraLoading(false)
           toast({
             title: "Video Loading Timeout",
-            description: isMobile 
+            description: isMobile
               ? "Video preview is slow to load. Try 'Upload Video Instead' or retry."
               : "Video preview is taking too long to load. Please try again.",
             variant: "destructive",
@@ -226,7 +236,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       let errorMessage = "Failed to access camera. Please try again."
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
-          errorMessage = isMobile 
+          errorMessage = isMobile
             ? "Camera timed out. Close other apps using the camera, or use 'Upload Video Instead'."
             : "Camera initialization timed out. Please close other apps using the camera and try again."
         } else if (error.message.includes('Permission')) {
@@ -263,22 +273,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     setCameraRetryCount(0) // Reset retry counter for manual retry
     setCameraLoading(false) // Reset loading state
     setCameraReady(false) // Reset ready state
-    
+
     // Small delay to ensure state is reset
     setTimeout(() => {
       initCamera()
     }, 500)
   }, [initCamera])
 
-  // Stop camera
-  const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
-      streamRef.current = null
-    }
-    setCameraReady(false)
-    setCameraLoading(false)
-  }, [])
+
 
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -673,7 +675,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       })
       return
     }
-    
+
     if (isRecording) {
       console.log('❌ Still recording, cannot post yet')
       toast({
@@ -696,11 +698,11 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
 
     console.log('✅ Validation passed, starting upload...')
-    
+
     // IMPORTANT: Stop camera and clean up streams BEFORE starting upload
     console.log('🧹 Cleaning up camera before post submission...')
     stopCamera()
-    
+
     // Clear recording state if active
     if (isRecording) {
       console.log('🛑 Stopping active recording before post...')
@@ -708,7 +710,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       // Wait a moment for recording to stop
       await new Promise(resolve => setTimeout(resolve, 500))
     }
-    
+
     setIsUploading(true)
 
     try {
@@ -860,7 +862,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           URL.revokeObjectURL(previewUrl)
           console.log('🗑️ Blob URL revoked')
         }
-        
+
         // Reset all states using the reset function
         resetAllStates()
 
@@ -877,7 +879,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         // Close modal and navigate to feed
         console.log('🚪 Closing post creator and navigating to feed...')
         onClose()
-        
+
         // Navigate to feed page after a short delay to ensure modal closes smoothly
         setTimeout(() => {
           if (typeof window !== 'undefined') {
@@ -956,7 +958,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Close and cleanup
   const handleClose = () => {
     console.log('🚪 handleClose called - cleaning up...')
-    
+
     // Clean up blob URLs to prevent memory leaks
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
@@ -1285,20 +1287,20 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <X className="h-6 w-6" />
                   </Button>
                 </div>
-                
+
                 {(cameraLoading || permissionLoading) ? (
                   <>
                     <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
                     <p className="text-white text-lg mb-2 text-center">
-                      {permissionLoading ? 'Requesting permissions...' : 
-                       cameraRetryCount > 0 ? `Retrying camera... (${cameraRetryCount}/2)` : 'Starting camera...'}
+                      {permissionLoading ? 'Requesting permissions...' :
+                        cameraRetryCount > 0 ? `Retrying camera... (${cameraRetryCount}/2)` : 'Starting camera...'}
                     </p>
                     <p className="text-white/70 text-sm text-center px-4 mb-6">
                       {permissionLoading
                         ? 'Please allow camera and microphone access when prompted'
-                        : cameraRetryCount > 0 
-                        ? 'If this keeps failing, try closing other apps or use "Upload Video Instead"'
-                        : 'Setting up your camera for recording'
+                        : cameraRetryCount > 0
+                          ? 'If this keeps failing, try closing other apps or use "Upload Video Instead"'
+                          : 'Setting up your camera for recording'
                       }
                     </p>
                     {/* Show retry button during loading for iOS users */}
