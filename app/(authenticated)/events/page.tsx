@@ -49,9 +49,11 @@ export default function EventsPage() {
   }
 
   const filteredEvents = events.filter(event => {
+    if (!event || !event.title) return false
+    
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase())
+      (event.description && event.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (event.location && event.location.toLowerCase().includes(searchTerm.toLowerCase()))
 
     return matchesSearch
   })
@@ -169,42 +171,48 @@ export default function EventsPage() {
               >
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-bold text-white line-clamp-2 group-hover:text-blue-300 transition-colors">
-                    {event.title}
+                    {event.title || 'Untitled Event'}
                   </h3>
-                  <Badge className={`${getStatusColor(event.status)} text-xs font-medium px-3 py-1 rounded-full`}>
-                    {event.status}
+                  <Badge className={`${getStatusColor(event.status || 'upcoming')} text-xs font-medium px-3 py-1 rounded-full`}>
+                    {event.status || 'upcoming'}
                   </Badge>
                 </div>
 
                 <p className="text-gray-400 text-sm line-clamp-2 mb-6">
-                  {event.description}
+                  {event.description || 'No description available'}
                 </p>
 
                 <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-300">
-                    <Calendar className="w-4 h-4 mr-3 text-blue-400" />
-                    {formatDate(event.date)}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-300">
-                    <Clock className="w-4 h-4 mr-3 text-blue-400" />
-                    {formatTime(event.time)}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-300">
-                    <MapPin className="w-4 h-4 mr-3 text-blue-400" />
-                    <span className="truncate">{event.location}</span>
-                  </div>
+                  {event.date && (
+                    <div className="flex items-center text-sm text-gray-300">
+                      <Calendar className="w-4 h-4 mr-3 text-blue-400" />
+                      {formatDate(event.date)}
+                    </div>
+                  )}
+                  {event.time && (
+                    <div className="flex items-center text-sm text-gray-300">
+                      <Clock className="w-4 h-4 mr-3 text-blue-400" />
+                      {formatTime(event.time)}
+                    </div>
+                  )}
+                  {event.location && (
+                    <div className="flex items-center text-sm text-gray-300">
+                      <MapPin className="w-4 h-4 mr-3 text-blue-400" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between pt-3 border-t border-gray-700">
                     <div className="flex items-center text-sm text-gray-300">
                       <Users className="w-4 h-4 mr-3 text-blue-400" />
-                      {event.attendees} {event.maxAttendees && `/ ${event.maxAttendees}`}
+                      {event.attendees || 0} {event.maxAttendees && `/ ${event.maxAttendees}`}
                     </div>
                     <Badge
-                      className={`text-xs font-medium px-3 py-1 rounded-full ${event.isPublic
+                      className={`text-xs font-medium px-3 py-1 rounded-full ${event.isPublic !== false
                         ? 'bg-green-500/20 text-green-300 border border-green-500/30'
                         : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
                         }`}
                     >
-                      {event.isPublic ? "Public" : "Private"}
+                      {event.isPublic !== false ? "Public" : "Private"}
                     </Badge>
                   </div>
                 </div>
