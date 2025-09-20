@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { FullscreenDialog } from "./FullscreenDialog"
@@ -47,8 +46,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
   
-  // Use router for navigation
-  const router = useRouter()
+
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -745,7 +743,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         console.log('🔄 Refreshing feed...')
         // Refresh feed
-        window.dispatchEvent(new CustomEvent('postCreated'))
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('postCreated'))
+        }
 
         // Close modal and navigate to feed
         console.log('🚪 Closing post creator and navigating to feed...')
@@ -753,7 +753,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         
         // Navigate to feed page after a short delay to ensure modal closes smoothly
         setTimeout(() => {
-          router.push('/feed')
+          if (typeof window !== 'undefined') {
+            window.location.href = '/feed'
+          }
         }, 100)
       } else {
         const errorText = await response.text()
@@ -900,12 +902,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Pause all feed videos when post creator opens
   useEffect(() => {
-    if (isOpen) {
-      // Dispatch event to pause all feed videos
-      window.dispatchEvent(new CustomEvent('pauseAllFeedVideos'))
-    } else {
-      // Dispatch event to resume feed videos when closing
-      window.dispatchEvent(new CustomEvent('resumeFeedVideos'))
+    if (typeof window !== 'undefined') {
+      if (isOpen) {
+        // Dispatch event to pause all feed videos
+        window.dispatchEvent(new CustomEvent('pauseAllFeedVideos'))
+      } else {
+        // Dispatch event to resume feed videos when closing
+        window.dispatchEvent(new CustomEvent('resumeFeedVideos'))
+      }
     }
   }, [isOpen])
 
@@ -922,7 +926,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Handle app visibility changes to re-check permissions (iOS fix)
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (!document.hidden && isOpen && mode === 'camera') {
+      if (typeof document !== 'undefined' && !document.hidden && isOpen && mode === 'camera') {
 
         // Re-check permissions when app becomes visible
         const hasPermissionNow = await checkPermission()
@@ -970,12 +974,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
 
     // Add event listeners for visibility and focus changes
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleFocus)
+    if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.addEventListener('focus', handleFocus)
+    }
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleFocus)
+      if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.removeEventListener('focus', handleFocus)
+      }
 
       if (permissionCheckInterval) {
         clearInterval(permissionCheckInterval)
