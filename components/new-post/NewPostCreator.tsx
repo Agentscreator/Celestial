@@ -1017,17 +1017,28 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   // Close and cleanup
   const handleClose = () => {
     console.log('🚪 handleClose called - cleaning up...')
+    console.log('🚪 Current state before close:', {
+      mode,
+      isUploading,
+      isRecording,
+      cameraReady,
+      showCaption
+    })
 
     // Clean up blob URLs to prevent memory leaks
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl)
+      console.log('🗑️ Preview URL cleaned up')
     }
 
     // Use the comprehensive reset function
     resetAllStates()
+    console.log('🔄 All states reset')
 
     // Call the parent's onClose
+    console.log('📞 Calling parent onClose...')
     onClose()
+    console.log('✅ handleClose completed')
   }
 
   // Close all selectors
@@ -1443,12 +1454,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
 
 
-            {/* Top Bar */}
-            <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between p-4">
+            {/* Top Bar - Close Button */}
+            <div className="absolute top-4 right-4 z-50">
               <Button
                 variant="ghost"
-                onClick={handleClose}
-                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+                onClick={(e) => {
+                  console.log('🔥 CLOSE BUTTON CLICKED!')
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleClose()
+                }}
+                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px] bg-red-500/20 border border-red-500/50"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
               >
                 <X className="h-6 w-6" />
               </Button>
@@ -1466,7 +1486,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
             {/* Debug State Display - Remove this after testing */}
             {process.env.NODE_ENV === 'development' && (
-              <div className="absolute top-4 right-4 z-50 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
+              <div className="absolute top-20 right-4 z-40 bg-black/80 text-white p-2 rounded text-xs max-w-[200px]">
                 <div>Recording: {isRecording ? 'YES' : 'NO'}</div>
                 <div>Stopping: {isStoppingRecording ? 'YES' : 'NO'}</div>
                 <div>Time: {recordingTime}s</div>
@@ -1794,17 +1814,38 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               playsInline
             />
 
-            {/* Top Bar */}
-            <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between p-4">
+            {/* Top Bar - Close Button */}
+            <div className="absolute top-4 right-4 z-50">
+              <Button
+                variant="ghost"
+                onClick={(e) => {
+                  console.log('🔥 PREVIEW CLOSE BUTTON CLICKED!')
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleClose()
+                }}
+                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {/* Back to Camera Button */}
+            <div className="absolute top-4 left-4 z-50">
               <Button
                 variant="ghost"
                 onClick={() => {
+                  console.log('🔙 Back to camera clicked')
                   setMode('camera')
                   removeFile()
                 }}
                 className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
               >
-                <X className="h-6 w-6" />
+                <Camera className="h-6 w-6" />
               </Button>
             </div>
 
