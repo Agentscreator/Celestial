@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Calendar, MapPin, Clock, Users, Camera, Palette, Repeat, MessageCircle, Upload, Check, ArrowLeft, ArrowRight } from "lucide-react"
+import { LocationInput } from "@/components/ui/location-input"
+import { EventMediaUpload } from "@/components/events/EventMediaUpload"
+import { Calendar, MapPin, Clock, Users, Camera, Palette, Repeat, MessageCircle, Upload, Check, ArrowLeft, ArrowRight, Save } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface EventTheme {
     id: string
@@ -55,9 +58,36 @@ export default function NewEventPage() {
 
     const [mediaFiles, setMediaFiles] = useState<File[]>([])
     const [dragOver, setDragOver] = useState(false)
+    const [isDraft, setIsDraft] = useState(false)
+    const [eventMedia, setEventMedia] = useState<any[]>([])
+    const [themes, setThemes] = useState<EventTheme[]>([])
+    const [loadingThemes, setLoadingThemes] = useState(false)
 
-    // Mock themes data based on corpus
-    const themes: EventTheme[] = [
+    // Load themes from API
+    useEffect(() => {
+        const loadThemes = async () => {
+            setLoadingThemes(true)
+            try {
+                const response = await fetch('/api/events/themes')
+                if (response.ok) {
+                    const data = await response.json()
+                    setThemes(data.themes || [])
+                } else {
+                    // Fallback to mock themes if API fails
+                    setThemes(mockThemes)
+                }
+            } catch (error) {
+                console.error('Error loading themes:', error)
+                setThemes(mockThemes)
+            } finally {
+                setLoadingThemes(false)
+            }
+        }
+        loadThemes()
+    }, [])
+
+    // Mock themes data as fallback
+    const mockThemes: EventTheme[] = [
         {
             id: "elegant-corporate",
             name: "Elegant Corporate",
@@ -264,49 +294,64 @@ export default function NewEventPage() {
         }
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent, saveAsDraft = false) => {
         e.preventDefault()
         setIsLoading(true)
+        setIsDraft(saveAsDraft)
 
         try {
-            const eventFormData = new FormData()
-
-            // Add form fields
-            Object.entries(formData).forEach(([key, value]) => {
-                eventFormData.append(key, value.toString())
-            })
-
-            // Add selected theme
-            eventFormData.append("themeId", selectedTheme)
-
-            // Add advanced settings
-            Object.entries(advancedSettings).forEach(([key, value]) => {
-                eventFormData.append(key, value.toString())
-            })
-
-            // Add media files
-            mediaFiles.forEach((file, index) => {
-                eventFormData.append(`media_${index}`, file)
-            })
+            const eventData = {
+                ...formData,
+                themeId: selectedTheme || null,
+                customBackgroundUrl: customMedia ? URL.createObjectURL(customMedia) : null,
+                customBackgroundType: customMedia?.type.startsWith('video/') ? 'video' : 'image',
+                ...advancedSettings,
+                isDraft: saveAsDraft
+            }
 
             const response = await fetch("/api/events", {
                 method: "POST",
-                body: eventFormData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(eventData)
             })
 
             if (response.ok) {
                 const result = await response.json()
-                router.push(`/events/${result.eventId}`)
+
+                if (saveAsDraft) {
+                    toast({
+                        title: "Draft Saved",
+                        description: "Your event has been saved as a draft.",
+                    })
+                    // Stay on the page for drafts
+                } else {
+                    toast({
+                        title: "Event Created",
+                        description: "Your event has been created successfully!",
+                    })
+                    router.push(`/events/${result.event.id}`)
+                }
             } else {
                 const error = await response.json()
                 console.error("Error creating event:", error)
-                alert("Failed to create event. Please try again.")
+                toast({
+                    title: "Error",
+                    description: error.error || "Failed to create event. Please try again.",
+                    variant: "destructive",
+                })
             }
         } catch (error) {
             console.error("Error creating event:", error)
-            alert("Failed to create event. Please try again.")
+            toast({
+                title: "Error",
+                description: "Failed to create event. Please try again.",
+                variant: "destructive",
+            })
         } finally {
             setIsLoading(false)
+            setIsDraft(false)
         }
     }
 
@@ -448,11 +493,10 @@ export default function NewEventPage() {
                                 {/* Location */}
                                 <div>
                                     <Label className="block text-sm font-medium text-gray-300 mb-3">Location *</Label>
-                                    <Input
-                                        type="text"
-                                        placeholder="Where is your event?"
+                                    <LocationInput
                                         value={formData.location}
-                                        onChange={(e) => handleInputChange("location", e.target.value)}
+                                        onChange={(value) => handleInputChange("location", value)}
+                                        placeholder="Where is your event?"
                                         required
                                         className="w-full px-4 py-4 text-lg bg-gray-800/60 backdrop-blur-xl border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 rounded-xl"
                                     />
@@ -495,8 +539,87 @@ export default function NewEventPage() {
                                 </div>
                             </div>
 
+                            {/* Advanced Settings */}
+                            <div className="mt-8 pt-6 border-t border-gray-700">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                                    <span className="w-2 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full mr-3"></span>
+                                    Advanced Settings
+                                </h3>
+
+                                <div className="space-y-6">
+                                    {/* Community Toggle */}
+                                    <div className="flex items-center justify-between p-4 bg-gray-800/40 rounded-xl">
+                                        <div>
+                                            <Label className="text-base font-medium">Enable Community</Label>
+                                            <p className="text-sm text-gray-400">Create a community group for ongoing discussions</p>
+                                        </div>
+                                        <Switch
+                                            checked={advancedSettings.enableCommunity}
+                                            onCheckedChange={(checked) => handleAdvancedSettingChange("enableCommunity", checked)}
+                                        />
+                                    </div>
+
+                                    {/* Community Settings */}
+                                    {advancedSettings.enableCommunity && (
+                                        <div className="space-y-4 pl-4 border-l-2 border-blue-500/30">
+                                            <div>
+                                                <Label className="block text-sm font-medium text-gray-300 mb-2">Community Name *</Label>
+                                                <Input
+                                                    type="text"
+                                                    placeholder="What should we call your community?"
+                                                    value={advancedSettings.communityName}
+                                                    onChange={(e) => handleAdvancedSettingChange("communityName", e.target.value)}
+                                                    className="bg-gray-800/60 border-gray-700 text-white placeholder-gray-400"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="block text-sm font-medium text-gray-300 mb-2">Invitation Message *</Label>
+                                                <Textarea
+                                                    placeholder="Invite people to join your community..."
+                                                    value={advancedSettings.invitationMessage}
+                                                    onChange={(e) => handleAdvancedSettingChange("invitationMessage", e.target.value)}
+                                                    className="bg-gray-800/60 border-gray-700 text-white placeholder-gray-400"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Repeating Event Toggle */}
+                                    <div className="flex items-center justify-between p-4 bg-gray-800/40 rounded-xl">
+                                        <div>
+                                            <Label className="text-base font-medium">Repeating Event</Label>
+                                            <p className="text-sm text-gray-400">Make this a recurring event</p>
+                                        </div>
+                                        <Switch
+                                            checked={advancedSettings.isRepeating}
+                                            onCheckedChange={(checked) => handleAdvancedSettingChange("isRepeating", checked)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Step 1 Navigation */}
-                            <div className="flex justify-end pt-6">
+                            <div className="flex justify-between pt-6">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={(e) => handleSubmit(e, true)}
+                                    disabled={isLoading || !formData.title}
+                                    className="px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800"
+                                >
+                                    {isDraft ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
+                                            Saving Draft...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4 mr-2" />
+                                            Save as Draft
+                                        </>
+                                    )}
+                                </Button>
                                 <button
                                     type="button"
                                     onClick={nextStep}
@@ -505,6 +628,158 @@ export default function NewEventPage() {
                                 >
                                     Continue to Style & Theme
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Media & Settings */}
+                    {currentStep === 3 && (
+                        <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
+                            <h2 className="text-2xl font-bold mb-6 flex items-center">
+                                <span className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full mr-4"></span>
+                                Media & Final Settings
+                            </h2>
+
+                            <div className="space-y-8">
+                                {/* Event Media Upload */}
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-4">Event Media</h3>
+                                    <p className="text-gray-400 mb-4">Add photos and videos to showcase your event</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {eventMedia.map((media, index) => (
+                                            <div key={index} className="relative bg-gray-800 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                                                {media.mediaType === 'video' ? (
+                                                    <video
+                                                        src={media.mediaUrl}
+                                                        className="w-full h-full object-cover"
+                                                        controls
+                                                    />
+                                                ) : (
+                                                    <img
+                                                        src={media.mediaUrl}
+                                                        alt={media.title || 'Event media'}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
+                                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                                                    <p className="text-white text-sm font-medium">{media.title || 'Untitled'}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Add Media Button */}
+                                        <EventMediaUpload
+                                            eventId="temp" // Will be replaced after event creation
+                                            onMediaUploaded={(media) => setEventMedia(prev => [...prev, media])}
+                                        >
+                                            <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-gray-500 transition-colors cursor-pointer">
+                                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                                <p className="text-gray-400">Add Media</p>
+                                            </div>
+                                        </EventMediaUpload>
+                                    </div>
+                                </div>
+
+                                {/* Theme Preview */}
+                                {selectedTheme && (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-4">Selected Theme</h3>
+                                        <div className="p-4 bg-gray-800 rounded-lg">
+                                            {(() => {
+                                                const theme = themes.find(t => t.id === selectedTheme) || mockThemes.find(t => t.id === selectedTheme)
+                                                return theme ? (
+                                                    <div className="flex items-center space-x-4">
+                                                        <div
+                                                            className="w-16 h-16 rounded-lg"
+                                                            style={{
+                                                                background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`
+                                                            }}
+                                                        ></div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-white">{theme.name}</h4>
+                                                            <p className="text-gray-400 text-sm">{theme.description}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-400">Theme not found</p>
+                                                )
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Custom Media Preview */}
+                                {customMedia && (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-4">Custom Background</h3>
+                                        <div className="relative bg-gray-800 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                                            {customMedia.type.startsWith('video/') ? (
+                                                <video
+                                                    src={URL.createObjectURL(customMedia)}
+                                                    className="w-full h-full object-cover"
+                                                    controls
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={URL.createObjectURL(customMedia)}
+                                                    alt="Custom background preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Step 3 Navigation */}
+                            <div className="flex justify-between pt-6">
+                                <button
+                                    type="button"
+                                    onClick={prevStep}
+                                    className="px-6 py-3 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-800 transition-all duration-300 font-medium"
+                                >
+                                    <ArrowLeft className="h-4 w-4 mr-2 inline" />
+                                    Back to Themes
+                                </button>
+                                <div className="flex space-x-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={(e) => handleSubmit(e, true)}
+                                        disabled={isLoading}
+                                        className="px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800"
+                                    >
+                                        {isDraft ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
+                                                Saving Draft...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="h-4 w-4 mr-2" />
+                                                Save as Draft
+                                            </>
+                                        )}
+                                    </Button>
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                                Creating Event...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check className="h-4 w-4 mr-2 inline" />
+                                                Create Event
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -568,10 +843,28 @@ export default function NewEventPage() {
                                                 Choose File
                                             </label>
                                             {customMedia && (
-                                                <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-                                                    <p className="text-green-300 text-sm">
-                                                        ✓ {customMedia.name} uploaded
-                                                    </p>
+                                                <div className="mt-4 space-y-3">
+                                                    <div className="p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                                                        <p className="text-green-300 text-sm">
+                                                            ✓ {customMedia.name} uploaded
+                                                        </p>
+                                                    </div>
+                                                    {/* Media Preview */}
+                                                    <div className="relative bg-gray-800 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                                                        {customMedia.type.startsWith('video/') ? (
+                                                            <video
+                                                                src={URL.createObjectURL(customMedia)}
+                                                                className="w-full h-full object-cover"
+                                                                controls
+                                                            />
+                                                        ) : (
+                                                            <img
+                                                                src={URL.createObjectURL(customMedia)}
+                                                                alt="Custom media preview"
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -659,123 +952,127 @@ export default function NewEventPage() {
                         </div>
                     )}
 
-                    {/* Step 3: Advanced Settings */}
+                    {/* Step 3: Media & Final Settings */}
                     {currentStep === 3 && (
                         <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
                             <h2 className="text-2xl font-bold mb-6 flex items-center">
-                                <span className="w-2 h-8 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full mr-4"></span>
-                                Settings & Media
+                                <span className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full mr-4"></span>
+                                Media & Final Settings
                             </h2>
 
                             <div className="space-y-8">
-                                {/* Repeating Event */}
-                                <div className="flex items-center justify-between p-6 bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                            </svg>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg">Repeating Event</h3>
-                                            <p className="text-gray-400">Create a recurring event series</p>
-                                        </div>
-                                    </div>
-                                    <Switch
-                                        checked={advancedSettings.isRepeating}
-                                        onCheckedChange={(checked) => handleAdvancedSettingChange('isRepeating', checked)}
-                                    />
-                                </div>
-
-                                {/* Community Settings */}
-                                <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-6">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <h3 className="font-semibold text-lg">Enable Community</h3>
-                                                <p className="text-gray-400">Create a community chat for participants</p>
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={advancedSettings.enableCommunity}
-                                            onCheckedChange={(checked) => handleAdvancedSettingChange('enableCommunity', checked)}
-                                        />
-                                    </div>
-
-                                    {advancedSettings.enableCommunity && (
-                                        <div className="space-y-6 animate-slide-up">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-3">
-                                                    Invitation Message
-                                                </label>
-                                                <div className="relative">
-                                                    <textarea
-                                                        rows={3}
-                                                        placeholder="e.g., Join me for a coffee meetup, Come hiking with me..."
-                                                        maxLength={200}
-                                                        value={advancedSettings.invitationMessage}
-                                                        onChange={(e) => handleAdvancedSettingChange('invitationMessage', e.target.value)}
-                                                        className="w-full px-4 py-4 bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300 resize-none"
-                                                    />
-                                                    <div className="absolute bottom-3 right-3">
-                                                        <span id="invite-char-count" className="text-xs text-gray-500">{advancedSettings.invitationMessage.length}/200</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-3">
-                                                    Community Name
-                                                </label>
-                                                <div className="flex gap-3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Name your community..."
-                                                        value={advancedSettings.communityName}
-                                                        onChange={(e) => handleAdvancedSettingChange('communityName', e.target.value)}
-                                                        className="flex-1 px-4 py-4 bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-300"
-                                                    />
-                                                    <button type="button" className="px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
-                                                        Generate
-                                                    </button>
-                                                </div>
-                                                <p className="text-sm text-gray-400 mt-2">People who join will be added to this community chat</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Media Upload */}
+                                {/* Event Media Upload */}
                                 <div>
-                                    <label className="block text-lg font-semibold mb-4">
-                                        Event Media
-                                    </label>
-                                    <div className="border-2 border-dashed border-gray-600 hover:border-purple-500 hover:bg-purple-500/5 rounded-2xl p-8 text-center transition-all duration-300">
-                                        <div className="mb-6">
-                                            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                                </svg>
+                                    <h3 className="text-lg font-semibold mb-4">Event Media</h3>
+                                    <p className="text-gray-400 mb-4">Add photos and videos to showcase your event</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {eventMedia.map((media, index) => (
+                                            <div key={index} className="relative bg-gray-800 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                                                {media.mediaType === 'video' ? (
+                                                    <video
+                                                        src={media.mediaUrl}
+                                                        className="w-full h-full object-cover"
+                                                        controls
+                                                    />
+                                                ) : (
+                                                    <img
+                                                        src={media.mediaUrl}
+                                                        alt={media.title || 'Event media'}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
+                                                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                                                    <p className="text-white text-sm font-medium">{media.title || 'Untitled'}</p>
+                                                </div>
                                             </div>
+                                        ))}
+
+                                        {/* Add Media Button */}
+                                        <EventMediaUpload
+                                            allowPreCreation={true}
+                                            onMediaUploaded={(media) => setEventMedia(prev => [...prev, media])}
+                                        >
+                                            <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-gray-500 transition-colors cursor-pointer">
+                                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                                <p className="text-gray-400">Add Media</p>
+                                            </div>
+                                        </EventMediaUpload>
+                                    </div>
+                                </div>
+
+                                {/* Theme Preview */}
+                                {selectedTheme && (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-4">Selected Theme</h3>
+                                        <div className="p-4 bg-gray-800 rounded-lg">
+                                            {(() => {
+                                                const theme = themes.find(t => t.id === selectedTheme) || mockThemes.find(t => t.id === selectedTheme)
+                                                return theme ? (
+                                                    <div className="flex items-center space-x-4">
+                                                        <div
+                                                            className="w-16 h-16 rounded-lg"
+                                                            style={{
+                                                                background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor})`
+                                                            }}
+                                                        ></div>
+                                                        <div>
+                                                            <h4 className="font-semibold text-white">{theme.name}</h4>
+                                                            <p className="text-gray-400 text-sm">{theme.description}</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-400">Theme not found</p>
+                                                )
+                                            })()}
                                         </div>
-                                        <h3 className="text-xl font-semibold mb-2">Add Event Media</h3>
-                                        <p className="text-gray-400 mb-4">Upload images and videos to showcase your event</p>
-                                        <p className="text-sm text-gray-500">Multiple files supported • Max 50MB per file</p>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            multiple
-                                            accept="image/*,video/*"
-                                            onChange={(e) => {
-                                                const files = Array.from(e.target.files || [])
-                                                setMediaFiles(prev => [...prev, ...files])
-                                            }}
-                                        />
+                                    </div>
+                                )}
+
+                                {/* Custom Media Preview */}
+                                {customMedia && (
+                                    <div>
+                                        <h3 className="text-lg font-semibold mb-4">Custom Background</h3>
+                                        <div className="relative bg-gray-800 rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                                            {customMedia.type.startsWith('video/') ? (
+                                                <video
+                                                    src={URL.createObjectURL(customMedia)}
+                                                    className="w-full h-full object-cover"
+                                                    controls
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={URL.createObjectURL(customMedia)}
+                                                    alt="Custom background preview"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Advanced Settings Summary */}
+                                <div className="bg-gray-800/40 rounded-lg p-4">
+                                    <h3 className="text-lg font-semibold mb-3">Event Settings</h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Community Enabled:</span>
+                                            <span className={advancedSettings.enableCommunity ? "text-green-400" : "text-gray-500"}>
+                                                {advancedSettings.enableCommunity ? "Yes" : "No"}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-400">Repeating Event:</span>
+                                            <span className={advancedSettings.isRepeating ? "text-green-400" : "text-gray-500"}>
+                                                {advancedSettings.isRepeating ? "Yes" : "No"}
+                                            </span>
+                                        </div>
+                                        {advancedSettings.enableCommunity && advancedSettings.communityName && (
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-400">Community Name:</span>
+                                                <span className="text-white">{advancedSettings.communityName}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -785,30 +1082,46 @@ export default function NewEventPage() {
                                 <button
                                     type="button"
                                     onClick={prevStep}
-                                    className="px-6 py-3 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700/60 hover:text-white transition-all duration-300 font-medium"
+                                    className="px-6 py-3 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-800 transition-all duration-300 font-medium"
                                 >
-                                    <ArrowLeft className="w-4 h-4 mr-2 inline" />
-                                    Back
+                                    <ArrowLeft className="h-4 w-4 mr-2 inline" />
+                                    Back to Themes
                                 </button>
-                                <div className="flex gap-4">
-                                    <button
+                                <div className="flex space-x-3">
+                                    <Button
                                         type="button"
-                                        className="px-6 py-3 border border-gray-600 text-gray-300 rounded-xl hover:bg-gray-700/60 hover:text-white transition-all duration-300 font-medium"
+                                        variant="outline"
+                                        onClick={(e) => handleSubmit(e, true)}
+                                        disabled={isLoading}
+                                        className="px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800"
                                     >
-                                        Save as Draft
-                                    </button>
+                                        {isDraft ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400 mr-2"></div>
+                                                Saving Draft...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="h-4 w-4 mr-2" />
+                                                Save as Draft
+                                            </>
+                                        )}
+                                    </Button>
                                     <button
                                         type="submit"
-                                        disabled={isLoading || !formData.title || !formData.date || !formData.time || (!selectedTheme && !customMedia)}
-                                        className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                        disabled={isLoading}
+                                        className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                     >
                                         {isLoading ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                                                 Creating Event...
-                                            </div>
+                                            </>
                                         ) : (
-                                            "Create Event"
+                                            <>
+                                                <Check className="h-4 w-4 mr-2 inline" />
+                                                Create Event
+                                            </>
                                         )}
                                     </button>
                                 </div>

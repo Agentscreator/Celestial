@@ -13,12 +13,13 @@ import { cn } from "@/lib/utils"
 import { useCameraPermissions } from "@/hooks/use-camera-permissions"
 
 interface EventMediaUploadProps {
-  eventId: string
+  eventId?: string
   onMediaUploaded?: (media: any) => void
   children?: React.ReactNode
+  allowPreCreation?: boolean // Allow media upload before event is created
 }
 
-export function EventMediaUpload({ eventId, onMediaUploaded, children }: EventMediaUploadProps) {
+export function EventMediaUpload({ eventId, onMediaUploaded, children, allowPreCreation = false }: EventMediaUploadProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadMethod, setUploadMethod] = useState<'file' | 'camera' | 'url'>('file')
@@ -321,14 +322,33 @@ export function EventMediaUpload({ eventId, onMediaUploaded, children }: EventMe
         }
       }
 
-      // Upload to event
-      const response = await fetch(`/api/events/${eventId}/media`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+      // Upload to event or store temporarily if no eventId
+      let response: Response
+      
+      if (eventId) {
+        response = await fetch(`/api/events/${eventId}/media`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            mediaUrl,
+            thumbnailUrl,
+            title: formData.title.trim() || null,
+            description: formData.description.trim() || null,
+            mediaType: detectedMediaType,
+            duration,
+            width,
+            height,
+            fileSize,
+            mimeType,
+            isPublic: formData.isPublic,
+          }),
+        })
+      } else if (allowPreCreation) {
+        // For pre-creation uploads, just return the media data
+        const mediaData = {
           mediaUrl,
           thumbnailUrl,
           title: formData.title.trim() || null,
@@ -340,8 +360,19 @@ export function EventMediaUpload({ eventId, onMediaUploaded, children }: EventMe
           fileSize,
           mimeType,
           isPublic: formData.isPublic,
-        }),
-      })
+        }
+        
+        toast({
+          title: "Media Ready",
+          description: "Media prepared for event creation.",
+        })
+
+        onMediaUploaded?.(mediaData)
+        handleClose()
+        return
+      } else {
+        throw new Error("Event ID is required for media upload")
+      }
 
       if (response.ok) {
         const data = await response.json()

@@ -176,41 +176,53 @@ export async function POST(request: NextRequest) {
       title, description, location, date, time, maxParticipants, 
       isInvite, inviteDescription, groupName, themeId,
       customBackgroundUrl, customBackgroundType,
-      isRepeating, repeatPattern, repeatInterval, repeatEndDate, repeatDaysOfWeek
+      isRepeating, repeatPattern, repeatInterval, repeatEndDate, repeatDaysOfWeek,
+      enableCommunity, communityName, invitationMessage, isDraft
     } = body
 
-    // Validation
+    // Validation - less strict for drafts
     console.log('✅ Validating required fields...')
-    if (!title?.trim() || !description?.trim() || !location?.trim() || !date || !time) {
-      console.log('❌ Validation failed: Missing required fields')
-      return NextResponse.json({ 
-        error: "Title, description, location, date, and time are required" 
-      }, { status: 400 })
-    }
-
-    // Validate community fields if enabled
-    if (isInvite) {
-      if (!inviteDescription?.trim()) {
+    if (!isDraft) {
+      if (!title?.trim() || !description?.trim() || !location?.trim() || !date || !time) {
+        console.log('❌ Validation failed: Missing required fields')
         return NextResponse.json({ 
-          error: "Invite description is required when creating a community" 
+          error: "Title, description, location, date, and time are required" 
         }, { status: 400 })
       }
-      if (!groupName?.trim()) {
+
+      // Validate community fields if enabled
+      if (enableCommunity || isInvite) {
+        if (!invitationMessage?.trim()) {
+          return NextResponse.json({ 
+            error: "Invitation message is required when creating a community" 
+          }, { status: 400 })
+        }
+        if (!communityName?.trim()) {
+          return NextResponse.json({ 
+            error: "Community name is required when creating a community" 
+          }, { status: 400 })
+        }
+      }
+    } else {
+      // For drafts, only require title
+      if (!title?.trim()) {
         return NextResponse.json({ 
-          error: "Community name is required when creating a community" 
+          error: "Title is required even for drafts" 
         }, { status: 400 })
       }
     }
 
-    // Validate date is not in the past
-    const eventDate = new Date(date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    if (eventDate < today) {
-      return NextResponse.json({ 
-        error: "Event date cannot be in the past" 
-      }, { status: 400 })
+    // Validate date is not in the past (only for published events)
+    if (!isDraft && date) {
+      const eventDate = new Date(date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (eventDate < today) {
+        return NextResponse.json({ 
+          error: "Event date cannot be in the past" 
+        }, { status: 400 })
+      }
     }
 
     // Generate unique share token
@@ -224,18 +236,18 @@ export async function POST(request: NextRequest) {
       .insert(eventsTable)
       .values({
         title: title.trim(),
-        description: description.trim(),
-        location: location.trim(),
-        eventDate: date,
-        eventTime: time,
+        description: description?.trim() || null,
+        location: location?.trim() || null,
+        eventDate: date || null,
+        eventTime: time || null,
         maxParticipants: maxParticipants || null,
-        currentParticipants: 1, // Creator is first participant
+        currentParticipants: isDraft ? 0 : 1, // Creator is first participant only for published events
         createdBy: session.user.id,
         shareToken,
-        isActive: 1,
-        isInvite: isInvite ? 1 : 0,
-        inviteDescription: isInvite ? inviteDescription?.trim() : null,
-        groupName: isInvite ? groupName?.trim() : null,
+        isActive: isDraft ? 0 : 1, // Drafts are inactive
+        isInvite: (enableCommunity || isInvite) ? 1 : 0,
+        inviteDescription: (enableCommunity || isInvite) ? (invitationMessage?.trim() || null) : null,
+        groupName: (enableCommunity || isInvite) ? (communityName?.trim() || null) : null,
         themeId: themeId || null,
         customBackgroundUrl: customBackgroundUrl || null,
         customBackgroundType: customBackgroundType || null,
@@ -247,21 +259,23 @@ export async function POST(request: NextRequest) {
       })
       .returning()
 
-    // Add creator as first participant
-    await db
-      .insert(eventParticipantsTable)
-      .values({
-        eventId: newEvent.id,
-        userId: session.user.id,
-      })
+    // Add creator as first participant (only for published events)
+    if (!isDraft) {
+      await db
+        .insert(eventParticipantsTable)
+        .values({
+          eventId: newEvent.id,
+          userId: session.user.id,
+        })
+    }
 
     // Create community group if enabled
     let groupId = null
-    if (isInvite && groupName?.trim()) {
+    if ((enableCommunity || isInvite) && communityName?.trim() && !isDraft) {
       const [newGroup] = await db
         .insert(groupsTable)
         .values({
-          name: groupName.trim(),
+          name: communityName.trim(),
           description: `Community for ${title.trim()}`,
           createdBy: session.user.id,
           isActive: 1,
