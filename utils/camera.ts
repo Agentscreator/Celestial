@@ -16,6 +16,66 @@ export interface CameraStreamOptions {
  */
 export async function requestCameraPermissions(): Promise<CameraPermissionResult> {
   try {
+    console.log('🔐 Requesting camera permissions...');
+    
+    // Detect iOS
+    const isIOS = Capacitor.getPlatform() === 'ios' || 
+                  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    console.log('📱 iOS detected:', isIOS);
+    
+    // For iOS, be more conservative with permission requests
+    if (isIOS) {
+      try {
+        // Try video-only first on iOS to avoid audio permission complications
+        console.log('🍎 iOS: Requesting video-only permission first...');
+        const videoStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true 
+        });
+        
+        videoStream.getTracks().forEach(track => {
+          track.stop();
+        });
+        
+        console.log('✅ iOS: Video permission granted');
+        return { granted: true };
+        
+      } catch (videoError) {
+        console.error('❌ iOS: Video permission failed:', videoError);
+        
+        let message = 'Camera access denied. Please allow camera permissions.';
+        if (videoError instanceof Error) {
+          switch (videoError.name) {
+            case 'NotAllowedError':
+              message = 'Camera permission denied. Please go to Settings → MirroSocial → Camera and enable camera access.';
+              break;
+            case 'NotFoundError':
+              message = 'No camera found on this device.';
+              break;
+            case 'NotReadableError':
+              message = 'Camera is already in use. Please close other apps using the camera.';
+              break;
+            case 'OverconstrainedError':
+              message = 'Camera constraints not supported on this device.';
+              break;
+            case 'AbortError':
+              message = 'Camera access was interrupted. Please try again.';
+              break;
+            default:
+              message = `Camera error: ${videoError.message}`;
+          }
+        }
+        
+        return { 
+          granted: false, 
+          message 
+        };
+      }
+    }
+    
+    // For non-iOS platforms, use the original approach
+    console.log('🤖 Non-iOS: Using standard permission request...');
     
     // Use getUserMedia for all platforms to avoid triggering native camera UI
     // This will request permissions but won't open the native camera interface
@@ -120,96 +180,141 @@ export async function checkCameraPermissions(): Promise<CameraPermissionResult> 
 }
 
 /**
- * Get camera stream with proper permission handling
+ * Get camera stream with proper permission handling and iOS-specific optimizations
  * This function will request permissions if needed and then get the camera stream
  */
 export async function getCameraStream(options: CameraStreamOptions): Promise<MediaStream | null> {
   try {
+    console.log('🎥 Getting camera stream with options:', options);
+    console.log('🔍 User Agent:', navigator.userAgent);
+    console.log('🔍 Platform:', navigator.platform);
     
-    // Use direct getUserMedia approach for all platforms
-    // This bypasses Capacitor Camera plugin issues
-    const constraints = {
-      video: {
-        facingMode: options.facingMode,
-        width: { ideal: 1280, max: 1920 },
-        height: { ideal: 720, max: 1080 },
-        aspectRatio: { ideal: 16/9 }, // Standard aspect ratio to prevent cropping
-        frameRate: { ideal: 30 }
-      },
-      audio: options.audioEnabled
-    };
+    // Create a timeout promise to prevent infinite hanging on iOS
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Camera initialization timeout after 10 seconds'));
+      }, 10000);
+    });
 
+    // Detect iOS more reliably
+    const isIOS = Capacitor.getPlatform() === 'ios' || 
+                  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    console.log('📱 Detected iOS:', isIOS);
+    
+    let constraints;
+    if (isIOS) {
+      // For iOS, use the most basic constraints first to avoid hanging
+      constraints = {
+        video: {
+          facingMode: options.facingMode
+        },
+        audio: options.audioEnabled
+      };
+      console.log('🍎 Using iOS-optimized constraints');
+    } else {
+      // For other platforms, use more detailed constraints
+      constraints = {
+        video: {
+          facingMode: options.facingMode,
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          aspectRatio: { ideal: 16/9 },
+          frameRate: { ideal: 30 }
+        },
+        audio: options.audioEnabled
+      };
+      console.log('🤖 Using standard constraints');
+    }
+
+    console.log('📋 Final constraints:', JSON.stringify(constraints, null, 2));
     
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Race the getUserMedia call against timeout
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia(constraints),
+        timeoutPromise
+      ]);
       
+      console.log('✅ Camera stream obtained successfully');
       return stream;
       
     } catch (error) {
-      console.error('getUserMedia failed with constraints:', error);
+      console.error('❌ Primary getUserMedia failed:', error);
       
-      // Try with simpler constraints if the detailed ones failed
+      // iOS-specific fallback: try even simpler constraints
+      if (isIOS) {
+        try {
+          console.log('🔄 Trying iOS fallback constraints...');
+          const fallbackConstraints = {
+            video: { facingMode: options.facingMode },
+            audio: false // Disable audio for iOS fallback
+          };
+          
+          const stream = await Promise.race([
+            navigator.mediaDevices.getUserMedia(fallbackConstraints),
+            timeoutPromise
+          ]);
+          
+          console.log('✅ iOS fallback stream obtained');
+          return stream;
+          
+        } catch (fallbackError) {
+          console.error('❌ iOS fallback also failed:', fallbackError);
+          throw fallbackError;
+        }
+      }
+      
+      // Non-iOS fallback logic
       try {
         const simpleConstraints = {
-          video: {
-            facingMode: options.facingMode
-          },
+          video: { facingMode: options.facingMode },
           audio: options.audioEnabled
         };
         
-        const stream = await navigator.mediaDevices.getUserMedia(simpleConstraints);
+        const stream = await Promise.race([
+          navigator.mediaDevices.getUserMedia(simpleConstraints),
+          timeoutPromise
+        ]);
+        
         return stream;
         
       } catch (simpleError) {
         console.error('Simple getUserMedia also failed:', simpleError);
         
-        // If audio+video failed, try video-only
+        // Final fallback - video only
         if (options.audioEnabled) {
-        try {
-          const videoOnlyConstraints = {
-            video: {
-              facingMode: options.facingMode,
-              width: { ideal: 1280, max: 1920 },
-              height: { ideal: 720, max: 1080 },
-              aspectRatio: { ideal: 16/9 }, // Standard aspect ratio to prevent cropping
-              frameRate: { ideal: 30 }
-            }
-          };
-          
-          const videoStream = await navigator.mediaDevices.getUserMedia(videoOnlyConstraints);
-          return videoStream;
-          
-        } catch (videoError) {
-          console.error('Video-only stream also failed:', videoError);
-          
-          // Final fallback - try with just facingMode
           try {
-            const fallbackConstraints = {
-              video: {
-                facingMode: options.facingMode
-              }
+            const videoOnlyConstraints = {
+              video: { facingMode: options.facingMode }
             };
             
-            const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-            return fallbackStream;
+            const videoStream = await Promise.race([
+              navigator.mediaDevices.getUserMedia(videoOnlyConstraints),
+              timeoutPromise
+            ]);
             
-          } catch (fallbackError) {
-            console.error('All camera constraint attempts failed:', fallbackError);
-            throw fallbackError;
+            return videoStream;
+            
+          } catch (videoError) {
+            console.error('Video-only stream also failed:', videoError);
+            throw videoError;
           }
+        } else {
+          throw simpleError;
         }
-      } else {
-        throw simpleError;
       }
-    }
     }
     
   } catch (error) {
-    console.error('Error getting camera stream:', error);
+    console.error('❌ Error getting camera stream:', error);
     
     // Provide more specific error messages
     if (error instanceof Error) {
-      if (error.name === 'NotAllowedError') {
+      if (error.message.includes('timeout')) {
+        throw new Error('Camera initialization timed out. Please close other apps using the camera and try again.');
+      } else if (error.name === 'NotAllowedError') {
         throw new Error('Camera access denied. Please allow camera permissions and try again.');
       } else if (error.name === 'NotFoundError') {
         throw new Error('No camera found. Please check your device has a camera.');

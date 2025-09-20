@@ -54,13 +54,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const recordingMimeTypeRef = useRef<string>('video/webm')
 
-  // Initialize camera with native permissions
+  // Initialize camera with native permissions and timeout handling
   const initCamera = useCallback(async () => {
     // Prevent multiple simultaneous initializations
     if (cameraLoading || permissionLoading) {
+      console.log('🚫 Camera init blocked - already loading:', { cameraLoading, permissionLoading })
       return
     }
 
+    console.log('🎥 Initializing camera...')
     setCameraLoading(true)
     setCameraReady(false)
 
@@ -70,7 +72,20 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       streamRef.current = null
     }
 
+    // Create a timeout to prevent infinite loading
+    const initTimeout = setTimeout(() => {
+      console.log('⏰ Camera initialization timeout')
+      setCameraLoading(false)
+      setCameraReady(false)
+      toast({
+        title: "Camera Timeout",
+        description: "Camera is taking too long to start. Please close other apps using the camera and try again.",
+        variant: "destructive",
+      })
+    }, 15000) // 15 second timeout
+
     try {
+      console.log('📱 Getting camera stream with permissions...')
 
       // Use the hook to get camera stream with native permissions
       const stream = await getCameraStreamWithPermission({
@@ -78,22 +93,41 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         audioEnabled: audioEnabled
       })
 
+      // Clear timeout since we got a response
+      clearTimeout(initTimeout)
+
       if (!stream) {
         throw new Error('Failed to get camera stream - permission may have been denied')
       }
 
+      console.log('✅ Camera stream obtained, setting up video element...')
       streamRef.current = stream
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
 
+        // Create a timeout for video loading
+        const videoTimeout = setTimeout(() => {
+          console.log('⏰ Video loading timeout')
+          setCameraLoading(false)
+          toast({
+            title: "Video Loading Timeout",
+            description: "Video preview is taking too long to load. Please try again.",
+            variant: "destructive",
+          })
+        }, 10000) // 10 second timeout for video loading
+
         // Wait for video to be ready
         videoRef.current.onloadedmetadata = () => {
+          console.log('📹 Video metadata loaded, starting playback...')
+          clearTimeout(videoTimeout)
+
           videoRef.current?.play().then(() => {
+            console.log('✅ Video playback started successfully')
             setCameraReady(true)
             setCameraLoading(false)
           }).catch(err => {
-            console.error('Error playing video:', err)
+            console.error('❌ Error playing video:', err)
             setCameraLoading(false)
             toast({
               title: "Camera Error",
@@ -105,21 +139,32 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Add error handler for video element
         videoRef.current.onerror = (err) => {
-          console.error('Video element error:', err)
+          console.error('❌ Video element error:', err)
+          clearTimeout(videoTimeout)
           setCameraLoading(false)
           setCameraReady(false)
+          toast({
+            title: "Video Error",
+            description: "Video preview failed to load. Please try again.",
+            variant: "destructive",
+          })
         }
       }
 
     } catch (error) {
-      console.error('Error accessing camera:', error)
+      console.error('❌ Error accessing camera:', error)
+      clearTimeout(initTimeout)
       setCameraLoading(false)
       setCameraReady(false)
 
       // Show user-friendly error message
       let errorMessage = "Failed to access camera. Please try again."
       if (error instanceof Error) {
-        errorMessage = error.message
+        if (error.message.includes('timeout')) {
+          errorMessage = "Camera initialization timed out. Please close other apps using the camera and try again."
+        } else {
+          errorMessage = error.message
+        }
       }
 
       toast({
@@ -1107,12 +1152,35 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                     <p className="text-white text-lg mb-2 text-center">
                       {permissionLoading ? 'Requesting permissions...' : 'Starting camera...'}
                     </p>
-                    <p className="text-white/70 text-sm text-center px-4">
+                    <p className="text-white/70 text-sm text-center px-4 mb-6">
                       {permissionLoading
                         ? 'Please allow camera and microphone access when prompted'
                         : 'Setting up your camera for recording'
                       }
                     </p>
+                    {/* Show retry button during loading for iOS users */}
+                    <div className="flex flex-col gap-3 w-full max-w-xs">
+                      <Button
+                        onClick={() => {
+                          // Force stop current loading and retry
+                          setCameraLoading(false)
+                          setTimeout(() => {
+                            initCamera()
+                          }, 500)
+                        }}
+                        variant="outline"
+                        className="border-white/30 text-white hover:bg-white/10 rounded-full px-6 py-3 w-full"
+                      >
+                        Retry Camera
+                      </Button>
+                      <Button
+                        onClick={() => setMode('upload')}
+                        variant="ghost"
+                        className="text-white/70 hover:text-white hover:bg-white/10 rounded-full px-6 py-2 w-full text-sm"
+                      >
+                        Upload Video Instead
+                      </Button>
+                    </div>
                   </>
                 ) : (
                   <>

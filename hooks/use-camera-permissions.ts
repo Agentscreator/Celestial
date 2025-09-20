@@ -57,35 +57,68 @@ export function useCameraPermissions(): UseCameraPermissionsReturn {
 
   const getCameraStreamWithPermission = useCallback(async (options: { facingMode: 'user' | 'environment'; audioEnabled: boolean }): Promise<MediaStream | null> => {
     try {
+      console.log('🔐 Getting camera stream with permission check...');
       
       // First ensure we have permission
       let hasPermissionNow = hasPermission;
       
       // If we don't know the permission status, check it first
       if (hasPermissionNow === null) {
+        console.log('❓ Permission status unknown, checking...');
         hasPermissionNow = await checkPermission();
       }
       
       // If we don't have permission, request it
       if (!hasPermissionNow) {
+        console.log('🚫 No permission, requesting...');
         hasPermissionNow = await requestPermission();
       }
       
       if (!hasPermissionNow) {
+        console.log('❌ Permission denied');
         return null;
       }
 
-      // Get the camera stream
-      const stream = await getCameraStream(options);
+      console.log('✅ Permission granted, getting camera stream...');
+      
+      // Get the camera stream with retry logic for iOS
+      let stream: MediaStream | null = null;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (!stream && retryCount < maxRetries) {
+        try {
+          stream = await getCameraStream(options);
+          if (stream) {
+            console.log('✅ Camera stream obtained on attempt', retryCount + 1);
+            break;
+          }
+        } catch (error) {
+          retryCount++;
+          console.log(`❌ Camera stream attempt ${retryCount} failed:`, error);
+          
+          if (retryCount < maxRetries) {
+            console.log(`🔄 Retrying in 1 second... (${retryCount}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            throw error;
+          }
+        }
+      }
+      
       return stream;
     } catch (error) {
-      console.error('Error getting camera stream:', error);
+      console.error('❌ Error getting camera stream:', error);
       
       let errorMessage = "Failed to access camera. Please try again.";
       if (error instanceof Error) {
         if (error.message.includes('denied') || error.message.includes('permission')) {
           errorMessage = "Camera permission denied. Please allow camera access in your device settings.";
           setHasPermission(false); // Update permission state
+        } else if (error.message.includes('timeout')) {
+          errorMessage = "Camera is taking too long to start. Please close other apps using the camera and try again.";
+        } else if (error.message.includes('already in use')) {
+          errorMessage = "Camera is already in use by another app. Please close other apps and try again.";
         } else {
           errorMessage = error.message;
         }

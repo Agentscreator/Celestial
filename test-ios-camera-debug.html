@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Camera Debug Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        video {
+            width: 100%;
+            height: 300px;
+            background: #333;
+            border-radius: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 8px;
+            background: #007AFF;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #222;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+            text-align: center;
+        }
+        .success { background: #28a745; }
+        .error { background: #dc3545; }
+        .warning { background: #ffc107; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>iOS Camera Debug Test</h1>
+        
+        <video id="video" autoplay muted playsinline></video>
+        
+        <div id="status" class="status warning">Ready to test</div>
+        
+        <button id="testBasic" onclick="testBasicCamera()">Test Basic Camera</button>
+        <button id="testWithAudio" onclick="testCameraWithAudio()">Test Camera + Audio</button>
+        <button id="testFrontCamera" onclick="testFrontCamera()">Test Front Camera</button>
+        <button id="testBackCamera" onclick="testBackCamera()">Test Back Camera</button>
+        <button id="stopCamera" onclick="stopCamera()" disabled>Stop Camera</button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const statusDiv = document.getElementById('status');
+        const logDiv = document.getElementById('log');
+        let currentStream = null;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            console.log(logEntry);
+            logDiv.innerHTML += logEntry + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setStatus(message, type = 'warning') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function updateButtons(cameraActive) {
+            document.getElementById('testBasic').disabled = cameraActive;
+            document.getElementById('testWithAudio').disabled = cameraActive;
+            document.getElementById('testFrontCamera').disabled = cameraActive;
+            document.getElementById('testBackCamera').disabled = cameraActive;
+            document.getElementById('stopCamera').disabled = !cameraActive;
+        }
+
+        async function testBasicCamera() {
+            log('Testing basic camera access...');
+            setStatus('Starting basic camera test...', 'warning');
+            
+            try {
+                const constraints = {
+                    video: true
+                };
+                
+                log('Requesting getUserMedia with constraints: ' + JSON.stringify(constraints));
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                currentStream = stream;
+                video.srcObject = stream;
+                
+                log('✅ Basic camera access successful');
+                setStatus('Basic camera working!', 'success');
+                updateButtons(true);
+                
+                // Log stream details
+                const videoTracks = stream.getVideoTracks();
+                if (videoTracks.length > 0) {
+                    const track = videoTracks[0];
+                    log(`Video track: ${track.label}, enabled: ${track.enabled}, ready: ${track.readyState}`);
+                    log(`Settings: ${JSON.stringify(track.getSettings())}`);
+                }
+                
+            } catch (error) {
+                log('❌ Basic camera test failed: ' + error.message);
+                setStatus('Basic camera failed: ' + error.message, 'error');
+                console.error('Camera error:', error);
+            }
+        }
+
+        async function testCameraWithAudio() {
+            log('Testing camera with audio...');
+            setStatus('Starting camera + audio test...', 'warning');
+            
+            try {
+                const constraints = {
+                    video: true,
+                    audio: true
+                };
+                
+                log('Requesting getUserMedia with constraints: ' + JSON.stringify(constraints));
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                currentStream = stream;
+                video.srcObject = stream;
+                
+                log('✅ Camera + audio access successful');
+                setStatus('Camera + audio working!', 'success');
+                updateButtons(true);
+                
+                // Log stream details
+                const videoTracks = stream.getVideoTracks();
+                const audioTracks = stream.getAudioTracks();
+                
+                if (videoTracks.length > 0) {
+                    const track = videoTracks[0];
+                    log(`Video track: ${track.label}, enabled: ${track.enabled}`);
+                }
+                
+                if (audioTracks.length > 0) {
+                    const track = audioTracks[0];
+                    log(`Audio track: ${track.label}, enabled: ${track.enabled}`);
+                }
+                
+            } catch (error) {
+                log('❌ Camera + audio test failed: ' + error.message);
+                setStatus('Camera + audio failed: ' + error.message, 'error');
+                console.error('Camera + audio error:', error);
+            }
+        }
+
+        async function testFrontCamera() {
+            log('Testing front camera...');
+            setStatus('Starting front camera test...', 'warning');
+            
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'user'
+                    },
+                    audio: true
+                };
+                
+                log('Requesting getUserMedia with constraints: ' + JSON.stringify(constraints));
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                currentStream = stream;
+                video.srcObject = stream;
+                
+                log('✅ Front camera access successful');
+                setStatus('Front camera working!', 'success');
+                updateButtons(true);
+                
+            } catch (error) {
+                log('❌ Front camera test failed: ' + error.message);
+                setStatus('Front camera failed: ' + error.message, 'error');
+                console.error('Front camera error:', error);
+            }
+        }
+
+        async function testBackCamera() {
+            log('Testing back camera...');
+            setStatus('Starting back camera test...', 'warning');
+            
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: 'environment'
+                    },
+                    audio: true
+                };
+                
+                log('Requesting getUserMedia with constraints: ' + JSON.stringify(constraints));
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                currentStream = stream;
+                video.srcObject = stream;
+                
+                log('✅ Back camera access successful');
+                setStatus('Back camera working!', 'success');
+                updateButtons(true);
+                
+            } catch (error) {
+                log('❌ Back camera test failed: ' + error.message);
+                setStatus('Back camera failed: ' + error.message, 'error');
+                console.error('Back camera error:', error);
+            }
+        }
+
+        function stopCamera() {
+            log('Stopping camera...');
+            
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => {
+                    track.stop();
+                    log(`Stopped track: ${track.label}`);
+                });
+                currentStream = null;
+            }
+            
+            video.srcObject = null;
+            setStatus('Camera stopped', 'warning');
+            updateButtons(false);
+            log('✅ Camera stopped successfully');
+        }
+
+        // Log device info
+        log('Device info:');
+        log('User Agent: ' + navigator.userAgent);
+        log('Platform: ' + navigator.platform);
+        log('Language: ' + navigator.language);
+        
+        // Check for mediaDevices support
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            log('✅ getUserMedia is supported');
+        } else {
+            log('❌ getUserMedia is not supported');
+        }
+
+        // Check for camera devices
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    log(`Found ${videoDevices.length} video input devices:`);
+                    videoDevices.forEach((device, index) => {
+                        log(`  ${index + 1}. ${device.label || 'Unknown Camera'} (${device.deviceId})`);
+                    });
+                })
+                .catch(error => {
+                    log('❌ Failed to enumerate devices: ' + error.message);
+                });
+        }
+    </script>
+</body>
+</html>
