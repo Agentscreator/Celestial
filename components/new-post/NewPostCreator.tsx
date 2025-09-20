@@ -19,6 +19,7 @@ interface NewPostCreatorProps {
 }
 
 export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreatorProps) {
+  console.log('🎬 NewPostCreator rendered with props:', { isOpen })
 
   const [mode, setMode] = useState<'camera' | 'upload' | 'preview'>('camera')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -912,9 +913,6 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           console.log('🗑️ Blob URL revoked')
         }
 
-        // Reset all states using the reset function
-        resetAllStates()
-
         console.log('📢 Notifying parent component...')
         // Notify parent and close
         onPostCreated?.(result.post)
@@ -927,6 +925,15 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         // Close modal and navigate to feed
         console.log('🚪 Closing post creator and navigating to feed...')
+
+        // Clean up blob URL
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl)
+          console.log('🗑️ Blob URL revoked')
+        }
+
+        // Reset states and close
+        resetAllStates()
         onClose()
 
         // Navigate to feed page after a short delay to ensure modal closes smoothly
@@ -998,6 +1005,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         description: userMessage,
         variant: "destructive",
       })
+
+      // Don't reset everything on error - just stop the loading state
+      // This allows users to try again without losing their content
     } finally {
       console.log('🏁 Post creation attempt finished, setting isUploading to false')
       setIsUploading(false)
@@ -1042,32 +1052,28 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera when dialog opens and in camera mode
   useEffect(() => {
-    if (isOpen && mode === 'camera') {
+    if (isOpen && mode === 'camera' && !cameraLoading && !cameraReady) {
+      console.log('🎥 Modal opened in camera mode - initializing camera...')
       // Small delay to ensure modal is fully open before starting camera
       setTimeout(() => {
         initCamera()
-      }, 100)
+      }, 200)
     } else if (!isOpen) {
       // Complete reset when modal closes
       console.log('🧹 Modal closed - resetting all states...')
       resetAllStates()
-    } else {
+    } else if (mode !== 'camera') {
       // Just stop camera when mode changes but modal is still open
-      console.log('🧹 Mode changed - stopping camera...')
+      console.log('🧹 Mode changed from camera - stopping camera...')
       stopCamera()
     }
 
     return () => {
       console.log('🧹 useEffect cleanup...')
-      if (!isOpen) {
-        // Only do full reset if modal is actually closed
-        resetAllStates()
-      } else {
-        // Just stop camera if modal is still open
-        stopCamera()
-      }
+      // Always stop camera on cleanup to prevent memory leaks
+      stopCamera()
     }
-  }, [isOpen, mode, resetAllStates]) // Added resetAllStates to dependencies
+  }, [isOpen, mode]) // Removed resetAllStates from dependencies to prevent infinite loops
 
   // Pause all feed videos when post creator opens
   useEffect(() => {
@@ -1084,11 +1090,12 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
-    if (mode === 'camera' && isOpen) {
+    if (mode === 'camera' && isOpen && cameraReady) {
+      console.log('🔄 Camera settings changed - reinitializing...')
       stopCamera()
       setTimeout(() => {
         initCamera()
-      }, 100)
+      }, 300)
     }
   }, [facingMode, audioEnabled]) // Only depend on the actual settings, not the functions
 
@@ -1898,8 +1905,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
                     console.log('📝 Button disabled?', isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile))
 
-                    // Show caption input if not already shown
-                    if (!showCaption) {
+                    // Show caption input if not already shown and no content exists
+                    if (!showCaption && !caption.trim() && !selectedFile) {
+                      console.log('📝 Showing caption input first')
                       setShowCaption(true)
                       return
                     }
@@ -1958,7 +1966,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       <span className="hidden sm:inline">Stopping...</span>
                       <span className="sm:hidden">...</span>
                     </div>
-                  ) : !showCaption ? (
+                  ) : !showCaption && !caption.trim() && !selectedFile ? (
                     "Add Caption"
                   ) : (
                     "Post"
