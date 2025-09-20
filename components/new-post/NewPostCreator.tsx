@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { FullscreenDialog } from "./FullscreenDialog"
@@ -45,6 +46,9 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Use camera permissions hook
   const { hasPermission, isLoading: permissionLoading, getCameraStreamWithPermission, checkPermission } = useCameraPermissions()
+  
+  // Use router for navigation
+  const router = useRouter()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -722,7 +726,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
         toast({
           title: "Success!",
-          description: "Your post has been created",
+          description: "Your post has been created - taking you to the feed",
         })
 
         console.log('🧹 Cleaning up form data...')
@@ -739,15 +743,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         // Notify parent and close
         onPostCreated?.(result.post)
 
-        console.log('� Rlefreshing feed...')
+        console.log('🔄 Refreshing feed...')
         // Refresh feed
         window.dispatchEvent(new CustomEvent('postCreated'))
 
-        // Add a small delay to let the user see the success message, then close
-        console.log('🚪 Closing post creator in 1 second...')
+        // Close modal and navigate to feed
+        console.log('🚪 Closing post creator and navigating to feed...')
+        onClose()
+        
+        // Navigate to feed page after a short delay to ensure modal closes smoothly
         setTimeout(() => {
-          onClose()
-        }, 1000)
+          router.push('/feed')
+        }, 100)
       } else {
         const errorText = await response.text()
         console.error('❌ Post creation failed:', {
