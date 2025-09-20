@@ -319,11 +319,20 @@ const VideoFeedItem = ({
 
   const handleShare = async () => {
     try {
-      console.log('Sharing post:', post.id);
+      console.log('🔄 Starting share process for post:', post.id);
+      
+      // Show immediate feedback
+      toast({
+        title: "Generating share link...",
+        description: "Please wait a moment.",
+      });
       
       // Call the share API to get proper share data
       const response = await fetch(`/api/posts/${post.id}/share`, {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       if (response.ok) {
@@ -339,9 +348,13 @@ const VideoFeedItem = ({
               url: shareData.url,
             });
             console.log('✅ Native share successful');
+            toast({
+              title: "Shared!",
+              description: "Post shared successfully.",
+            });
             return;
           } catch (shareError) {
-            console.log("Native share failed, falling back to clipboard");
+            console.log("Native share failed, falling back to clipboard:", shareError);
           }
         }
 
@@ -378,13 +391,13 @@ const VideoFeedItem = ({
         }
       } else {
         const errorText = await response.text();
-        console.error('Share API failed:', response.status, errorText);
-        throw new Error('Failed to generate share link');
+        console.error('❌ Share API failed:', response.status, errorText);
+        throw new Error(`Failed to generate share link: ${response.status}`);
       }
     } catch (error) {
-      console.error('Error sharing post:', error);
+      console.error('❌ Error sharing post:', error);
       // Fallback to basic sharing
-      const fallbackUrl = `${window.location.origin}/post/${post.id}`;
+      const fallbackUrl = `${window.location.origin}/posts/shared/fallback-${post.id}`;
       if (navigator.clipboard && window.isSecureContext) {
         try {
           await navigator.clipboard.writeText(fallbackUrl);
@@ -396,12 +409,14 @@ const VideoFeedItem = ({
           toast({
             title: "Share Link",
             description: `Copy this link: ${fallbackUrl}`,
+            variant: "destructive",
           });
         }
       } else {
         toast({
           title: "Share Link",
           description: `Copy this link: ${fallbackUrl}`,
+          variant: "destructive",
         });
       }
     }
@@ -570,7 +585,13 @@ const VideoFeedItem = ({
       {isVideo() && isPlaying && (
         <div 
           className="absolute inset-0 z-5"
-          onClick={() => {
+          onClick={(e) => {
+            // Don't pause if clicking on buttons or interactive elements
+            const target = e.target as HTMLElement;
+            if (target.closest('button') || target.closest('[role="button"]')) {
+              return;
+            }
+            
             const video = videoRef.current;
             if (video) {
               video.pause();
@@ -596,7 +617,10 @@ const VideoFeedItem = ({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={handleLike}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLike();
+            }}
             disabled={isLiking}
             className={`w-10 h-10 rounded-full transition-all duration-200 ${
               isLiked 
@@ -613,7 +637,10 @@ const VideoFeedItem = ({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => handleComment()}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleComment();
+            }}
             className="w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
           >
             <MessageCircle className="w-5 h-5" />
@@ -624,7 +651,11 @@ const VideoFeedItem = ({
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => handleShare()}
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('🔄 Share button clicked for post:', post.id);
+            handleShare();
+          }}
           className="w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
         >
           <Share className="w-5 h-5" />
