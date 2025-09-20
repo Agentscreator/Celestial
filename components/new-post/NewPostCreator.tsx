@@ -175,7 +175,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         variant: "destructive",
       })
     }
-  }, [facingMode, audioEnabled, cameraLoading, permissionLoading, getCameraStreamWithPermission])
+  }, [facingMode, audioEnabled, getCameraStreamWithPermission])
 
   // Stop camera
   const stopCamera = useCallback(() => {
@@ -915,7 +915,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Re-initialize camera when settings change (but not on first load)
   useEffect(() => {
-    if (cameraReady && mode === 'camera') {
+    if (mode === 'camera' && isOpen) {
       stopCamera()
       setTimeout(() => {
         initCamera()
@@ -989,7 +989,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         clearInterval(permissionCheckInterval)
       }
     }
-  }, [isOpen, mode, cameraReady, cameraLoading, hasPermission, checkPermission, initCamera])
+  }, [isOpen, mode, hasPermission, checkPermission])
 
   // Cleanup blob URLs on component unmount
   useEffect(() => {
