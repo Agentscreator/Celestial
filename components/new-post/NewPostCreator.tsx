@@ -286,26 +286,48 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file type - only videos allowed
-      if (!file.type.startsWith('video/')) {
+      console.log('📁 File selected:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      })
+
+      // Validate file type - allow both videos and images
+      if (!file.type.startsWith('video/') && !file.type.startsWith('image/')) {
+        console.error('❌ Invalid file type:', file.type)
         toast({
           title: "Invalid file type",
-          description: "Please select a video file",
+          description: "Please select a video or image file",
           variant: "destructive",
         })
         return
       }
 
-      // Validate file size (50MB max)
-      const maxSize = 50 * 1024 * 1024
+      // Validate file size (50MB for videos, 10MB for images)
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
       if (file.size > maxSize) {
+        console.error('❌ File too large:', file.size)
         toast({
           title: "File too large",
-          description: "Please select a file smaller than 50MB",
+          description: `Please select a file smaller than ${file.type.startsWith('video/') ? '50MB' : '10MB'}`,
           variant: "destructive",
         })
         return
       }
+
+      // Validate file is not empty
+      if (file.size === 0) {
+        console.error('❌ Empty file selected')
+        toast({
+          title: "Empty file",
+          description: "The selected file is empty. Please choose a different file.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      console.log('✅ File validation passed')
 
       // Clean up any existing preview URL before creating new one
       if (previewUrl) {
@@ -316,6 +338,10 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
       setMode('preview')
+
+      console.log('✅ File set and preview created')
+    } else {
+      console.log('❌ No file selected')
     }
   }
 
@@ -723,69 +749,67 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
         lastModified: selectedFile.lastModified
       } : 'No file')
 
-      // Enhanced file validation
-      if (!selectedFile || selectedFile.size === 0) {
-        console.error('❌ Invalid file: file is null or empty')
-        toast({
-          title: "Invalid file",
-          description: "The selected file appears to be empty or corrupted. Please try recording again.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Check file size limits (50MB for videos, 10MB for images)
-      const maxSize = selectedFile.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
-      if (selectedFile.size > maxSize) {
-        console.error('❌ File too large:', selectedFile.size)
-        toast({
-          title: "File too large",
-          description: `File size is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed is ${maxSize / 1024 / 1024}MB.`,
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Validate file type
-      if (!selectedFile.type.startsWith('video/') && !selectedFile.type.startsWith('image/')) {
-        console.error('❌ Invalid file type:', selectedFile.type)
-        toast({
-          title: "Invalid file type",
-          description: "Please select a video or image file.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      console.log('✅ File validation passed')
-
-      // Test file readability
-      try {
-        const testBuffer = await selectedFile.arrayBuffer()
-        if (testBuffer.byteLength === 0) {
-          throw new Error('File is empty')
+      // Enhanced file validation - only validate if file exists
+      if (selectedFile) {
+        if (selectedFile.size === 0) {
+          console.error('❌ Invalid file: file is empty')
+          toast({
+            title: "Invalid file",
+            description: "The selected file appears to be empty or corrupted. Please try recording again.",
+            variant: "destructive",
+          })
+          return
         }
-        console.log('✅ File is readable, size:', testBuffer.byteLength)
-      } catch (fileError) {
-        console.error('❌ File is not readable:', fileError)
-        toast({
-          title: "File error",
-          description: "The selected file cannot be read. Please try recording again.",
-          variant: "destructive",
-        })
-        return
+
+        // Check file size limits (50MB for videos, 10MB for images)
+        const maxSize = selectedFile.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+        if (selectedFile.size > maxSize) {
+          console.error('❌ File too large:', selectedFile.size)
+          toast({
+            title: "File too large",
+            description: `File size is ${(selectedFile.size / 1024 / 1024).toFixed(1)}MB. Maximum allowed is ${maxSize / 1024 / 1024}MB.`,
+            variant: "destructive",
+          })
+          return
+        }
+
+        // Validate file type
+        if (!selectedFile.type.startsWith('video/') && !selectedFile.type.startsWith('image/')) {
+          console.error('❌ Invalid file type:', selectedFile.type)
+          toast({
+            title: "Invalid file type",
+            description: "Please select a video or image file.",
+            variant: "destructive",
+          })
+          return
+        }
+
+        console.log('✅ File validation passed')
+
+        // Test file readability
+        try {
+          const testBuffer = await selectedFile.arrayBuffer()
+          if (testBuffer.byteLength === 0) {
+            throw new Error('File is empty')
+          }
+          console.log('✅ File is readable, size:', testBuffer.byteLength)
+        } catch (fileError) {
+          console.error('❌ File is not readable:', fileError)
+          toast({
+            title: "File error",
+            description: "The selected file cannot be read. Please try recording again.",
+            variant: "destructive",
+          })
+          return
+        }
+      } else {
+        console.log('📝 Creating text-only post (no media file)')
       }
 
       const formData = new FormData()
       formData.append('content', caption.trim())
       if (selectedFile) {
-        formData.append('media', selectedFile)
-      }
-      formData.append('isInvite', 'false')
-
-      // Additional debugging for media upload
-      if (selectedFile) {
-        console.log('📁 Media file details before upload:', {
+        console.log('📁 Adding media file to FormData:', {
           name: selectedFile.name,
           size: selectedFile.size,
           type: selectedFile.type,
@@ -793,8 +817,21 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           isValidFile: selectedFile instanceof File,
           hasContent: selectedFile.size > 0
         })
+        formData.append('media', selectedFile)
+        console.log('✅ Media file added to FormData')
       } else {
-        console.log('📝 Creating text-only post')
+        console.log('📝 Creating text-only post (no media)')
+      }
+      formData.append('isInvite', 'false')
+
+      // Verify FormData contents
+      console.log('📦 FormData verification:')
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`- ${key}: File(name="${value.name}", size=${value.size}, type="${value.type}")`)
+        } else {
+          console.log(`- ${key}: "${value}"`)
+        }
       }
 
       // Add sound information if selected
@@ -847,6 +884,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
           video: result.post?.video,
           hasMedia: !!(result.post?.image || result.post?.video)
         })
+
+        // Verify media was properly uploaded and attached
+        if (selectedFile && !(result.post?.image || result.post?.video)) {
+          console.warn('⚠️ WARNING: Media file was provided but not found in created post!')
+          console.warn('Expected media type:', selectedFile.type.startsWith('video/') ? 'video' : 'image')
+          console.warn('Post image URL:', result.post?.image)
+          console.warn('Post video URL:', result.post?.video)
+        } else if (selectedFile && (result.post?.image || result.post?.video)) {
+          console.log('✅ Media successfully uploaded and attached to post')
+          const mediaUrl = result.post?.image || result.post?.video
+          console.log('📎 Media URL:', mediaUrl)
+        }
 
         // Play success sound
         playMessageSound()
@@ -1416,10 +1465,14 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                 <div>Time: {recordingTime}s</div>
                 <div>Camera Ready: {cameraReady ? 'YES' : 'NO'}</div>
                 <div>Camera Loading: {cameraLoading ? 'YES' : 'NO'}</div>
-                <div>Permission Loading: {permissionLoading ? 'YES' : 'NO'}</div>
-                <div>Has Permission: {hasPermission === null ? 'UNKNOWN' : hasPermission ? 'YES' : 'NO'}</div>
+                <div>Uploading: {isUploading ? 'YES' : 'NO'}</div>
                 <div>Mode: {mode}</div>
-                <div>Platform: {typeof window !== 'undefined' ? window.navigator.userAgent.includes('iPhone') ? 'iOS' : 'Other' : 'SSR'}</div>
+                <div>Show Caption: {showCaption ? 'YES' : 'NO'}</div>
+                <div>Has File: {selectedFile ? 'YES' : 'NO'}</div>
+                <div>Caption Length: {caption.length}</div>
+                <div>Button Disabled: {(isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile)) ? 'YES' : 'NO'}</div>
+                {selectedFile && <div>File: {selectedFile.name.substring(0, 15)}...</div>}
+                {selectedFile && <div>Size: {Math.round(selectedFile.size / 1024)}KB</div>}
               </div>
             )}
 
@@ -1749,7 +1802,18 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             </div>
 
             {/* Next Button - Positioned Lower - Hide after caption is shown */}
-            {!showCaption && (
+            {!showCaption && !selectedFile && (
+              <div className="absolute top-20 right-4 z-10 flex flex-col gap-2">
+                <Button
+                  onClick={() => setShowCaption(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-4 py-2 min-h-[40px] text-sm font-medium shadow-lg touch-manipulation"
+                >
+                  Text Post
+                </Button>
+              </div>
+            )}
+
+            {!showCaption && selectedFile && (
               <div className="absolute top-20 right-4 z-10">
                 <Button
                   onClick={() => setShowCaption(true)}
@@ -1806,42 +1870,46 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
             )}
 
-            {/* Post Button - Positioned Higher */}
-            {showCaption && (
+            {/* Post Button - Always visible when there's content */}
+            {(showCaption || caption.trim() || selectedFile) && (
               <div className="absolute bottom-32 right-4 z-20">
                 <Button
                   onClick={async (e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    console.log('📝 Post button clicked')
-                    console.log('📝 Button state:', {
+                    console.log('� POST BUtTTON CLICKED!')
+                    console.log('📝 Current state:', {
                       isUploading,
+                      cameraLoading,
+                      isRecording,
+                      isStoppingRecording,
                       captionLength: caption.length,
                       captionTrimmed: caption.trim().length,
                       hasSelectedFile: !!selectedFile,
+                      showCaption,
+                      mode,
                       selectedFileDetails: selectedFile ? {
                         name: selectedFile.name,
                         size: selectedFile.size,
-                        type: selectedFile.type
+                        type: selectedFile.type,
+                        lastModified: selectedFile.lastModified
                       } : null
                     })
 
-                    // Validate inputs before proceeding
-                    if (!caption.trim()) {
-                      console.log('❌ Caption validation failed')
-                      toast({
-                        title: "Description required",
-                        description: "Please add a description for your post",
-                        variant: "destructive",
-                      })
+                    console.log('📝 Button disabled?', isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile))
+
+                    // Show caption input if not already shown
+                    if (!showCaption) {
+                      setShowCaption(true)
                       return
                     }
 
-                    if (!selectedFile) {
-                      console.log('❌ File validation failed')
+                    // Validate inputs before proceeding - allow text-only or media-only posts
+                    if (!caption.trim() && !selectedFile) {
+                      console.log('❌ Content validation failed')
                       toast({
-                        title: "Media required",
-                        description: "Please record a video or upload a file",
+                        title: "Content required",
+                        description: "Please add a description or record/upload media for your post",
                         variant: "destructive",
                       })
                       return
@@ -1890,6 +1958,8 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                       <span className="hidden sm:inline">Stopping...</span>
                       <span className="sm:hidden">...</span>
                     </div>
+                  ) : !showCaption ? (
+                    "Add Caption"
                   ) : (
                     "Post"
                   )}
