@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { PermissionsManager } from '../utils/permissions';
+import { requestCameraPermissions, requestMicrophonePermissions } from '../utils/camera';
 
 export function PermissionsInitializer() {
   const [initialized, setInitialized] = useState(false);
@@ -24,8 +24,22 @@ export function PermissionsInitializer() {
         if (!hasInitialized) {
           console.log('First time app launch this session - requesting native permissions...');
           
-          // Use the native permission manager to initialize all permissions
-          await PermissionsManager.initializeAllPermissions();
+          // Use the updated camera utilities that avoid native camera UI
+          try {
+            console.log('Requesting camera permissions...');
+            await requestCameraPermissions();
+            console.log('✅ Camera permissions requested');
+          } catch (error) {
+            console.log('Camera permissions request failed:', error);
+          }
+
+          try {
+            console.log('Requesting microphone permissions...');
+            await requestMicrophonePermissions();
+            console.log('✅ Microphone permissions requested');
+          } catch (error) {
+            console.log('Microphone permissions request failed:', error);
+          }
           
           // Mark as initialized for this session
           sessionStorage.setItem('permissions-initialized', 'true');

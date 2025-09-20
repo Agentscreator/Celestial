@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { PermissionsManager, PermissionStatus } from '../utils/permissions';
+import { requestCameraPermissions as requestCamera, checkCameraPermissions, requestMicrophonePermissions } from '../utils/camera';
 import { Capacitor } from '@capacitor/core';
+
+export interface PermissionStatus {
+  camera: boolean;
+  photos: boolean;
+  microphone: boolean;
+}
 
 export function usePermissions() {
   const [permissions, setPermissions] = useState<PermissionStatus>({
@@ -19,10 +25,23 @@ export function usePermissions() {
   const checkPermissions = async () => {
     setLoading(true);
     try {
-      const status = await PermissionsManager.checkAllPermissions();
-      setPermissions(status);
+      // Check camera permissions using the updated utilities
+      const cameraResult = await checkCameraPermissions();
+      
+      // For now, assume photos permission is the same as camera
+      // and we can't easily check microphone permission status
+      setPermissions({
+        camera: cameraResult.granted,
+        photos: cameraResult.granted,
+        microphone: false // We can't easily check this without requesting
+      });
     } catch (error) {
       console.error('Error checking permissions:', error);
+      setPermissions({
+        camera: false,
+        photos: false,
+        microphone: false
+      });
     } finally {
       setLoading(false);
     }
@@ -30,11 +49,11 @@ export function usePermissions() {
 
   const requestCameraPermissions = async (): Promise<boolean> => {
     try {
-      const granted = await PermissionsManager.requestCameraPermissions();
-      if (granted) {
+      const result = await requestCamera();
+      if (result.granted) {
         await checkPermissions(); // Refresh permissions status
       }
-      return granted;
+      return result.granted;
     } catch (error) {
       console.error('Error requesting permissions:', error);
       return false;
@@ -43,15 +62,25 @@ export function usePermissions() {
 
   const ensureCameraPermissions = async (): Promise<boolean> => {
     try {
-      const granted = await PermissionsManager.ensureCameraPermissions();
-      if (granted) {
-        await checkPermissions(); // Refresh permissions status
-      } else if (isNative) {
-        // Show alert to go to settings
-        const deviceInfo = await PermissionsManager.getDeviceInfo();
-        PermissionsManager.showPermissionAlert(deviceInfo?.platform || 'unknown');
+      // First check if we already have permissions
+      const checkResult = await checkCameraPermissions();
+      if (checkResult.granted) {
+        return true;
       }
-      return granted;
+
+      // If not, request them
+      const requestResult = await requestCamera();
+      if (requestResult.granted) {
+        await checkPermissions(); // Refresh permissions status
+        return true;
+      }
+
+      // If still not granted and on native platform, show alert
+      if (isNative) {
+        alert('Camera permissions are required. Please enable them in your device Settings → Apps → MirroSocial → Permissions.');
+      }
+      
+      return false;
     } catch (error) {
       console.error('Error ensuring permissions:', error);
       return false;
