@@ -1198,6 +1198,17 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             {/* Camera Loading/Permission Overlay */}
             {(cameraLoading || permissionLoading || !cameraReady) && (
               <div className="absolute inset-0 bg-black flex flex-col items-center justify-center z-20 p-4">
+                {/* Exit button in overlay */}
+                <div className="absolute top-4 right-4 z-30">
+                  <Button
+                    variant="ghost"
+                    onClick={handleClose}
+                    className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
+                  >
+                    <X className="h-6 w-6" />
+                  </Button>
+                </div>
+                
                 {(cameraLoading || permissionLoading) ? (
                   <>
                     <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
@@ -1228,6 +1239,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                         className="text-white/70 hover:text-white hover:bg-white/10 rounded-full px-6 py-2 w-full text-sm"
                       >
                         Upload Video Instead
+                      </Button>
+                      <Button
+                        onClick={handleClose}
+                        variant="ghost"
+                        className="text-white/50 hover:text-white/70 hover:bg-white/5 rounded-full px-6 py-2 text-sm w-full"
+                      >
+                        Cancel
                       </Button>
                     </div>
                   </>
@@ -1275,6 +1293,13 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
                           Settings Help
                         </Button>
                       )}
+                      <Button
+                        onClick={handleClose}
+                        variant="ghost"
+                        className="text-white/50 hover:text-white/70 hover:bg-white/5 rounded-full px-6 py-2 text-sm w-full"
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </>
                 )}
@@ -1284,7 +1309,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
 
             {/* Top Bar */}
-            <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between p-4">
+            <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between p-4">
               <Button
                 variant="ghost"
                 onClick={handleClose}
@@ -1631,7 +1656,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             />
 
             {/* Top Bar */}
-            <div className="absolute top-4 left-0 right-0 z-10 flex items-center justify-between p-4">
+            <div className="absolute top-4 left-0 right-0 z-30 flex items-center justify-between p-4">
               <Button
                 variant="ghost"
                 onClick={() => {
