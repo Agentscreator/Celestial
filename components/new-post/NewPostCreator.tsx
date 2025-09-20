@@ -1063,12 +1063,16 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
 
   // Initialize camera when dialog opens and in camera mode
   useEffect(() => {
-    if (isOpen && mode === 'camera' && !cameraLoading && !cameraReady) {
-      console.log('🎥 Modal opened in camera mode - initializing camera...')
-      // Small delay to ensure modal is fully open before starting camera
-      setTimeout(() => {
-        initCamera()
-      }, 200)
+    if (isOpen && mode === 'camera') {
+      if (!cameraLoading && !cameraReady) {
+        console.log('🎥 Camera mode activated - initializing camera...')
+        // Small delay to ensure modal is fully open before starting camera
+        setTimeout(() => {
+          initCamera()
+        }, 200)
+      } else if (cameraReady) {
+        console.log('🎥 Camera already ready in camera mode')
+      }
     } else if (!isOpen) {
       // Complete reset when modal closes
       console.log('🧹 Modal closed - resetting all states...')
@@ -1084,7 +1088,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       // Always stop camera on cleanup to prevent memory leaks
       stopCamera()
     }
-  }, [isOpen, mode]) // Removed resetAllStates from dependencies to prevent infinite loops
+  }, [isOpen, mode, cameraLoading, cameraReady]) // Added camera states to dependencies
 
   // Pause all feed videos when post creator opens
   useEffect(() => {
@@ -1838,10 +1842,41 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
             <div className="absolute top-4 left-4 z-50">
               <Button
                 variant="ghost"
-                onClick={() => {
+                onClick={async () => {
                   console.log('🔙 Back to camera clicked')
-                  setMode('camera')
-                  removeFile()
+                  console.log('🔄 Resetting camera state and switching to camera mode...')
+
+                  try {
+                    // Stop any existing camera stream first
+                    stopCamera()
+
+                    // Reset all camera-related states
+                    setCameraReady(false)
+                    setCameraLoading(false)
+                    setCameraRetryCount(0)
+
+                    // Remove the file and switch mode
+                    removeFile()
+                    setMode('camera')
+
+                    // Wait a bit longer for cleanup, then initialize camera
+                    setTimeout(async () => {
+                      console.log('🎥 Initializing camera after mode switch...')
+                      try {
+                        await initCamera()
+                        console.log('✅ Camera initialization completed')
+                      } catch (error) {
+                        console.error('❌ Camera initialization failed:', error)
+                        toast({
+                          title: "Camera Error",
+                          description: "Failed to initialize camera. Try using 'Retry Camera' button.",
+                          variant: "destructive",
+                        })
+                      }
+                    }, 500)
+                  } catch (error) {
+                    console.error('❌ Error in back to camera:', error)
+                  }
                 }}
                 className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
               >
