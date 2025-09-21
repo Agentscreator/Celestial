@@ -921,6 +921,7 @@ export default function NewEventPage() {
 
                                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                                             <Button
+                                                type="button"
                                                 onClick={() => setShowVideoCreator(true)}
                                                 className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                                             >
@@ -928,6 +929,7 @@ export default function NewEventPage() {
                                             </Button>
                                             {!eventVideo && (
                                                 <Button
+                                                    type="button"
                                                     onClick={nextStep}
                                                     variant="outline"
                                                     className="border-gray-600 text-gray-300 hover:bg-gray-800 px-8 py-3 text-lg font-semibold rounded-xl transition-all duration-300"
