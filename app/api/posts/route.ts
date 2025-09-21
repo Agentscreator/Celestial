@@ -4,63 +4,20 @@ import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
 import { postsTable, usersTable, postLikesTable, postCommentsTable, postInvitesTable, postLocationsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
 import { desc, eq, count, and } from "drizzle-orm"
-import { put } from "@vercel/blob"
+import { uploadToR2 } from "@/src/lib/r2-storage"
 
 // Configure the API route
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+// Upload function now uses R2 instead of Vercel Blob
 async function uploadToStorage(options: {
   buffer: Buffer
   filename: string
   mimetype: string
   folder?: string
 }): Promise<string> {
-  const { buffer, filename, mimetype, folder = "post-media" } = options
-
-  const timestamp = Date.now()
-  const fileExtension = filename.split(".").pop()
-  const uniqueFilename = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`
-  const pathname = `${folder}/${uniqueFilename}`
-
-  console.log("=== BLOB UPLOAD DEBUG ===")
-  console.log("Uploading to path:", pathname)
-  console.log("File size:", buffer.length)
-  console.log("MIME type:", mimetype)
-  console.log("Buffer is valid:", buffer instanceof Buffer)
-  console.log("Buffer has content:", buffer.length > 0)
-
-  try {
-    const blob = await put(pathname, buffer, {
-      access: "public",
-      contentType: mimetype,
-    })
-
-    console.log("Blob upload successful:", blob.url)
-    console.log("Blob details:", {
-      url: blob.url,
-      pathname: blob.pathname,
-      contentType: blob.contentType,
-      contentDisposition: blob.contentDisposition,
-    })
-    console.log("=== BLOB UPLOAD COMPLETE ===")
-
-    return blob.url
-  } catch (blobError) {
-    console.error("=== BLOB UPLOAD ERROR ===")
-    console.error("Error details:", {
-      name: blobError instanceof Error ? blobError.name : 'Unknown',
-      message: blobError instanceof Error ? blobError.message : String(blobError),
-      stack: blobError instanceof Error ? blobError.stack : 'No stack'
-    })
-    console.error("Upload parameters:", {
-      pathname,
-      bufferSize: buffer.length,
-      mimetype,
-      hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
-    })
-    throw blobError
-  }
+  return uploadToR2(options)
 }
 
 // GET - Fetch posts
