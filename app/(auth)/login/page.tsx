@@ -146,7 +146,7 @@ export default function LoginPage() {
       </div>
 
       <Card className="w-full max-w-md bg-gray-900/95 border-gray-700 backdrop-blur-sm shadow-2xl">
-        <CardHeader className="space-y-3 px-6 pt-8 pb-6">
+        <CardHeader className="space-y-3 px-6 pt-6 pb-4">
           <CardTitle className="text-2xl sm:text-3xl font-bold text-center text-white tracking-tight">Welcome back</CardTitle>
           <CardDescription className="text-center text-gray-300 text-base leading-relaxed">
             Enter your credentials to access your account
