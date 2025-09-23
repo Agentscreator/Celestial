@@ -243,13 +243,13 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
     } catch (error) {
       console.error('❌ Primary getUserMedia failed:', error);
       
-      // iOS-specific fallback: try even simpler constraints
+      // iOS-specific fallback: try simpler constraints but keep audio if requested
       if (isIOS) {
         try {
           console.log('🔄 Trying iOS fallback constraints...');
           const fallbackConstraints = {
             video: { facingMode: options.facingMode },
-            audio: false // Disable audio for iOS fallback
+            audio: options.audioEnabled // Keep audio setting from original request
           };
           
           const stream = await Promise.race([
@@ -257,12 +257,36 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
             timeoutPromise
           ]);
           
-          console.log('✅ iOS fallback stream obtained');
+          console.log('✅ iOS fallback stream obtained with audio:', options.audioEnabled);
           return stream;
           
         } catch (fallbackError) {
           console.error('❌ iOS fallback also failed:', fallbackError);
-          throw fallbackError;
+          
+          // Only try without audio if audio was originally requested and failed
+          if (options.audioEnabled) {
+            try {
+              console.log('🔄 Trying iOS video-only as last resort...');
+              const videoOnlyConstraints = {
+                video: { facingMode: options.facingMode },
+                audio: false
+              };
+              
+              const videoStream = await Promise.race([
+                navigator.mediaDevices.getUserMedia(videoOnlyConstraints),
+                timeoutPromise
+              ]);
+              
+              console.warn('⚠️ iOS: Got video-only stream (audio failed)');
+              return videoStream;
+              
+            } catch (videoOnlyError) {
+              console.error('❌ iOS video-only also failed:', videoOnlyError);
+              throw videoOnlyError;
+            }
+          } else {
+            throw fallbackError;
+          }
         }
       }
       
@@ -283,8 +307,8 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
       } catch (simpleError) {
         console.error('Simple getUserMedia also failed:', simpleError);
         
-        // Final fallback - video only
-        if (options.audioEnabled) {
+        // Final fallback - only use video-only if audio was not requested
+        if (!options.audioEnabled) {
           try {
             const videoOnlyConstraints = {
               video: { facingMode: options.facingMode }
@@ -295,6 +319,7 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
               timeoutPromise
             ]);
             
+            console.log('✅ Video-only fallback stream obtained');
             return videoStream;
             
           } catch (videoError) {
@@ -302,7 +327,10 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
             throw videoError;
           }
         } else {
-          throw simpleError;
+          // If audio was requested but failed, don't fall back to video-only
+          // This ensures we don't create silent videos when audio was expected
+          console.error('❌ Audio was requested but failed - not falling back to video-only');
+          throw new Error('Failed to get camera stream with audio. Please check your microphone permissions and try again.');
         }
       }
     }

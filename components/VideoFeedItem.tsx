@@ -47,7 +47,7 @@ const VideoFeedItem = ({
   isActive = false
 }: VideoFeedItemProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // Always unmuted
+  const [isMuted, setIsMuted] = useState(false); // Start unmuted to hear audio
   const [currentLikes, setCurrentLikes] = useState(post.likes);
   const [isLiked, setIsLiked] = useState(post.isLiked);
   const [isLiking, setIsLiking] = useState(false);
@@ -670,6 +670,35 @@ const VideoFeedItem = ({
         >
           <Share className="w-5 h-5" />
         </Button>
+
+        {/* Mute/Unmute Button - Only show for videos */}
+        {isVideo() && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={(e) => {
+              e.stopPropagation();
+              const newMutedState = !isMuted;
+              setIsMuted(newMutedState);
+              if (videoRef.current) {
+                videoRef.current.muted = newMutedState;
+              }
+              console.log('🔊 Audio toggled:', newMutedState ? 'muted' : 'unmuted');
+            }}
+            className="w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm transition-all duration-200"
+          >
+            {isMuted ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Bottom Content - Clean & Elegant */}

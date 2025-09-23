@@ -374,33 +374,62 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
       recordedChunksRef.current = []
       // Try to create MediaRecorder with audio support
       // Try different codec combinations for audio+video support
-      // Prioritize MP4 for better compatibility with blob storage
+      // Prioritize codecs that support both video and audio
       const codecOptions = [
-        'video/mp4',                   // MP4 first for better compatibility
+        'video/webm;codecs=vp9,opus',  // VP9 video + Opus audio (best quality)
+        'video/webm;codecs=vp8,opus',  // VP8 video + Opus audio (good compatibility)
+        'video/webm;codecs=h264,aac',  // H264 video + AAC audio
         'video/webm;codecs=h264,opus', // H264 video + Opus audio
-        'video/webm;codecs=vp8,opus',  // VP8 video + Opus audio
-        'video/webm;codecs=vp9,opus',  // VP9 video + Opus audio
-        'video/webm'                   // Default WebM fallback
+        'video/mp4;codecs=avc1,mp4a',  // MP4 with H264 video + AAC audio
+        'video/webm',                  // Default WebM (should include audio)
+        'video/mp4'                    // Default MP4 (should include audio)
       ]
 
       let mediaRecorder: MediaRecorder | null = null
+      let selectedCodec = ''
 
-      // Try to find a supported codec
+      // Try to find a supported codec that includes audio
       let codecFound = false
       for (const codec of codecOptions) {
         const isSupported = MediaRecorder.isTypeSupported(codec)
+        console.log(`🎵 Testing codec: ${codec} - Supported: ${isSupported}`)
         if (isSupported) {
-          mediaRecorder = new MediaRecorder(streamRef.current, { mimeType: codec })
-          recordingMimeTypeRef.current = codec
-          codecFound = true
-          break
+          try {
+            // Test creating MediaRecorder with this codec
+            const testRecorder = new MediaRecorder(streamRef.current, {
+              mimeType: codec,
+              audioBitsPerSecond: 128000, // Ensure good audio quality
+              videoBitsPerSecond: 2500000 // Good video quality
+            })
+            mediaRecorder = testRecorder
+            selectedCodec = codec
+            recordingMimeTypeRef.current = codec
+            codecFound = true
+            console.log(`✅ Selected codec: ${codec}`)
+            break
+          } catch (codecError) {
+            console.log(`❌ Failed to create MediaRecorder with ${codec}:`, codecError)
+            continue
+          }
         }
       }
 
       // Fallback if no specific codec is supported
       if (!codecFound) {
-        mediaRecorder = new MediaRecorder(streamRef.current)
-        recordingMimeTypeRef.current = 'video/mp4'
+        console.log('🔄 Using default MediaRecorder configuration')
+        try {
+          mediaRecorder = new MediaRecorder(streamRef.current, {
+            audioBitsPerSecond: 128000, // Ensure audio is included
+            videoBitsPerSecond: 2500000
+          })
+          selectedCodec = 'default'
+          recordingMimeTypeRef.current = 'video/webm' // Default to WebM
+        } catch (defaultError) {
+          console.log('❌ Default MediaRecorder failed, trying basic:', defaultError)
+          mediaRecorder = new MediaRecorder(streamRef.current)
+          selectedCodec = 'basic'
+          recordingMimeTypeRef.current = 'video/webm'
+        }
       }
 
       if (!mediaRecorder) {

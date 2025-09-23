@@ -1,52 +1,57 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/src/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const { url } = await request.json()
     
     if (!url) {
-      return NextResponse.json({ error: "URL required" }, { status: 400 })
+      return NextResponse.json({ error: "URL is required" }, { status: 400 })
     }
-
-    console.log("🔍 Validating media URL:", url)
-
+    
+    console.log('🔍 Validating media URL:', url)
+    
+    // Try to fetch the URL to check if it's accessible
     try {
       const response = await fetch(url, { 
         method: 'HEAD',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; MediaValidator/1.0)'
+          'User-Agent': 'MirroSocial-MediaValidator/1.0'
         }
       })
       
       const result = {
         url,
+        accessible: response.ok,
         status: response.status,
         statusText: response.statusText,
         contentType: response.headers.get('content-type'),
         contentLength: response.headers.get('content-length'),
-        accessible: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
+        lastModified: response.headers.get('last-modified'),
+        timestamp: new Date().toISOString()
       }
-
-      console.log("✅ Media validation result:", result)
+      
+      console.log('📊 Validation result:', result)
+      
       return NextResponse.json(result)
+      
     } catch (fetchError) {
-      console.error("❌ Media fetch error:", fetchError)
-      return NextResponse.json({
+      console.error('❌ URL fetch failed:', fetchError)
+      
+      const result = {
         url,
         accessible: false,
-        error: fetchError instanceof Error ? fetchError.message : 'Unknown error'
-      })
+        error: fetchError instanceof Error ? fetchError.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }
+      
+      return NextResponse.json(result)
     }
+    
   } catch (error) {
-    console.error("Validate media error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error('❌ Media validation error:', error)
+    return NextResponse.json(
+      { error: "Failed to validate media URL" },
+      { status: 500 }
+    )
   }
 }
