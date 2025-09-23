@@ -715,6 +715,67 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
     }
   }
 
+  // Show destination selection
+  const [showDestinationSelect, setShowDestinationSelect] = useState(false)
+
+  // Handle destination selection
+  const handleDestinationSelect = (destination: 'feed' | 'event') => {
+    if (destination === 'event') {
+      handleCreateEvent()
+    } else {
+      handleCreatePost()
+    }
+    setShowDestinationSelect(false)
+  }
+
+  // Create event with media and description
+  const handleCreateEvent = async () => {
+    console.log('🎉 handleCreateEvent called')
+    
+    // Validation
+    if (!caption.trim() && !selectedFile) {
+      toast({
+        title: "Content required",
+        description: "Please add a description or upload media for your event",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Store event data in localStorage and navigate to event creation
+    const eventData = {
+      media: selectedFile ? {
+        file: selectedFile,
+        previewUrl: previewUrl
+      } : null,
+      description: caption.trim(),
+      selectedSound: selectedSound
+    }
+    
+    // Convert file to base64 for storage
+    if (selectedFile) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const eventDataWithBase64 = {
+          ...eventData,
+          media: {
+            ...eventData.media,
+            fileData: reader.result,
+            fileName: selectedFile.name,
+            fileType: selectedFile.type,
+            fileSize: selectedFile.size
+          }
+        }
+        localStorage.setItem('pendingEventData', JSON.stringify(eventDataWithBase64))
+        window.location.href = '/events/new'
+      }
+      reader.readAsDataURL(selectedFile)
+    } else {
+      localStorage.setItem('pendingEventData', JSON.stringify(eventData))
+      window.location.href = '/events/new'
+    }
+  }
+
   // Create post
   const handleCreatePost = async () => {
     console.log('🚀 handleCreatePost called')
@@ -1937,101 +1998,101 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </div>
             )}
 
-            {/* Post Button - Always visible when there's content */}
+            {/* Destination Selection or Post Button */}
             {(showCaption || caption.trim() || selectedFile) && (
               <div className="absolute bottom-32 right-4 z-20">
-                <Button
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    console.log('� POST BUtTTON CLICKED!')
-                    console.log('📝 Current state:', {
-                      isUploading,
-                      cameraLoading,
-                      isRecording,
-                      isStoppingRecording,
-                      captionLength: caption.length,
-                      captionTrimmed: caption.trim().length,
-                      hasSelectedFile: !!selectedFile,
-                      showCaption,
-                      mode,
-                      selectedFileDetails: selectedFile ? {
-                        name: selectedFile.name,
-                        size: selectedFile.size,
-                        type: selectedFile.type,
-                        lastModified: selectedFile.lastModified
-                      } : null
-                    })
+                {showDestinationSelect ? (
+                  <div className="flex flex-col gap-2 mb-2">
+                    <Button
+                      onClick={() => handleDestinationSelect('event')}
+                      className="bg-purple-500 hover:bg-purple-600 text-white rounded-full px-6 py-3 font-medium shadow-lg"
+                    >
+                      📅 Create Event
+                    </Button>
+                    <Button
+                      onClick={() => handleDestinationSelect('feed')}
+                      className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6 py-3 font-medium shadow-lg"
+                    >
+                      📱 Post to Feed
+                    </Button>
+                    <Button
+                      onClick={() => setShowDestinationSelect(false)}
+                      variant="outline"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-800 rounded-full px-6 py-2"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      console.log('📝 SHARE BUTTON CLICKED!')
 
-                    console.log('📝 Button disabled?', isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile))
+                      // Show caption input if not already shown and no content exists
+                      if (!showCaption && !caption.trim() && !selectedFile) {
+                        console.log('📝 Showing caption input first')
+                        setShowCaption(true)
+                        return
+                      }
 
-                    // Show caption input if not already shown and no content exists
-                    if (!showCaption && !caption.trim() && !selectedFile) {
-                      console.log('📝 Showing caption input first')
-                      setShowCaption(true)
-                      return
-                    }
+                      // Validate inputs before proceeding
+                      if (!caption.trim() && !selectedFile) {
+                        console.log('❌ Content validation failed')
+                        toast({
+                          title: "Content required",
+                          description: "Please add a description or record/upload media",
+                          variant: "destructive",
+                        })
+                        return
+                      }
 
-                    // Validate inputs before proceeding - allow text-only or media-only posts
-                    if (!caption.trim() && !selectedFile) {
-                      console.log('❌ Content validation failed')
-                      toast({
-                        title: "Content required",
-                        description: "Please add a description or record/upload media for your post",
-                        variant: "destructive",
-                      })
-                      return
-                    }
-
-                    console.log('✅ All validations passed, calling handleCreatePost')
-                    try {
-                      await handleCreatePost()
-                      console.log('✅ handleCreatePost completed successfully')
-                    } catch (error) {
-                      console.error('❌ handleCreatePost failed:', error)
-                    }
-                  }}
-                  disabled={isUploading || cameraLoading || isRecording || isStoppingRecording || (!caption.trim() && !selectedFile)}
-                  className={cn(
-                    "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
-                    isUploading || cameraLoading || isRecording || isStoppingRecording
-                      ? "bg-gray-500 cursor-not-allowed"
-                      : (!caption.trim() && !selectedFile)
-                        ? "bg-red-500/50 cursor-not-allowed"
-                        : "bg-red-500 hover:bg-red-600 active:bg-red-700"
-                  )}
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  {isUploading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="hidden sm:inline">Posting...</span>
-                      <span className="sm:hidden">...</span>
-                    </div>
-                  ) : cameraLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="hidden sm:inline">Camera Loading...</span>
-                      <span className="sm:hidden">...</span>
-                    </div>
-                  ) : isRecording ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                      <span className="hidden sm:inline">Recording...</span>
-                      <span className="sm:hidden">REC</span>
-                    </div>
-                  ) : isStoppingRecording ? (
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="hidden sm:inline">Stopping...</span>
-                      <span className="sm:hidden">...</span>
-                    </div>
-                  ) : !showCaption && !caption.trim() && !selectedFile ? (
-                    "Add Caption"
-                  ) : (
-                    "Post"
-                  )}
-                </Button>
+                      // Show destination selection
+                      setShowDestinationSelect(true)
+                    }}
+                    disabled={isUploading || cameraLoading || isRecording || isStoppingRecording}
+                    className={cn(
+                      "text-white rounded-full px-6 sm:px-8 py-2 sm:py-3 font-medium shadow-lg touch-manipulation min-w-[100px] transition-all relative z-50",
+                      isUploading || cameraLoading || isRecording || isStoppingRecording
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : (!caption.trim() && !selectedFile)
+                          ? "bg-red-500/50 cursor-not-allowed"
+                          : "bg-red-500 hover:bg-red-600 active:bg-red-700"
+                    )}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {isUploading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Sharing...</span>
+                        <span className="sm:hidden">...</span>
+                      </div>
+                    ) : cameraLoading ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Camera Loading...</span>
+                        <span className="sm:hidden">...</span>
+                      </div>
+                    ) : isRecording ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                        <span className="hidden sm:inline">Recording...</span>
+                        <span className="sm:hidden">REC</span>
+                      </div>
+                    ) : isStoppingRecording ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Stopping...</span>
+                        <span className="sm:hidden">...</span>
+                      </div>
+                    ) : !showCaption && !caption.trim() && !selectedFile ? (
+                      "Add Caption"
+                    ) : (
+                      "Share"
+                    )}
+                  </Button>
+                )}
               </div>
             )}
 
