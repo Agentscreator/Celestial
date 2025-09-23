@@ -4,7 +4,7 @@ import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
 import { storiesTable, storyViewsTable, usersTable, followersTable, communitiesTable, communityMembersTable, groupStoriesTable, groupStoryViewsTable, groupsTable, groupMembersTable } from "@/src/db/schema"
 import { eq, and, gt, desc, sql, inArray, or } from "drizzle-orm"
-import { put } from '@vercel/blob'
+import { uploadToR2 } from "@/src/lib/r2-storage"
 import { v4 as uuidv4 } from "uuid"
 
 // GET /api/stories - Fetch stories from followed users and own stories
@@ -275,25 +275,23 @@ export async function POST(request: NextRequest) {
       const bytes = await mediaFile.arrayBuffer()
       const buffer = Buffer.from(bytes)
 
-      // Generate unique filename
-      const fileExtension = mediaFile.name.split(".").pop()
-      const fileName = `${uuidv4()}.${fileExtension}`
-
       // Determine if it's image or video
       const isVideo = mediaFile.type.startsWith("video/")
-      const pathname = `stories/${isVideo ? 'videos' : 'images'}/${fileName}`
+      const folder = `stories/${isVideo ? 'videos' : 'images'}`
 
-      // Upload to Vercel Blob
-      const blob = await put(pathname, buffer, {
-        access: 'public',
-        contentType: mediaFile.type,
+      // Upload to Cloudflare R2
+      const mediaUrl = await uploadToR2({
+        buffer,
+        filename: mediaFile.name,
+        mimetype: mediaFile.type,
+        folder,
       })
 
       // Set the URL
       if (isVideo) {
-        videoUrl = blob.url
+        videoUrl = mediaUrl
       } else {
-        imageUrl = blob.url
+        imageUrl = mediaUrl
       }
     }
 

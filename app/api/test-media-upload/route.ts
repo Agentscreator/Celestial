@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { put } from "@vercel/blob"
+import { uploadToR2 } from "@/src/lib/r2-storage"
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,24 +28,21 @@ export async function POST(request: NextRequest) {
       isBuffer: buffer instanceof Buffer
     })
     
-    // Upload to blob
-    const timestamp = Date.now()
-    const fileExtension = media.name.split(".").pop()
-    const uniqueFilename = `test-${timestamp}.${fileExtension}`
-    const pathname = `test-uploads/${uniqueFilename}`
+    // Upload to Cloudflare R2
+    console.log("Uploading to R2...")
     
-    console.log("Uploading to:", pathname)
-    
-    const blob = await put(pathname, buffer, {
-      access: "public",
-      contentType: media.type,
+    const fileUrl = await uploadToR2({
+      buffer,
+      filename: media.name,
+      mimetype: media.type,
+      folder: "test-uploads",
     })
     
-    console.log("Upload successful:", blob.url)
+    console.log("Upload successful:", fileUrl)
     
     return NextResponse.json({
       success: true,
-      url: blob.url,
+      url: fileUrl,
       originalName: media.name,
       size: media.size,
       type: media.type

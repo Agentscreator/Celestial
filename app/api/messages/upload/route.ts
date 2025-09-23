@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
-import { put } from '@vercel/blob'
+import { uploadToR2 } from "@/src/lib/r2-storage"
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,31 +55,23 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ File validation passed")
 
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = file.name.split('.').pop() || 'bin'
-    const filename = `${timestamp}-${randomString}.${extension}`
-    const pathname = `messages/${filename}`
-
-    console.log("📝 Generated filename:", filename)
-    console.log("📁 Blob pathname:", pathname)
-
-    // Upload to Vercel Blob
-    console.log("💾 Uploading to Vercel Blob...")
+    // Upload to Cloudflare R2
+    console.log("💾 Uploading to Cloudflare R2...")
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     
-    const blob = await put(pathname, buffer, {
-      access: 'public',
-      contentType: file.type,
+    const fileUrl = await uploadToR2({
+      buffer,
+      filename: file.name,
+      mimetype: file.type,
+      folder: "messages",
     })
     
-    console.log("✅ File uploaded successfully to blob storage")
-    console.log("🔗 Blob URL:", blob.url)
+    console.log("✅ File uploaded successfully to R2 storage")
+    console.log("🔗 R2 URL:", fileUrl)
     
     const response = {
-      url: blob.url,
+      url: fileUrl,
       name: file.name,
       type: file.type,
       size: file.size,

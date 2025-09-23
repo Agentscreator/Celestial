@@ -5,7 +5,8 @@ import { db } from "@/src/db"
 import { postsTable, usersTable } from "@/src/db/schema"
 import { eq, and, sql } from "drizzle-orm"
 import { postCommentsTable, postLikesTable, postInvitesTable } from "@/src/db/schema"
-import { put } from "@vercel/blob"
+import { uploadToR2 } from "@/src/lib/r2-storage"
+
 
 // GET - Fetch a single post
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -98,12 +99,14 @@ async function uploadToStorage(options: {
   const uniqueFilename = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`
   const pathname = `${folder}/${uniqueFilename}`
 
-  const blob = await put(pathname, buffer, {
-    access: "public",
-    contentType: mimetype,
+  const imageUrl = await uploadToR2({
+    buffer,
+    filename: uniqueFilename,
+    mimetype,
+    folder,
   })
 
-  return blob.url
+  return imageUrl
 }
 
 // PUT - Edit a post
@@ -276,7 +279,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       console.log("Post deleted:", postDeleted)
 
       console.log("✅ Post deleted successfully")
-      return NextResponse.json({ 
+      return NextResponse.json({
         message: "Post deleted successfully",
         deletedCounts: {
           comments: commentsDeleted,
@@ -292,7 +295,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
         message: dbError instanceof Error ? dbError.message : String(dbError),
         stack: dbError instanceof Error ? dbError.stack : undefined
       })
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: "Failed to delete post from database",
         details: dbError instanceof Error ? dbError.message : String(dbError)
       }, { status: 500 })
@@ -304,7 +307,7 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     })
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: "Internal server error",
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })

@@ -5,28 +5,7 @@ import { authOptions } from "@/src/lib/auth";
 import { db } from "@/src/db";
 import { usersTable } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
-import { put } from '@vercel/blob';
-
-async function uploadToStorage(options: {
-  buffer: Buffer;
-  filename: string;
-  mimetype: string;
-  folder?: string;
-}): Promise<string> {
-  const { buffer, filename, mimetype, folder = "profile-images" } = options;
-  
-  const timestamp = Date.now();
-  const fileExtension = filename.split('.').pop();
-  const uniqueFilename = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExtension}`;
-  const pathname = `${folder}/${uniqueFilename}`;
-
-  const blob = await put(pathname, buffer, {
-    access: 'public',
-    contentType: mimetype,
-  });
-
-  return blob.url;
-}
+import { uploadToR2 } from "@/src/lib/r2-storage";
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,8 +49,8 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // 3) Upload to Vercel Blob storage
-    const imageUrl = await uploadToStorage({
+    // 3) Upload to Cloudflare R2 storage
+    const imageUrl = await uploadToR2({
       buffer,
       filename: file.name,
       mimetype: file.type,
