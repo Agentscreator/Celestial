@@ -233,43 +233,80 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
       return NextResponse.json({ error: "Invalid post ID" }, { status: 400 })
     }
 
-    // Check if post exists and belongs to the user
-    const post = await db
-      .select()
+    // First check if post exists at all
+    console.log("Checking if post exists...")
+    const postExists = await db
+      .select({ id: postsTable.id, userId: postsTable.userId })
       .from(postsTable)
-      .where(and(eq(postsTable.id, postId), eq(postsTable.userId, session.user.id)))
+      .where(eq(postsTable.id, postId))
       .limit(1)
 
-    if (post.length === 0) {
-      console.error("Post not found or not owned by user")
-      return NextResponse.json({ error: "Post not found or unauthorized" }, { status: 404 })
+    if (postExists.length === 0) {
+      console.error("Post not found in database")
+      return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
 
-    console.log("Post found, proceeding with deletion")
+    console.log("Post exists, owner:", postExists[0].userId)
+
+    // Check if user owns the post
+    if (postExists[0].userId !== session.user.id) {
+      console.error("User does not own this post")
+      return NextResponse.json({ error: "Unauthorized - you don't own this post" }, { status: 403 })
+    }
+
+    console.log("User owns post, proceeding with deletion")
 
     try {
-      // Delete associated data first
+      // Delete associated data first (with individual error handling)
       console.log("Deleting associated comments...")
-      await db.delete(postCommentsTable).where(eq(postCommentsTable.postId, postId))
+      const commentsDeleted = await db.delete(postCommentsTable).where(eq(postCommentsTable.postId, postId))
+      console.log("Comments deleted:", commentsDeleted)
 
       console.log("Deleting associated likes...")
-      await db.delete(postLikesTable).where(eq(postLikesTable.postId, postId))
+      const likesDeleted = await db.delete(postLikesTable).where(eq(postLikesTable.postId, postId))
+      console.log("Likes deleted:", likesDeleted)
 
       console.log("Deleting associated invites...")
-      await db.delete(postInvitesTable).where(eq(postInvitesTable.postId, postId))
+      const invitesDeleted = await db.delete(postInvitesTable).where(eq(postInvitesTable.postId, postId))
+      console.log("Invites deleted:", invitesDeleted)
 
       // Delete the post
       console.log("Deleting the post...")
-      await db.delete(postsTable).where(and(eq(postsTable.id, postId), eq(postsTable.userId, session.user.id)))
+      const postDeleted = await db.delete(postsTable).where(and(eq(postsTable.id, postId), eq(postsTable.userId, session.user.id)))
+      console.log("Post deleted:", postDeleted)
 
       console.log("✅ Post deleted successfully")
-      return NextResponse.json({ message: "Post deleted successfully" })
+      return NextResponse.json({ 
+        message: "Post deleted successfully",
+        deletedCounts: {
+          comments: commentsDeleted,
+          likes: likesDeleted,
+          invites: invitesDeleted,
+          post: postDeleted
+        }
+      })
     } catch (dbError) {
       console.error("❌ Database deletion error:", dbError)
-      return NextResponse.json({ error: "Failed to delete post from database" }, { status: 500 })
+      console.error("Error details:", {
+        name: dbError instanceof Error ? dbError.name : 'Unknown',
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+        stack: dbError instanceof Error ? dbError.stack : undefined
+      })
+      return NextResponse.json({ 
+        error: "Failed to delete post from database",
+        details: dbError instanceof Error ? dbError.message : String(dbError)
+      }, { status: 500 })
     }
   } catch (error) {
     console.error("❌ Delete post error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("Error details:", {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    return NextResponse.json({ 
+      error: "Internal server error",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }
