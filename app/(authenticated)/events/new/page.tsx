@@ -441,7 +441,7 @@ export default function NewEventPage() {
     }
 
     const nextStep = () => {
-        if (currentStep < 4) {
+        if (currentStep < 3) {
             setCurrentStep(currentStep + 1)
         }
     }
@@ -456,11 +456,11 @@ export default function NewEventPage() {
         return formData.title && formData.description && formData.date && formData.time && formData.location
     }
 
-    const canProceedToStep3 = () => {
-        return true // Video is optional for step 3
+    const canProceedToStep2 = () => {
+        return formData.title && formData.description && formData.date && formData.time && formData.location
     }
 
-    const canProceedToStep4 = () => {
+    const canProceedToStep3 = () => {
         return selectedTheme || customMedia
     }
 
@@ -520,13 +520,6 @@ export default function NewEventPage() {
                                 : 'bg-white/10 border-white/20'
                                 }`}>
                                 <span className="text-sm font-semibold">3</span>
-                            </div>
-                            <div className={`w-12 h-0.5 transition-all duration-300 ${currentStep >= 4 ? 'bg-gradient-to-r from-purple-500 to-purple-600' : 'bg-gray-600'}`}></div>
-                            <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${currentStep >= 4
-                                ? 'bg-gradient-to-r from-purple-500 to-purple-600 border-purple-500 shadow-lg shadow-purple-500/50'
-                                : 'bg-white/10 border-white/20'
-                                }`}>
-                                <span className="text-sm font-semibold">4</span>
                             </div>
                         </div>
                     </div>
@@ -712,7 +705,7 @@ export default function NewEventPage() {
                                         disabled={!canProceedToStep2()}
                                         className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                     >
-                                        Continue to Video Creation
+                                        Continue to Theme Selection
                                     </button>
                                 </div>
                             </div>
@@ -870,102 +863,8 @@ export default function NewEventPage() {
                             </div>
                         )}
 
-                        {/* Step 2: Event Video */}
+                        {/* Step 2: Theme Selection */}
                         {currentStep === 2 && (
-                            <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
-                                <h2 className="text-2xl font-bold mb-6 flex items-center">
-                                    <span className="w-2 h-8 bg-gradient-to-b from-red-500 to-pink-500 rounded-full mr-4"></span>
-                                    Create Event Video (Optional)
-                                </h2>
-
-                                <div className="text-center space-y-6">
-                                    <div className="max-w-md mx-auto">
-                                        <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                                            <Camera className="w-10 h-10 text-white" />
-                                        </div>
-                                        <h3 className="text-xl font-semibold mb-3">Share Your Event with Video (Optional)</h3>
-                                        <p className="text-gray-400 mb-6">
-                                            Create a short video (up to 99 seconds) to showcase your event and make it more engaging for potential attendees. You can skip this step if you prefer.
-                                        </p>
-
-                                        {eventVideo ? (
-                                            <div className="bg-gray-800/40 rounded-xl p-4 mb-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center space-x-3">
-                                                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                                                            <Camera className="w-5 h-5 text-white" />
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <p className="font-medium text-white">Video Ready</p>
-                                                            <p className="text-sm text-gray-400">
-                                                                {(eventVideo.file.size / 1024 / 1024).toFixed(1)}MB • {eventVideo.file.type.includes('video') ? 'Video' : 'Image'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setEventVideo(null)}
-                                                        className="text-red-400 hover:text-red-300"
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                                {eventVideo.description && (
-                                                    <p className="text-sm text-gray-300 mt-2 text-left">
-                                                        "{eventVideo.description}"
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ) : null}
-
-                                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                                            <Button
-                                                type="button"
-                                                onClick={() => setShowVideoCreator(true)}
-                                                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                                            >
-                                                {eventVideo ? 'Change Video' : 'Create Video'}
-                                            </Button>
-                                            {!eventVideo && (
-                                                <Button
-                                                    type="button"
-                                                    onClick={nextStep}
-                                                    variant="outline"
-                                                    className="border-gray-600 text-gray-300 hover:bg-gray-800 px-8 py-3 text-lg font-semibold rounded-xl transition-all duration-300"
-                                                >
-                                                    Skip Video
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Navigation */}
-                                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-700">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={prevStep}
-                                        className="px-6 py-3 border-gray-600 text-gray-300 hover:bg-gray-800 rounded-xl transition-all duration-300"
-                                    >
-                                        <ArrowLeft className="w-4 h-4 mr-2" />
-                                        Previous
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        onClick={nextStep}
-                                        disabled={!canProceedToStep3()}
-                                        className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                                    >
-                                        {eventVideo ? 'Continue with Video' : 'Continue without Video'}
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Step 3: Theme Selection */}
-                        {currentStep === 3 && (
                             <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
                                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                                     <span className="w-2 h-8 bg-gradient-to-b from-purple-500 to-pink-500 rounded-full mr-4"></span>
@@ -1132,8 +1031,8 @@ export default function NewEventPage() {
                             </div>
                         )}
 
-                        {/* Step 4: Media & Final Settings */}
-                        {currentStep === 4 && (
+                        {/* Step 3: Media & Final Settings */}
+                        {currentStep === 3 && (
                             <div className="bg-gray-800/60 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 transition-all duration-300 hover:border-gray-600 hover:shadow-2xl">
                                 <h2 className="text-2xl font-bold mb-6 flex items-center">
                                     <span className="w-2 h-8 bg-gradient-to-b from-green-500 to-emerald-500 rounded-full mr-4"></span>
