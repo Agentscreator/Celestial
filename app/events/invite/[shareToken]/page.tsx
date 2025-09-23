@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Calendar, MapPin, Users, Clock, ArrowLeft } from "lucide-react"
+import { Calendar, MapPin, Users, Clock, ArrowLeft, Video, Image } from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +24,8 @@ interface PublicEvent {
   inviteDescription?: string
   groupName?: string
   customFlyerUrl?: string
+  customBackgroundUrl?: string
+  customBackgroundType?: 'image' | 'video' | 'gif'
   inviteVideoUrl?: string
   inviteVideoThumbnail?: string
   inviteVideoDescription?: string
@@ -53,11 +55,11 @@ export default function PublicEventInvitePage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     })
   }
 
@@ -65,10 +67,10 @@ export default function PublicEventInvitePage() {
     const [hours, minutes] = timeStr.split(':')
     const date = new Date()
     date.setHours(parseInt(hours), parseInt(minutes))
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     })
   }
 
@@ -86,9 +88,9 @@ export default function PublicEventInvitePage() {
       try {
         setLoading(true)
         setError(null)
-        
+
         const response = await fetch(`/api/events/public/${shareToken}`)
-        
+
         if (!response.ok) {
           if (response.status === 404) {
             setError('Event not found or invite link is invalid')
@@ -97,7 +99,7 @@ export default function PublicEventInvitePage() {
           }
           return
         }
-        
+
         const data = await response.json()
         setEvent(data.event)
       } catch (err) {
@@ -166,7 +168,7 @@ export default function PublicEventInvitePage() {
 
   const handleShare = async () => {
     const shareUrl = window.location.href
-    
+
     if (navigator.share && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
       try {
         await navigator.share({
@@ -252,7 +254,7 @@ export default function PublicEventInvitePage() {
         </div>
 
         {/* Event Card */}
-        <Card 
+        <Card
           className={`overflow-hidden transition-all ${getShadowClass(cardTheme.shadowIntensity)} border-0 mb-6`}
           style={{
             borderRadius: `${cardTheme.borderRadius}px`,
@@ -262,24 +264,26 @@ export default function PublicEventInvitePage() {
           }}
         >
           {/* Themed Header */}
-          <div 
+          <div
             className="h-32 relative overflow-hidden"
             style={{ background: cardTheme.backgroundGradient }}
           >
-            {/* Custom flyer background if available */}
-            {event.customFlyerUrl && (
-              <div 
+            {/* Background media if available */}
+            {(event.customBackgroundUrl || event.customFlyerUrl) && (
+              <div
                 className="absolute inset-0 opacity-30 bg-cover bg-center"
-                style={{ backgroundImage: `url(${event.customFlyerUrl})` }}
+                style={{
+                  backgroundImage: `url(${event.customBackgroundUrl || event.customFlyerUrl})`
+                }}
               />
             )}
-            
+
             {/* Overlay content */}
             <div className="absolute inset-0 flex items-end p-6">
               <div className="w-full">
-                <h2 
+                <h2
                   className="text-2xl font-bold mb-2"
-                  style={{ 
+                  style={{
                     color: cardTheme.textColor,
                     fontWeight: cardTheme.fontWeight
                   }}
@@ -288,16 +292,16 @@ export default function PublicEventInvitePage() {
                 </h2>
                 <div className="flex items-center gap-2 text-sm opacity-90">
                   <span>hosted by</span>
-                  <span 
+                  <span
                     className="font-semibold"
                     style={{ color: cardTheme.accentColor }}
                   >
                     @{event.createdByUsername}
                   </span>
                   {event.isInvite && (
-                    <Badge 
+                    <Badge
                       className="text-xs px-2 py-1 ml-2"
-                      style={{ 
+                      style={{
                         backgroundColor: `${cardTheme.accentColor}20`,
                         color: cardTheme.textColor,
                         border: `1px solid ${cardTheme.accentColor}40`
@@ -311,11 +315,11 @@ export default function PublicEventInvitePage() {
             </div>
 
             {/* Decorative elements */}
-            <div 
+            <div
               className="absolute top-4 right-4 w-20 h-20 rounded-full opacity-10"
               style={{ backgroundColor: cardTheme.accentColor }}
             />
-            <div 
+            <div
               className="absolute -top-6 -right-6 w-16 h-16 rounded-full opacity-20"
               style={{ backgroundColor: cardTheme.secondaryColor }}
             />
@@ -323,8 +327,38 @@ export default function PublicEventInvitePage() {
 
           <CardContent className="p-6 space-y-4">
             <p className="text-gray-300 leading-relaxed">{event.description}</p>
-            
-            {/* Event Video */}
+
+            {/* Event Media */}
+            {event.customBackgroundUrl && (
+              <div className="space-y-3">
+                <div className="relative rounded-lg overflow-hidden bg-gray-800">
+                  {event.customBackgroundType === 'video' ? (
+                    <video
+                      src={event.customBackgroundUrl}
+                      className="w-full h-auto max-h-96 object-cover"
+                      controls
+                      playsInline
+                      preload="metadata"
+                    >
+                      <source src={event.customBackgroundUrl} type="video/mp4" />
+                      <source src={event.customBackgroundUrl} type="video/webm" />
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <img
+                      src={event.customBackgroundUrl}
+                      alt={event.title}
+                      className="w-full h-auto max-h-96 object-cover rounded-lg"
+                    />
+                  )}
+                </div>
+                <p className="text-sm text-gray-400 italic">
+                  {event.customBackgroundType === 'video' ? 'Event video' : 'Event image'} shared by @{event.createdByUsername}
+                </p>
+              </div>
+            )}
+
+            {/* Event Video (Legacy) */}
             {event.inviteVideoUrl && (
               <div className="space-y-3">
                 <div className="relative rounded-lg overflow-hidden bg-gray-800">
@@ -346,16 +380,16 @@ export default function PublicEventInvitePage() {
                 )}
               </div>
             )}
-            
+
             {event.isInvite && event.inviteDescription && (
-              <div 
+              <div
                 className="rounded-lg p-4 border"
-                style={{ 
+                style={{
                   backgroundColor: `${cardTheme.primaryColor}10`,
                   borderColor: `${cardTheme.primaryColor}30`
                 }}
               >
-                <p 
+                <p
                   className="font-semibold mb-2"
                   style={{ color: cardTheme.accentColor }}
                 >
@@ -365,7 +399,7 @@ export default function PublicEventInvitePage() {
                   {event.inviteDescription}
                 </p>
                 {event.groupName && (
-                  <p 
+                  <p
                     className="text-sm opacity-80"
                     style={{ color: cardTheme.accentColor }}
                   >
@@ -374,26 +408,26 @@ export default function PublicEventInvitePage() {
                 )}
               </div>
             )}
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-gray-400">
                   <MapPin className="h-5 w-5" style={{ color: cardTheme.accentColor }} />
                   <span>{event.location}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-3 text-gray-400">
                   <Calendar className="h-5 w-5" style={{ color: cardTheme.accentColor }} />
                   <span>{formatDate(event.date)}</span>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-gray-400">
                   <Clock className="h-5 w-5" style={{ color: cardTheme.accentColor }} />
                   <span>{formatTime(event.time)}</span>
                 </div>
-                
+
                 <div className="flex items-center gap-3 text-gray-400">
                   <Users className="h-5 w-5" style={{ color: cardTheme.accentColor }} />
                   <span>
@@ -403,7 +437,7 @@ export default function PublicEventInvitePage() {
               </div>
             </div>
           </CardContent>
-          
+
           <CardFooter className="pt-4 gap-3 px-6 pb-6">
             <Button
               onClick={handleJoinClick}
@@ -425,7 +459,7 @@ export default function PublicEventInvitePage() {
                 "Sign Up & Join Event"
               )}
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={handleShare}
@@ -440,13 +474,13 @@ export default function PublicEventInvitePage() {
         {/* Call to Action */}
         <div className="text-center space-y-4">
           <p className="text-gray-400">
-            Don't have an account? 
+            Don't have an account?
             <Link href="/auth/signup" className="text-blue-400 hover:text-blue-300 ml-1">
               Sign up now
             </Link>
             {" "}to join events and connect with your community.
           </p>
-          
+
           <Link href="/">
             <Button variant="ghost" className="text-gray-400 hover:text-white">
               <ArrowLeft className="h-4 w-4 mr-2" />
