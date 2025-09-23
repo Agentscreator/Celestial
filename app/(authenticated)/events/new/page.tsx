@@ -421,10 +421,6 @@ export default function NewEventPage() {
         return formData.title && formData.description && formData.date && formData.time && formData.location
     }
 
-    const canProceedToStep2 = () => {
-        return formData.title && formData.description && formData.date && formData.time && formData.location
-    }
-
     const canProceedToStep3 = () => {
         return selectedTheme || customMedia
     }
