@@ -25,7 +25,7 @@ interface ThemedEventCardProps {
     groupName?: string
     customFlyerUrl?: string
     customBackgroundUrl?: string
-    customBackgroundType?: 'image' | 'gif'
+    customBackgroundType?: 'image' | 'video' | 'gif'
     thumbnailVideoUrl?: string
     thumbnailImageUrl?: string
     isRepeating?: boolean
@@ -208,6 +208,45 @@ export function ThemedEventCard({ event, theme, onJoin, onLeave, onShare, showFu
           style={{ backgroundColor: cardTheme.secondaryColor }}
         />
       </div>
+
+      {/* Event Media Preview */}
+      {event.customBackgroundUrl && (
+        <div className="relative">
+          <div className="aspect-video bg-gray-900">
+            {event.customBackgroundType === 'video' || event.thumbnailVideoUrl ? (
+              <video
+                src={event.customBackgroundUrl || event.thumbnailVideoUrl}
+                className="w-full h-full object-cover"
+                controls
+                playsInline
+                poster={event.thumbnailImageUrl}
+              >
+                <source src={event.customBackgroundUrl || event.thumbnailVideoUrl} type="video/mp4" />
+                <source src={event.customBackgroundUrl || event.thumbnailVideoUrl} type="video/webm" />
+                Your browser does not support the video tag.
+              </video>
+            ) : (
+              <img
+                src={event.customBackgroundUrl}
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm rounded px-2 py-1">
+            <div className="flex items-center gap-1 text-white text-xs">
+              {event.customBackgroundType === 'video' || event.thumbnailVideoUrl ? (
+                <Video className="w-3 h-3" />
+              ) : (
+                <Image className="w-3 h-3" />
+              )}
+              <span>
+                {event.customBackgroundType === 'video' || event.thumbnailVideoUrl ? 'Event Video' : 'Event Image'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CardContent className="p-4 space-y-3">
         <p className="text-gray-300 text-sm leading-relaxed">{event.description}</p>

@@ -33,6 +33,8 @@ interface Event {
   themeId?: number | null
   customFlyerUrl?: string
   flyerData?: string
+  customBackgroundUrl?: string
+  customBackgroundType?: 'image' | 'video' | 'gif'
   theme?: any | null
   createdAt: string
   updatedAt: string
@@ -302,6 +304,49 @@ export default function EventDetailPage() {
           />
         </div>
       </div>
+
+      {/* Event Media */}
+      {event.customBackgroundUrl && (
+        <div className="w-full">
+          <Card className="bg-gray-800/50 border-gray-700 overflow-hidden">
+            <div className="relative" style={{ aspectRatio: '16/9' }}>
+              {event.customBackgroundType === 'video' ? (
+                <video
+                  src={event.customBackgroundUrl}
+                  className="w-full h-full object-cover"
+                  controls
+                  playsInline
+                  poster={event.customBackgroundUrl.replace(/\.[^/.]+$/, '_thumbnail.jpg')}
+                >
+                  <source src={event.customBackgroundUrl} type="video/mp4" />
+                  <source src={event.customBackgroundUrl} type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <img
+                  src={event.customBackgroundUrl}
+                  alt={event.title}
+                  className="w-full h-full object-cover"
+                />
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                <div className="flex items-center gap-2 text-white">
+                  {event.customBackgroundType === 'video' ? (
+                    <Video className="w-4 h-4" />
+                  ) : (
+                    <div className="w-4 h-4 rounded bg-white/20 flex items-center justify-center">
+                      <div className="w-2 h-2 bg-white rounded-sm"></div>
+                    </div>
+                  )}
+                  <span className="text-sm font-medium">
+                    {event.customBackgroundType === 'video' ? 'Event Video' : 'Event Image'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Event Info */}
