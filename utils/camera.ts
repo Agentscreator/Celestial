@@ -17,33 +17,33 @@ export interface CameraStreamOptions {
 export async function requestCameraPermissions(): Promise<CameraPermissionResult> {
   try {
     console.log('🔐 Requesting camera permissions...');
-    
+
     // Detect iOS
-    const isIOS = Capacitor.getPlatform() === 'ios' || 
-                  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
+    const isIOS = Capacitor.getPlatform() === 'ios' ||
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     console.log('📱 iOS detected:', isIOS);
-    
+
     // For iOS, be more conservative with permission requests
     if (isIOS) {
       try {
         // Try video-only first on iOS to avoid audio permission complications
         console.log('🍎 iOS: Requesting video-only permission first...');
-        const videoStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true 
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true
         });
-        
+
         videoStream.getTracks().forEach(track => {
           track.stop();
         });
-        
+
         console.log('✅ iOS: Video permission granted');
         return { granted: true };
-        
+
       } catch (videoError) {
         console.error('❌ iOS: Video permission failed:', videoError);
-        
+
         let message = 'Camera access denied. Please allow camera permissions.';
         if (videoError instanceof Error) {
           switch (videoError.name) {
@@ -66,50 +66,50 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
               message = `Camera error: ${videoError.message}`;
           }
         }
-        
-        return { 
-          granted: false, 
-          message 
+
+        return {
+          granted: false,
+          message
         };
       }
     }
-    
+
     // For non-iOS platforms, use the original approach
     console.log('🤖 Non-iOS: Using standard permission request...');
-    
+
     // Use getUserMedia for all platforms to avoid triggering native camera UI
     // This will request permissions but won't open the native camera interface
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
       });
-      
+
       // Stop the stream immediately as we just wanted to check permissions
       stream.getTracks().forEach(track => {
         track.stop();
       });
-      
+
       return { granted: true };
-      
+
     } catch (error) {
       console.error('getUserMedia failed, trying video-only...', error);
-      
+
       // If audio+video failed, try video only
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true 
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          video: true
         });
-        
+
         videoStream.getTracks().forEach(track => {
-            track.stop();
+          track.stop();
         });
-        
+
         return { granted: true };
-        
+
       } catch (videoError) {
         console.error('Video-only getUserMedia also failed:', videoError);
-        
+
         let message = 'Camera access denied. Please allow camera permissions.';
         if (videoError instanceof Error) {
           switch (videoError.name) {
@@ -132,18 +132,18 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
               message = `Camera error: ${videoError.message}`;
           }
         }
-        
-        return { 
-          granted: false, 
-          message 
+
+        return {
+          granted: false,
+          message
         };
       }
     }
   } catch (error) {
     console.error('Error requesting camera permissions:', error);
-    return { 
-      granted: false, 
-      message: 'Failed to request camera permissions. Please try again.' 
+    return {
+      granted: false,
+      message: 'Failed to request camera permissions. Please try again.'
     };
   }
 }
@@ -154,20 +154,20 @@ export async function requestCameraPermissions(): Promise<CameraPermissionResult
  */
 export async function checkCameraPermissions(): Promise<CameraPermissionResult> {
   try {
-    
+
     // Try to use the Permissions API (available on most modern browsers and WebView)
     try {
       const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      
+
       return {
         granted: permissions.state === 'granted',
         message: permissions.state === 'granted' ? undefined : 'Camera permissions need to be requested'
       };
     } catch (error) {
       // Permissions API not supported, we'll need to request to find out
-      return { 
-        granted: false, 
-        message: 'Camera permissions need to be requested (cannot check current status)' 
+      return {
+        granted: false,
+        message: 'Camera permissions need to be requested (cannot check current status)'
       };
     }
   } catch (error) {
@@ -188,7 +188,7 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
     console.log('🎥 Getting camera stream with options:', options);
     console.log('🔍 User Agent:', navigator.userAgent);
     console.log('🔍 Platform:', navigator.platform);
-    
+
     // Create a timeout promise to prevent infinite hanging on iOS
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
@@ -197,12 +197,12 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
     });
 
     // Detect iOS more reliably
-    const isIOS = Capacitor.getPlatform() === 'ios' || 
-                  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
+    const isIOS = Capacitor.getPlatform() === 'ios' ||
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
     console.log('📱 Detected iOS:', isIOS);
-    
+
     let constraints;
     if (isIOS) {
       // For iOS, use the most basic constraints first to avoid hanging
@@ -220,7 +220,7 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
           facingMode: options.facingMode,
           width: { ideal: 1280, max: 1920 },
           height: { ideal: 720, max: 1080 },
-          aspectRatio: { ideal: 16/9 },
+          aspectRatio: { ideal: 16 / 9 },
           frameRate: { ideal: 30 }
         },
         audio: options.audioEnabled
@@ -229,20 +229,20 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
     }
 
     console.log('📋 Final constraints:', JSON.stringify(constraints, null, 2));
-    
+
     try {
       // Race the getUserMedia call against timeout
       const stream = await Promise.race([
         navigator.mediaDevices.getUserMedia(constraints),
         timeoutPromise
       ]);
-      
+
       console.log('✅ Camera stream obtained successfully');
       return stream;
-      
+
     } catch (error) {
       console.error('❌ Primary getUserMedia failed:', error);
-      
+
       // iOS-specific fallback: try simpler constraints but keep audio if requested
       if (isIOS) {
         try {
@@ -251,18 +251,18 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
             video: { facingMode: options.facingMode },
             audio: options.audioEnabled // Keep audio setting from original request
           };
-          
+
           const stream = await Promise.race([
             navigator.mediaDevices.getUserMedia(fallbackConstraints),
             timeoutPromise
           ]);
-          
+
           console.log('✅ iOS fallback stream obtained with audio:', options.audioEnabled);
           return stream;
-          
+
         } catch (fallbackError) {
           console.error('❌ iOS fallback also failed:', fallbackError);
-          
+
           // Only try without audio if audio was originally requested and failed
           if (options.audioEnabled) {
             try {
@@ -271,15 +271,15 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
                 video: { facingMode: options.facingMode },
                 audio: false
               };
-              
+
               const videoStream = await Promise.race([
                 navigator.mediaDevices.getUserMedia(videoOnlyConstraints),
                 timeoutPromise
               ]);
-              
+
               console.warn('⚠️ iOS: Got video-only stream (audio failed)');
               return videoStream;
-              
+
             } catch (videoOnlyError) {
               console.error('❌ iOS video-only also failed:', videoOnlyError);
               throw videoOnlyError;
@@ -289,39 +289,39 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
           }
         }
       }
-      
+
       // Non-iOS fallback logic
       try {
         const simpleConstraints = {
           video: { facingMode: options.facingMode },
           audio: options.audioEnabled
         };
-        
+
         const stream = await Promise.race([
           navigator.mediaDevices.getUserMedia(simpleConstraints),
           timeoutPromise
         ]);
-        
+
         return stream;
-        
+
       } catch (simpleError) {
         console.error('Simple getUserMedia also failed:', simpleError);
-        
+
         // Final fallback - only use video-only if audio was not requested
         if (!options.audioEnabled) {
           try {
             const videoOnlyConstraints = {
               video: { facingMode: options.facingMode }
             };
-            
+
             const videoStream = await Promise.race([
               navigator.mediaDevices.getUserMedia(videoOnlyConstraints),
               timeoutPromise
             ]);
-            
+
             console.log('✅ Video-only fallback stream obtained');
             return videoStream;
-            
+
           } catch (videoError) {
             console.error('Video-only stream also failed:', videoError);
             throw videoError;
@@ -334,10 +334,10 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
         }
       }
     }
-    
+
   } catch (error) {
     console.error('❌ Error getting camera stream:', error);
-    
+
     // Provide more specific error messages
     if (error instanceof Error) {
       if (error.message.includes('timeout')) {
@@ -354,7 +354,7 @@ export async function getCameraStream(options: CameraStreamOptions): Promise<Med
         throw new Error('Camera access was aborted. Please try again.');
       }
     }
-    
+
     throw error;
   }
 }
@@ -369,27 +369,27 @@ export async function takePhoto(facingMode: 'user' | 'environment' = 'environmen
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode }
     });
-    
+
     // Create video element to capture frame
     const video = document.createElement('video');
     video.srcObject = stream;
     video.play();
-    
+
     return new Promise((resolve, reject) => {
       video.onloadedmetadata = () => {
         // Create canvas to capture frame
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        
+
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
+
         // Draw current frame to canvas
         context?.drawImage(video, 0, 0);
-        
+
         // Stop the stream
         stream.getTracks().forEach(track => track.stop());
-        
+
         // Convert to blob
         canvas.toBlob((blob) => {
           if (blob) {
@@ -400,7 +400,7 @@ export async function takePhoto(facingMode: 'user' | 'environment' = 'environmen
           }
         }, 'image/jpeg', 0.9);
       };
-      
+
       video.onerror = () => {
         stream.getTracks().forEach(track => track.stop());
         reject(new Error('Failed to load video'));
@@ -417,47 +417,47 @@ export async function takePhoto(facingMode: 'user' | 'environment' = 'environmen
  */
 export async function requestMicrophonePermissions(): Promise<CameraPermissionResult> {
   try {
-    
+
     if (Capacitor.isNativePlatform()) {
-      
+
       // On native platforms, try to request microphone permission through getUserMedia
       // This will trigger the native permission dialog
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: true 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true
         });
         stream.getTracks().forEach(track => track.stop());
         return { granted: true };
       } catch (error) {
         console.error('Native microphone permission failed:', error);
-        
+
         let message = 'Microphone permission denied. Please enable microphone access in your device Settings.';
         if (error instanceof Error && error.name === 'NotAllowedError') {
           message = 'Microphone access denied. Please allow microphone permissions when prompted and try again.';
         }
-        
+
         return {
           granted: false,
           message
         };
       }
     } else {
-      
+
       // For web, use getUserMedia
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: true 
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true
         });
         stream.getTracks().forEach(track => track.stop());
         return { granted: true };
       } catch (error) {
         console.error('Web microphone permission error:', error);
-        
+
         let message = 'Microphone access denied. Please allow microphone permissions.';
         if (error instanceof Error && error.name === 'NotAllowedError') {
           message = 'Microphone permission denied. Please allow microphone access when prompted.';
         }
-        
+
         return {
           granted: false,
           message

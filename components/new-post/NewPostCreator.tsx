@@ -1866,34 +1866,7 @@ export function NewPostCreator({ isOpen, onClose, onPostCreated }: NewPostCreato
               </Button>
             </div>
 
-            {/* Back to Camera Button */}
-            <div className="absolute top-4 left-4 z-50">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  console.log('🔙 Back to camera clicked')
-                  console.log('🔄 Switching back to camera mode...')
 
-                  // Stop any existing camera stream first
-                  stopCamera()
-
-                  // Reset camera states
-                  setCameraReady(false)
-                  setCameraLoading(false)
-                  setCameraRetryCount(0)
-
-                  // Remove the file and switch mode
-                  removeFile()
-                  setMode('camera')
-
-                  // Let the useEffect handle camera initialization
-                  console.log('✅ Mode switched to camera, useEffect will handle initialization')
-                }}
-                className="text-white hover:bg-white/10 rounded-full p-3 min-w-[48px] min-h-[48px]"
-              >
-                <Camera className="h-6 w-6" />
-              </Button>
-            </div>
 
             {/* Next Button - Positioned Lower - Hide after caption is shown */}
             {!showCaption && !selectedFile && (
