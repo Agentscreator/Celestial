@@ -1,91 +1,114 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/src/lib/auth"
 import { db } from "@/src/db"
 import { postsTable } from "@/src/db/schema"
-import { sql, eq } from "drizzle-orm"
+import { like, or } from "drizzle-orm"
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    console.log("=== FIX MEDIA URLS API START ===")
+    
     const session = await getServerSession(authOptions)
+    
     if (!session?.user?.id) {
+      console.error("❌ UNAUTHORIZED: No session")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
-
-    console.log("🔧 Starting media URL cleanup...")
-
-    // Find posts with potentially broken URLs
-    const postsWithMedia = await db
-      .select({
-        id: postsTable.id,
-        image: postsTable.image,
-        video: postsTable.video,
-      })
+    
+    console.log("🔍 Finding posts with broken media URLs...")
+    
+    // Find all posts with the old media.mirro2.com URLs
+    const brokenPosts = await db
+      .select()
       .from(postsTable)
       .where(
-        sql`(${postsTable.image} IS NOT NULL OR ${postsTable.video} IS NOT NULL)`
+        or(
+          like(postsTable.video, '%media.mirro2.com%'),
+          like(postsTable.image, '%media.mirro2.com%')
+        )
       )
-
-    const results = {
-      total: postsWithMedia.length,
-      vercelUrls: 0,
-      nonVercelUrls: 0,
-      invalidUrls: 0,
-      fixed: 0,
-      errors: [] as string[]
+    
+    console.log(`📊 Found ${brokenPosts.length} posts with broken URLs`)
+    
+    if (brokenPosts.length === 0) {
+      return NextResponse.json({
+        message: "No broken URLs found",
+        fixed: 0,
+        posts: []
+      })
     }
-
-    for (const post of postsWithMedia) {
-      const imageUrl = post.image
-      const videoUrl = post.video
-
-      // Check image URL
-      if (imageUrl) {
-        if (imageUrl.includes('vercel-storage.com') || imageUrl.includes('blob.vercel-storage.com')) {
-          results.vercelUrls++
-        } else {
-          results.nonVercelUrls++
-          console.log(`❌ Non-Vercel image URL in post ${post.id}: ${imageUrl}`)
+    
+    // Fix the URLs
+    const fixedPosts = []
+    let totalFixed = 0
+    
+    for (const post of brokenPosts) {
+      const updates: any = {}
+      let hasUpdates = false
+      
+      // Fix video URL
+      if (post.video && post.video.includes('media.mirro2.com')) {
+        updates.video = post.video.replace(
+          'https://media.mirro2.com',
+          'https://pub-f50a78c96ae94eb08dea6fb65f69d0e1.r2.dev'
+        )
+        hasUpdates = true
+        console.log(`🎥 Fixing video URL for post ${post.id}:`)
+        console.log(`  From: ${post.video}`)
+        console.log(`  To: ${updates.video}`)
+      }
+      
+      // Fix image URL
+      if (post.image && post.image.includes('media.mirro2.com')) {
+        updates.image = post.image.replace(
+          'https://media.mirro2.com',
+          'https://pub-f50a78c96ae94eb08dea6fb65f69d0e1.r2.dev'
+        )
+        hasUpdates = true
+        console.log(`🖼️ Fixing image URL for post ${post.id}:`)
+        console.log(`  From: ${post.image}`)
+        console.log(`  To: ${updates.image}`)
+      }
+      
+      // Update the post if there are changes
+      if (hasUpdates) {
+        try {
+          await db
+            .update(postsTable)
+            .set(updates)
+            .where(postsTable.id.eq(post.id))
           
-          // Set to null for now - you can replace with a default image if needed
-          try {
-            await db
-              .update(postsTable)
-              .set({ image: null })
-              .where(eq(postsTable.id, post.id))
-            results.fixed++
-          } catch (error) {
-            results.errors.push(`Failed to fix post ${post.id}: ${error}`)
-          }
+          totalFixed++
+          fixedPosts.push({
+            id: post.id,
+            originalVideo: post.video,
+            originalImage: post.image,
+            fixedVideo: updates.video || post.video,
+            fixedImage: updates.image || post.image
+          })
+          
+          console.log(`✅ Fixed post ${post.id}`)
+        } catch (updateError) {
+          console.error(`❌ Failed to fix post ${post.id}:`, updateError)
         }
       }
-
-      // Check video URL
-      if (videoUrl) {
-        if (videoUrl.includes('vercel-storage.com') || videoUrl.includes('blob.vercel-storage.com')) {
-          results.vercelUrls++
-        } else {
-          results.nonVercelUrls++
-          console.log(`❌ Non-Vercel video URL in post ${post.id}: ${videoUrl}`)
-          
-          // Set to null for now - you can replace with a default video if needed
-          try {
-            await db
-              .update(postsTable)
-              .set({ video: null })
-              .where(eq(postsTable.id, post.id))
-            results.fixed++
-          } catch (error) {
-            results.errors.push(`Failed to fix post ${post.id}: ${error}`)
-          }
-        }
-      }
     }
-
-    console.log("✅ Media URL cleanup completed:", results)
-    return NextResponse.json(results)
+    
+    console.log(`✅ Fixed ${totalFixed} posts`)
+    console.log("=== FIX MEDIA URLS API END ===")
+    
+    return NextResponse.json({
+      message: `Successfully fixed ${totalFixed} posts`,
+      fixed: totalFixed,
+      posts: fixedPosts
+    })
+    
   } catch (error) {
-    console.error("Fix media URLs error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("❌ FIX MEDIA URLS API ERROR:", error)
+    return NextResponse.json(
+      { error: "Failed to fix media URLs" },
+      { status: 500 }
+    )
   }
 }

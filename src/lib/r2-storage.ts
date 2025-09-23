@@ -37,8 +37,8 @@ export async function uploadToR2(options: UploadOptions): Promise<string> {
       Key: key,
       Body: buffer,
       ContentType: mimetype,
-      // Make the object publicly readable
-      ACL: "public-read",
+      // Note: Cloudflare R2 doesn't use ACL like AWS S3
+      // Public access is configured at the bucket level
     })
 
     await r2Client.send(command)
