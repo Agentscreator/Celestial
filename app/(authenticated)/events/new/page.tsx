@@ -28,6 +28,7 @@ export default function NewEventPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
   const [prefilledMedia, setPrefilledMedia] = useState<any>(null)
+  const [uploadedMediaFile, setUploadedMediaFile] = useState<File | null>(null)
 
   const [formData, setFormData] = useState({
     description: "",
@@ -73,7 +74,23 @@ export default function NewEventPage() {
         console.error('Error loading prefilled data:', error)
       }
     }
+
+    // Cleanup function to revoke blob URLs
+    return () => {
+      if (prefilledMedia?.previewUrl && prefilledMedia.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(prefilledMedia.previewUrl)
+      }
+    }
   }, [])
+
+  // Cleanup blob URLs when media is removed
+  useEffect(() => {
+    return () => {
+      if (prefilledMedia?.previewUrl && prefilledMedia.previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(prefilledMedia.previewUrl)
+      }
+    }
+  }, [prefilledMedia])
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -101,13 +118,25 @@ export default function NewEventPage() {
     setIsLoading(true)
 
     try {
-      // Convert prefilled media file back to File object if needed
+      // Handle media file - either from upload or prefilled from post creator
       let mediaFile = null
-      if (prefilledMedia?.fileData) {
-        // Convert base64 back to File
-        const response = await fetch(prefilledMedia.fileData)
-        const blob = await response.blob()
-        mediaFile = new File([blob], prefilledMedia.fileName, { type: prefilledMedia.fileType })
+      
+      if (uploadedMediaFile) {
+        // Use directly uploaded file
+        mediaFile = uploadedMediaFile
+      } else if (prefilledMedia?.fileData) {
+        // Convert prefilled media file back to File object
+        if (prefilledMedia.fileData.startsWith('data:')) {
+          // Base64 data from post creator
+          const response = await fetch(prefilledMedia.fileData)
+          const blob = await response.blob()
+          mediaFile = new File([blob], prefilledMedia.fileName, { type: prefilledMedia.fileType })
+        } else {
+          // Blob URL from direct upload
+          const response = await fetch(prefilledMedia.fileData)
+          const blob = await response.blob()
+          mediaFile = new File([blob], prefilledMedia.fileName, { type: prefilledMedia.fileType })
+        }
       }
 
       const eventData = {
@@ -207,6 +236,52 @@ export default function NewEventPage() {
     return formData.description && formData.date && formData.time && formData.location
   }
 
+  const handleMediaUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image or video file",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate file size (50MB for videos, 10MB for images)
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast({
+          title: "File too large",
+          description: `Please select a file smaller than ${file.type.startsWith('video/') ? '50MB' : '10MB'}`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      
+      // Set the media data
+      setPrefilledMedia({
+        fileData: previewUrl,
+        previewUrl: previewUrl,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      })
+      
+      // Store the actual file for upload
+      setUploadedMediaFile(file)
+
+      toast({
+        title: "Media uploaded",
+        description: `${file.name} has been added to your event`,
+      })
+    }
+  }
+
   return (
     <>
       <div className="dark font-sans text-white antialiased" style={{
@@ -263,10 +338,11 @@ export default function NewEventPage() {
                   Event Details
                 </h2>
 
-                {/* Media Preview */}
-                {prefilledMedia && (
-                  <div className="mb-4 sm:mb-6">
-                    <Label className="block text-sm font-medium text-gray-300 mb-2 sm:mb-3">Event Media</Label>
+                {/* Media Upload/Preview */}
+                <div className="mb-4 sm:mb-6">
+                  <Label className="block text-sm font-medium text-gray-300 mb-2 sm:mb-3">Event Media</Label>
+                  
+                  {prefilledMedia ? (
                     <div className="relative bg-gray-800/40 rounded-lg sm:rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
                       {prefilledMedia.fileType?.startsWith('video/') ? (
                         <video
@@ -274,6 +350,7 @@ export default function NewEventPage() {
                           className="w-full h-full object-cover"
                           controls
                           playsInline
+                          poster={prefilledMedia.thumbnailUrl}
                         />
                       ) : (
                         <img
@@ -288,9 +365,47 @@ export default function NewEventPage() {
                           <span className="hidden sm:inline">{prefilledMedia.fileName}</span>
                         </span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Cleanup blob URL if it exists
+                          if (prefilledMedia?.previewUrl && prefilledMedia.previewUrl.startsWith('blob:')) {
+                            URL.revokeObjectURL(prefilledMedia.previewUrl)
+                          }
+                          setPrefilledMedia(null)
+                          setUploadedMediaFile(null)
+                        }}
+                        className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-red-500/80 hover:bg-red-500 text-white rounded-full p-1.5 sm:p-2 transition-colors"
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </button>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={handleMediaUpload}
+                        className="hidden"
+                        id="media-upload"
+                      />
+                      <label
+                        htmlFor="media-upload"
+                        className="flex flex-col items-center justify-center w-full h-48 sm:h-64 border-2 border-dashed border-gray-600 rounded-lg sm:rounded-xl cursor-pointer bg-gray-800/20 hover:bg-gray-800/40 transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 sm:w-10 sm:h-10 mb-3 sm:mb-4 text-gray-400" />
+                          <p className="mb-2 text-sm sm:text-base text-gray-400">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            Images or Videos (MAX. 50MB)
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
                   {/* Description */}
