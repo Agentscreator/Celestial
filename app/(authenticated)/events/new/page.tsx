@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { LocationInput } from "@/components/ui/location-input"
 import { EventMediaUpload } from "@/components/events/EventMediaUpload"
-import { EventVideoCreator } from "@/components/events/EventVideoCreator"
+
 import { RepeatingEventConfig } from "@/components/events/RepeatingEventConfig"
-import { Calendar, MapPin, Clock, Users, Camera, Palette, Repeat, MessageCircle, Upload, Check, ArrowLeft, ArrowRight, Save, X } from "lucide-react"
+import { Calendar, MapPin, Clock, Users, Palette, Repeat, MessageCircle, Upload, Check, ArrowLeft, ArrowRight, Save, X } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
 interface EventTheme {
@@ -72,8 +72,7 @@ export default function NewEventPage() {
     const [eventMedia, setEventMedia] = useState<any[]>([])
     const [themes, setThemes] = useState<EventTheme[]>([])
     const [loadingThemes, setLoadingThemes] = useState(false)
-    const [showVideoCreator, setShowVideoCreator] = useState(false)
-    const [eventVideo, setEventVideo] = useState<{ file: File; description: string } | null>(null)
+
 
     // Load themes from API
     useEffect(() => {
@@ -319,52 +318,18 @@ export default function NewEventPage() {
         setIsDraft(saveAsDraft)
 
         try {
-            let inviteVideoUrl = null
-            let inviteVideoThumbnail = null
 
-            // Upload event video if provided
-            if (eventVideo && !saveAsDraft) {
-                try {
-                    const videoFormData = new FormData()
-                    videoFormData.append('video', eventVideo.file)
-                    videoFormData.append('description', eventVideo.description)
-                    videoFormData.append('type', 'event-invite')
 
-                    const videoResponse = await fetch('/api/upload/event-video', {
-                        method: 'POST',
-                        body: videoFormData
-                    })
 
-                    if (videoResponse.ok) {
-                        const videoResult = await videoResponse.json()
-                        inviteVideoUrl = videoResult.videoUrl
-                        inviteVideoThumbnail = videoResult.thumbnailUrl
-                    } else {
-                        console.error('Video upload failed:', await videoResponse.text())
-                        toast({
-                            title: "Video Upload Failed",
-                            description: "Failed to upload event video. Creating event without video.",
-                            variant: "destructive",
-                        })
-                    }
-                } catch (videoError) {
-                    console.error('Video upload error:', videoError)
-                    toast({
-                        title: "Video Upload Error",
-                        description: "Error uploading video. Creating event without video.",
-                        variant: "destructive",
-                    })
-                }
-            }
 
             const eventData = {
                 ...formData,
                 themeId: selectedTheme || null,
                 customBackgroundUrl: customMedia ? URL.createObjectURL(customMedia) : null,
                 customBackgroundType: customMedia?.type.startsWith('video/') ? 'video' : 'image',
-                inviteVideoUrl,
-                inviteVideoThumbnail,
-                inviteVideoDescription: eventVideo?.description || null,
+                inviteVideoUrl: null,
+                inviteVideoThumbnail: null,
+                inviteVideoDescription: null,
                 ...advancedSettings,
                 // Ensure repeat settings are properly formatted
                 repeatPattern: advancedSettings.isRepeating ? advancedSettings.repeatPattern : null,
@@ -1021,10 +986,10 @@ export default function NewEventPage() {
                                     <button
                                         type="button"
                                         onClick={nextStep}
-                                        disabled={!canProceedToStep4()}
+                                        disabled={!canProceedToStep3()}
                                         className="px-8 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                                     >
-                                        Continue to Settings
+                                        Continue to Final Settings
                                         <ArrowRight className="w-4 h-4 ml-2 inline" />
                                     </button>
                                 </div>
@@ -1244,16 +1209,7 @@ export default function NewEventPage() {
                 </div>
             </div>
 
-            {/* Event Video Creator Dialog */}
-            <EventVideoCreator
-                isOpen={showVideoCreator}
-                onClose={() => setShowVideoCreator(false)}
-                onVideoCreated={(videoData) => {
-                    setEventVideo(videoData)
-                    setShowVideoCreator(false)
-                }}
-                eventTitle={formData.title}
-            />
+
         </>
     )
 }
